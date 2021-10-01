@@ -16,6 +16,7 @@
 
 #define LOG_TAG "audiohalservice"
 
+#include <signal.h>
 #include <string>
 #include <vector>
 
@@ -61,6 +62,7 @@ int main(int /* argc */, char* /* argv */ []) {
 #ifdef ARCH_ARM_32
     android::hardware::ProcessState::initWithMmapSize(getHWBinderMmapSize());
 #endif
+
     ::android::ProcessState::initWithDriver("/dev/vndbinder");
     // start a threadpool for vndbinder interactions
     ::android::ProcessState::self()->startThreadPool();
