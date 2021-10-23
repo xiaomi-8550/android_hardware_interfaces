@@ -85,8 +85,7 @@ Filter::Filter(DemuxFilterType type, int64_t filterId, uint32_t bufferSize,
 }
 
 Filter::~Filter() {
-    mFilterThreadRunning = false;
-    std::lock_guard<std::mutex> lock(mFilterThreadLock);
+    close();
 }
 
 ::ndk::ScopedAStatus Filter::getId64Bit(int64_t* _aidl_return) {
@@ -187,8 +186,12 @@ Filter::~Filter() {
 
 ::ndk::ScopedAStatus Filter::stop() {
     ALOGV("%s", __FUNCTION__);
+
     mFilterThreadRunning = false;
-    std::lock_guard<std::mutex> lock(mFilterThreadLock);
+    if (mFilterThread.joinable()) {
+        mFilterThread.join();
+    }
+
     return ::ndk::ScopedAStatus::ok();
 }
 
@@ -226,8 +229,8 @@ Filter::~Filter() {
 ::ndk::ScopedAStatus Filter::close() {
     ALOGV("%s", __FUNCTION__);
 
-    mFilterThreadRunning = false;
-    std::lock_guard<std::mutex> lock(mFilterThreadLock);
+    stop();
+
     return mDemux->removeFilter(mFilterId);
 }
 
@@ -376,22 +379,15 @@ bool Filter::createFilterMQ() {
 }
 
 ::ndk::ScopedAStatus Filter::startFilterLoop() {
-    pthread_create(&mFilterThread, NULL, __threadLoopFilter, this);
-    pthread_setname_np(mFilterThread, "filter_waiting_loop");
+    mFilterThread = std::thread(&Filter::filterThreadLoop, this);
     return ::ndk::ScopedAStatus::ok();
-}
-
-void* Filter::__threadLoopFilter(void* user) {
-    Filter* const self = static_cast<Filter*>(user);
-    self->filterThreadLoop();
-    return 0;
 }
 
 void Filter::filterThreadLoop() {
     if (!mFilterThreadRunning) {
         return;
     }
-    std::lock_guard<std::mutex> lock(mFilterThreadLock);
+
     ALOGD("[Filter] filter %" PRIu64 " threadLoop start.", mFilterId);
 
     // For the first time of filter output, implementation needs to send the filter
@@ -646,8 +642,8 @@ void Filter::updateRecordOutput(vector<int8_t>& data) {
         DemuxFilterPesEvent pesEvent;
         pesEvent = {
                 // temp dump meta data
-                .streamId = static_cast<char16_t>(mPesOutput[3]),
-                .dataLength = static_cast<char16_t>(mPesOutput.size()),
+                .streamId = static_cast<int32_t>(mPesOutput[3]),
+                .dataLength = static_cast<int32_t>(mPesOutput.size()),
         };
         if (DEBUG_FILTER) {
             ALOGD("[Filter] assembled pes data length %d", pesEvent.dataLength);
@@ -793,7 +789,7 @@ bool Filter::writeSectionsAndCreateEvent(vector<int8_t>& data) {
             .tableId = 0,
             .version = 1,
             .sectionNum = 1,
-            .dataLength = static_cast<char16_t>(data.size()),
+            .dataLength = static_cast<int32_t>(data.size()),
     };
     mFilterEvents[size].set<DemuxFilterEvent::Tag::section>(secEvent);
     return true;
@@ -891,7 +887,7 @@ native_handle_t* Filter::createNativeHandle(int fd) {
     mFilterEvents[size].get<DemuxFilterEvent::Tag::media>().avMemory =
             ::android::dupToAidl(nativeHandle);
     mFilterEvents[size].get<DemuxFilterEvent::Tag::media>().dataLength =
-            static_cast<int32_t>(output.size());
+            static_cast<int64_t>(output.size());
     mFilterEvents[size].get<DemuxFilterEvent::Tag::media>().avDataId = static_cast<int64_t>(dataId);
     if (mPts) {
         mFilterEvents[size].get<DemuxFilterEvent::Tag::media>().pts = mPts;
@@ -932,10 +928,9 @@ native_handle_t* Filter::createNativeHandle(int fd) {
     mFilterEvents[size] = DemuxFilterEvent::make<DemuxFilterEvent::Tag::media>();
     mFilterEvents[size].get<DemuxFilterEvent::Tag::media>().avMemory =
             ::android::dupToAidl(nativeHandle);
-    mFilterEvents[size].get<DemuxFilterEvent::Tag::media>().offset =
-            static_cast<int32_t>(mSharedAvMemOffset);
+    mFilterEvents[size].get<DemuxFilterEvent::Tag::media>().offset = mSharedAvMemOffset;
     mFilterEvents[size].get<DemuxFilterEvent::Tag::media>().dataLength =
-            static_cast<int32_t>(output.size());
+            static_cast<int64_t>(output.size());
     if (mPts) {
         mFilterEvents[size].get<DemuxFilterEvent::Tag::media>().pts = mPts;
         mPts = 0;
