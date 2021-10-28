@@ -307,6 +307,18 @@ const ConfigDeclaration kVehicleProperties[]{
                          .prop = toInt(VehicleProperty::CRITICALLY_LOW_TIRE_PRESSURE),
                          .access = VehiclePropertyAccess::READ,
                          .changeMode = VehiclePropertyChangeMode::STATIC,
+                         .areaConfigs = {VehicleAreaConfig{
+                                                 .areaId = WHEEL_FRONT_LEFT,
+                                         },
+                                         VehicleAreaConfig{
+                                                 .areaId = WHEEL_FRONT_RIGHT,
+                                         },
+                                         VehicleAreaConfig{
+                                                 .areaId = WHEEL_REAR_LEFT,
+                                         },
+                                         VehicleAreaConfig{
+                                                 .areaId = WHEEL_REAR_RIGHT,
+                                         }},
                  },
          .initialAreaValues = {{WHEEL_FRONT_LEFT, {.floatValues = {137.0f}}},
                                {WHEEL_FRONT_RIGHT, {.floatValues = {137.0f}}},
@@ -989,7 +1001,7 @@ const ConfigDeclaration kVehicleProperties[]{
                 .config =
                         {
                                 .prop = toInt(VehicleProperty::EPOCH_TIME),
-                                .access = VehiclePropertyAccess::READ_WRITE,
+                                .access = VehiclePropertyAccess::WRITE,
                                 .changeMode = VehiclePropertyChangeMode::ON_CHANGE,
                         },
         },
@@ -1060,6 +1072,42 @@ const ConfigDeclaration kVehicleProperties[]{
                                 .access = VehiclePropertyAccess::WRITE,
                                 .changeMode = VehiclePropertyChangeMode::ON_CHANGE,
                         },
+        },
+        {
+                .config =
+                        {
+                                .prop = PLACEHOLDER_PROPERTY_INT,
+                                .access = VehiclePropertyAccess::READ_WRITE,
+                                .changeMode = VehiclePropertyChangeMode::ON_CHANGE,
+                        },
+                .initialValue = {.int32Values = {0}},
+        },
+        {
+                .config =
+                        {
+                                .prop = PLACEHOLDER_PROPERTY_FLOAT,
+                                .access = VehiclePropertyAccess::READ_WRITE,
+                                .changeMode = VehiclePropertyChangeMode::ON_CHANGE,
+                        },
+                .initialValue = {.floatValues = {0.0f}},
+        },
+        {
+                .config =
+                        {
+                                .prop = PLACEHOLDER_PROPERTY_BOOLEAN,
+                                .access = VehiclePropertyAccess::READ_WRITE,
+                                .changeMode = VehiclePropertyChangeMode::ON_CHANGE,
+                        },
+                .initialValue = {.int32Values = {0 /* false */}},
+        },
+        {
+                .config =
+                        {
+                                .prop = PLACEHOLDER_PROPERTY_STRING,
+                                .access = VehiclePropertyAccess::READ_WRITE,
+                                .changeMode = VehiclePropertyChangeMode::ON_CHANGE,
+                        },
+                .initialValue = {.stringValue = {"Test"}},
         },
 #ifdef ENABLE_VENDOR_CLUSTER_PROPERTY_FOR_TESTING
         // Vendor propetry for E2E ClusterHomeService testing.

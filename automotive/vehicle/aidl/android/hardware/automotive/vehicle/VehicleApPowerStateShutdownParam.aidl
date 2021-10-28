@@ -16,7 +16,7 @@
 
 package android.hardware.automotive.vehicle;
 
-// @VintfStability
+@VintfStability
 @Backing(type="int")
 enum VehicleApPowerStateShutdownParam {
     /**
@@ -36,4 +36,13 @@ enum VehicleApPowerStateShutdownParam {
      * Postponing is not allowed.
      */
     SLEEP_IMMEDIATELY = 4,
+    /**
+     * AP must hibernate (suspend to disk) immediately. Postponing is not allowed.
+     * Depending on the actual implementation, it may shut down immediately
+     */
+    HIBERNATE_IMMEDIATELY = 5,
+    /**
+     * AP can enter hibernation (suspend to disk) instead of shutting down completely.
+     */
+    CAN_HIBERNATE = 6,
 }
