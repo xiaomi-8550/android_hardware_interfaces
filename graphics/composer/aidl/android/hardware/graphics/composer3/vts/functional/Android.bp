@@ -1,11 +1,11 @@
-/*
- * Copyright (C) 2021 The Android Open Source Project
+/**
+ * Copyright (c) 2021, The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -23,37 +23,29 @@ package {
     default_applicable_licenses: ["hardware_interfaces_license"],
 }
 
-cc_library {
-    name: "VehicleHalProtoMessageConverter",
-    srcs: [
-        "src/*.cpp",
-    ],
-    vendor: true,
-    local_include_dirs: ["include"],
-    export_include_dirs: ["include"],
-    shared_libs: ["libprotobuf-cpp-full"],
-    static_libs: [
-        "VehicleHalProtos",
-        "VehicleHalUtils",
-    ],
-    defaults: ["VehicleHalDefaults"],
-    export_static_lib_headers: ["VehicleHalUtils"],
-}
-
 cc_test {
-    name: "VehicleHalProtoMessageConverterTest",
-    srcs: [
-        "test/*.cpp",
+    name: "VtsHalGraphicsComposer3_TargetTest",
+    defaults: [
+        "VtsHalTargetTestDefaults",
+        "use_libaidlvintf_gtest_helper_static",
     ],
-    vendor: true,
-    defaults: ["VehicleHalDefaults"],
-    shared_libs: ["libprotobuf-cpp-full"],
+    srcs: ["VtsHalGraphicsComposer3_TargetTest.cpp"],
+
+    // TODO(b/64437680): Assume these libs are always available on the device.
+    shared_libs: [
+        "libbinder_ndk",
+        "libbinder",
+    ],
     static_libs: [
-        "VehicleHalProtoMessageConverter",
-        "VehicleHalProtos",
-        "VehicleHalUtils",
-        "libgtest",
+        "android.hardware.graphics.composer3-V1-ndk",
+        "android.hardware.graphics.common-V3-ndk",
+        "android.hardware.graphics.common@1.2",
+        "android.hardware.common-V2-ndk",
+        "android.hardware.common.fmq-V1-ndk",
     ],
-    header_libs: ["VehicleHalDefaultConfig"],
-    test_suites: ["device-tests"],
+
+    test_suites: [
+        "general-tests",
+        "vts",
+    ],
 }
