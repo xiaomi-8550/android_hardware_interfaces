@@ -1035,24 +1035,77 @@ enum VehicleProperty {
     VEHICLE_SPEED_DISPLAY_UNITS = 0x0605 + 0x10000000 + 0x01000000
             + 0x00400000, // VehiclePropertyGroup:SYSTEM,VehicleArea:GLOBAL,VehiclePropertyType:INT32
     /**
-     * Current date and time, encoded as Unix time (in milliseconds).
+     * Current date and time suggestion for the Car, encoded as Epoch time
+     * (in milliseconds). This value denotes the number of milliseconds seconds
+     * that have elapsed since 1/1/1970 UTC.
+     *
+     * This property signals a change in CarTime to Android. If the property is supported, VHAL
+     * must report the most accurate current CarTime when this property is read, and publish a
+     * change to this property when the CarTime value has changed. An on-change event for this
+     * property must be published when CarTime changes for any reason other than the natural elapse
+     * of time (time delta smaller than 500ms should not trigger an on change event). Android will
+     * read and subscribe to this property to fetch time from VHAL. This can be useful to
+     * synchronize Android's time with other vehicle systems (dash clock etc).
+     *     int64Values[0] = provided Epoch time (in milliseconds)
+     *
+     * Whenever a new Value for the property is received, AAOS will create
+     * and send an "ExternalTimeSuggestion" to the "TimeDetectorService".
+     * If other sources do not have a higher priority, Android will use this
+     * to set the system time. For information on how to adjust time source
+     * priorities and how time suggestions are handled (including how Android
+     * handles gitter, drift, and minimum resolution) see Time Detector Service
+     * documentation.
+     *
+     * Note that the property may take >0 ms to get propagated through the stack
+     * and, having a timestamped property helps reduce any time drift. So,
+     * for all reads to the property, the timestamp can be used to negate this
+     * drift:
+     *     drift = elapsedTime - PropValue.timestamp
+     *     effectiveTime = PropValue.value.int64Values[0] + drift
+     *
+     * It is strongly recommended that this property must not be used to retrieve
+     * time from ECUs using protocols (GNSS, NTP, Telephony etc). Since these
+     * protocols are already supported by Android, it is recommended to use
+     * Android’s own systems for them instead of wiring those through the VHAL
+     * using this property.
+     *
+     * WARNING: The value available through this property should not be dependent
+     * on value written by Android to ANDROID_EPOCH_TIME property in any way.
+     *
+     * @change_mode VehiclePropertyChangeMode:ON_CHANGE
+     * @access VehiclePropertyAccess:READ_ONLY
+     * @unit VehicleUnit:MILLI_SECS
+     */
+    EXTERNAL_CAR_TIME = 0x0608 + 0x10000000 // VehiclePropertyGroup:SYSTEM
+            + 0x01000000 // VehicleArea:GLOBAL
+            + 0x00500000, // VehiclePropertyType:INT64
+    /**
+     * Current date and time, encoded as Epoch time (in milliseconds).
      * This value denotes the number of milliseconds seconds that have
      * elapsed since 1/1/1970 UTC.
      *
-     * Reading this value will give you the system’s time. This can be
-     * useful to synchronize other vehicle systems (dash clock etc).
+     * CarServices will write to this value to give VHAL the Android system's
+     * time, if the VHAL supports this property. This can be useful to
+     * synchronize other vehicle systems (dash clock etc) with Android's time.
      *
-     * Writing this value will update the ‘ExternalTimeSuggestion’
-     * value (if enabled). This value may be consumed by the “Time
-     * Detector Service”, if other sources do not have a higher
-     * priority. For information on how to adjust time source
-     * priorities see Time Detector Service documentation.
+     * AAOS writes to this property once during boot, and
+     * will thereafter write only when some time-source changes are propagated.
+     * AAOS will fill in VehiclePropValue.timestamp correctly.
+     * Note that AAOS will not send updates for natural elapse of time.
+     *     int64Values[0] = provided Unix time (in milliseconds)
+     *
+     * Note that the property may take >0 ms to get propagated through the stack
+     * and, having a timestamped property helps reduce any time drift. So,
+     * for all writes to the property, the timestamp can be used to negate this
+     * drift:
+     *     drift = elapsedTime - PropValue.timestamp
+     *     effectiveTime = PropValue.value.int64Values[0] + drift
      *
      * @change_mode VehiclePropertyChangeMode:ON_CHANGE
-     * @access VehiclePropertyAccess:READ_WRITE
+     * @access VehiclePropertyAccess:WRITE_ONLY
      * @unit VehicleUnit:MILLI_SECS
      */
-    EPOCH_TIME = 0x0606 + 0x10000000 + 0x01000000
+    ANDROID_EPOCH_TIME = 0x0606 + 0x10000000 + 0x01000000
             + 0x00500000, // VehiclePropertyGroup:SYSTEM,VehicleArea:GLOBAL,VehiclePropertyType:INT64
     /**
      * External encryption binding seed.

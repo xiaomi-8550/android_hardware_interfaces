@@ -32,6 +32,7 @@ namespace android {
 namespace hardware {
 namespace automotive {
 namespace vehicle {
+namespace fake {
 
 class FakeVehicleHardware final : public IVehicleHardware {
   public:
@@ -81,10 +82,8 @@ class FakeVehicleHardware final : public IVehicleHardware {
     void registerOnPropertySetErrorEvent(OnPropertySetErrorCallback&& callback) override;
 
   private:
-    void storePropInitialValue(const defaultconfig::ConfigDeclaration& config);
-    void init(std::shared_ptr<VehiclePropValuePool> valuePool);
-    void onValueChangeCallback(
-            const ::aidl::android::hardware::automotive::vehicle::VehiclePropValue& value);
+    // Expose private methods to unit test.
+    friend class FakeVehicleHardwareTestHelper;
 
     std::unique_ptr<VehiclePropertyStore> mServerSidePropStore;
     // mValuePool is also used in mServerSidePropStore.
@@ -92,8 +91,21 @@ class FakeVehicleHardware final : public IVehicleHardware {
     std::mutex mCallbackLock;
     OnPropertyChangeCallback mOnPropertyChangeCallback GUARDED_BY(mCallbackLock);
     OnPropertySetErrorCallback mOnPropertySetErrorCallback GUARDED_BY(mCallbackLock);
+
+    void init(std::shared_ptr<VehiclePropValuePool> valuePool);
+    // Stores the initial value to property store.
+    void storePropInitialValue(const defaultconfig::ConfigDeclaration& config);
+    // The callback that would be called when a vehicle property value change happens.
+    void onValueChangeCallback(
+            const ::aidl::android::hardware::automotive::vehicle::VehiclePropValue& value);
+    // If property "persist.vendor.vhal_init_value_override" is set to true, override the properties
+    // using config files in 'overrideDir'.
+    void maybeOverrideProperties(const char* overrideDir);
+    // Override the properties using config files in 'overrideDir'.
+    void overrideProperties(const char* overrideDir);
 };
 
+}  // namespace fake
 }  // namespace vehicle
 }  // namespace automotive
 }  // namespace hardware

@@ -52,17 +52,19 @@ VehiclePropValuePool::RecyclableType VehiclePropValuePool::obtain(VehiclePropert
 }
 
 VehiclePropValuePool::RecyclableType VehiclePropValuePool::obtain(const VehiclePropValue& src) {
-    VehiclePropertyType type = getPropType(src.prop);
+    int propId = src.prop;
+    VehiclePropertyType type = getPropType(propId);
     size_t vectorSize = getVehicleRawValueVectorSize(src.value, type);
     if (vectorSize == 0 && !isComplexType(type)) {
         ALOGW("empty vehicle prop value, contains no content");
+        ALOGW("empty vehicle prop value, contains no content, prop: %d", propId);
         // Return any empty VehiclePropValue.
-        return RecyclableType{new VehiclePropValue, mDisposableDeleter};
+        return RecyclableType{new VehiclePropValue{}, mDisposableDeleter};
     }
 
     auto dest = obtain(type, vectorSize);
 
-    dest->prop = src.prop;
+    dest->prop = propId;
     dest->areaId = src.areaId;
     dest->status = src.status;
     dest->timestamp = src.timestamp;
@@ -101,7 +103,7 @@ VehiclePropValuePool::RecyclableType VehiclePropValuePool::obtainComplex() {
 
 VehiclePropValuePool::RecyclableType VehiclePropValuePool::obtainRecyclable(
         VehiclePropertyType type, size_t vectorSize) {
-    std::lock_guard<std::mutex> lock(mLock);
+    std::scoped_lock<std::mutex> lock(mLock);
     assert(vectorSize > 0);
 
     // VehiclePropertyType is not overlapping with vectorSize.
