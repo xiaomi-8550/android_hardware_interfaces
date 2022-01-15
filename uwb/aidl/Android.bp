@@ -35,6 +35,7 @@ aidl_interface {
                 "//apex_available:platform",
                 "com.android.uwb",
             ],
+            min_sdk_version: "current",
         },
     },
 }
@@ -53,9 +54,6 @@ aidl_interface {
             ],
         },
         ndk: {
-            vndk: {
-                enabled: true,
-            },
             apex_available: [
                 "//apex_available:platform",
                 "com.android.uwb",
