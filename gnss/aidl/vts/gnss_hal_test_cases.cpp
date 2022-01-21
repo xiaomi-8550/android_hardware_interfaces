@@ -23,7 +23,9 @@
 #include <android/hardware/gnss/IGnssPowerIndication.h>
 #include <android/hardware/gnss/IGnssPsds.h>
 #include "GnssBatchingCallback.h"
+#include "GnssGeofenceCallback.h"
 #include "GnssMeasurementCallbackAidl.h"
+#include "GnssNavigationMessageCallback.h"
 #include "GnssPowerIndicationCallback.h"
 #include "gnss_hal_test.h"
 
@@ -38,8 +40,11 @@ using android::hardware::gnss::IGnss;
 using android::hardware::gnss::IGnssBatching;
 using android::hardware::gnss::IGnssBatchingCallback;
 using android::hardware::gnss::IGnssConfiguration;
+using android::hardware::gnss::IGnssGeofence;
+using android::hardware::gnss::IGnssGeofenceCallback;
 using android::hardware::gnss::IGnssMeasurementCallback;
 using android::hardware::gnss::IGnssMeasurementInterface;
+using android::hardware::gnss::IGnssNavigationMessageInterface;
 using android::hardware::gnss::IGnssPowerIndication;
 using android::hardware::gnss::IGnssPsds;
 using android::hardware::gnss::PsdsType;
@@ -755,23 +760,36 @@ TEST_P(GnssHalTest, BlocklistConstellationLocationOn) {
 }
 
 /*
- * TestGnssBatchingExtension:
- * 1. Gets the IGnssBatching extension.
- * 2. Initializes the interface with an IGnssBatchingCallback.
- * 3. Clean up.
+ * TestAllExtensions.
  */
-TEST_P(GnssHalTest, TestGnssBatchingExtension) {
+TEST_P(GnssHalTest, TestAllExtensions) {
     sp<IGnssBatching> iGnssBatching;
     auto status = aidl_gnss_hal_->getExtensionGnssBatching(&iGnssBatching);
-    if (!status.isOk() || iGnssBatching == nullptr) {
-        // Device doesn't support batching. Skip the test.
-        return;
+    if (status.isOk() && iGnssBatching != nullptr) {
+        auto gnssBatchingCallback = sp<GnssBatchingCallback>::make();
+        status = iGnssBatching->init(gnssBatchingCallback);
+        ASSERT_TRUE(status.isOk());
+
+        status = iGnssBatching->cleanup();
+        ASSERT_TRUE(status.isOk());
     }
 
-    sp<IGnssBatchingCallback> iGnssBatchingCallback;
-    status = iGnssBatching->init(iGnssBatchingCallback);
-    ASSERT_TRUE(status.isOk());
+    sp<IGnssGeofence> iGnssGeofence;
+    status = aidl_gnss_hal_->getExtensionGnssGeofence(&iGnssGeofence);
+    if (status.isOk() && iGnssGeofence != nullptr) {
+        auto gnssGeofenceCallback = sp<GnssGeofenceCallback>::make();
+        status = iGnssGeofence->setCallback(gnssGeofenceCallback);
+        ASSERT_TRUE(status.isOk());
+    }
 
-    status = iGnssBatching->cleanup();
-    ASSERT_TRUE(status.isOk());
+    sp<IGnssNavigationMessageInterface> iGnssNavMsgIface;
+    status = aidl_gnss_hal_->getExtensionGnssNavigationMessage(&iGnssNavMsgIface);
+    if (status.isOk() && iGnssNavMsgIface != nullptr) {
+        auto gnssNavMsgCallback = sp<GnssNavigationMessageCallback>::make();
+        status = iGnssNavMsgIface->setCallback(gnssNavMsgCallback);
+        ASSERT_TRUE(status.isOk());
+
+        status = iGnssNavMsgIface->close();
+        ASSERT_TRUE(status.isOk());
+    }
 }
