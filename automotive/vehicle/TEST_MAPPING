@@ -8,6 +8,18 @@
     },
     {
       "name": "VehicleHalVehicleUtilsTest"
+    },
+    {
+      "name": "FakeVehicleHardwareTest"
+    },
+    {
+      "name": "FakeVehicleHalValueGeneratorsTest"
+    },
+    {
+      "name": "FakeObd2FrameTest"
+    },
+    {
+      "name": "FakeUserHalTest"
     }
   ]
 }

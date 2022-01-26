@@ -90,6 +90,12 @@ interface IComposerClient {
     const int EX_SEAMLESS_NOT_POSSIBLE = 10;
 
     /**
+     * Integer.MAX_VALUE is reserved for the invalid configuration.
+     * This should not be returned as a valid configuration.
+     */
+    const int INVALID_CONFIGURATION = 0x7fffffff;
+
+    /**
      * Creates a new layer on the given display.
      *
      * @param display is the display on which to create the layer.
@@ -189,28 +195,6 @@ interface IComposerClient {
     int getActiveConfig(long display);
 
     /**
-     * Returns whether a client target with the given properties can be
-     * handled by the device.
-     *
-     * This function must return true for a client target with width and
-     * height equal to the active display configuration dimensions,
-     * PixelFormat::RGBA_8888, and Dataspace::UNKNOWN. It is not required to
-     * return true for any other configuration.
-     *
-     * @param display is the display to query.
-     * @param width is the client target width in pixels.
-     * @param height is the client target height in pixels.
-     * @param format is the client target format.
-     * @param dataspace is the client target dataspace, as described in
-     *     setLayerDataspace.
-     * @exception EX_BAD_DISPLAY when an invalid display handle was passed in.
-     * @exception EX_UNSUPPORTED when the given configuration is not supported.
-     */
-    void getClientTargetSupport(long display, int width, int height,
-            android.hardware.graphics.common.PixelFormat format,
-            android.hardware.graphics.common.Dataspace dataspace);
-
-    /**
      * Returns the color modes supported on this display.
      *
      * All devices must support at least ColorMode::NATIVE.
@@ -304,6 +288,7 @@ interface IComposerClient {
     /**
      * Returns handles for all of the valid display configurations on this
      * display.
+     * This should never return INVALID_CONFIGURATION as a valid value.
      *
      * @param display is the display to query.
      *
@@ -690,9 +675,8 @@ interface IComposerClient {
      * If the display is internally connected (not through HDMI), and such modes are available,
      * this method should trigger them.
      *
-     * This function should only be called if the display reports support for the corresponding
-     * content type (ContentType::{GRAPHICS, PHOTO, CINEMA, GAME}) from getSupportedContentTypes.
-     * ContentType::NONE is supported by default and can always be set.
+     * This function can be called for a content type even if no support for it is
+     * reported from getSupportedContentTypes.
      *
      * @exception EX_BAD_DISPLAY when an invalid display handle was passed in.
      * @exception EX_UNSUPPORTED when the given content type is not supported by the composer

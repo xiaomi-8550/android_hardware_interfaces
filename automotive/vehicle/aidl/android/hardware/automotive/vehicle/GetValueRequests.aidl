@@ -16,18 +16,14 @@
 
 package android.hardware.automotive.vehicle;
 
-import android.hardware.automotive.vehicle.VehiclePropValue;
+import android.hardware.automotive.vehicle.GetValueRequest;
 import android.os.ParcelFileDescriptor;
 
 @VintfStability
 parcelable GetValueRequests {
-    // The list of properties to get if they fit the binder memory limitation.
-    VehiclePropValue[] payloads;
-    // A list of request IDs, one for each VehiclePropValue. For every client,
-    // the request ID must start with 1 and monotonically increase for every
-    // VehiclePropValue in GetValueRequests. If it hits LONG_MAX (very
-    // unlikely), it must loop back to 0.
-    long[] requestId;
+    // A list of GetValueRequest to get if they fit the binder memory
+    // limitation.
+    GetValueRequest[] payloads;
     // Shared memory file to store requests if they exceed binder memory
     // limitation. Created by client, readable only at VHAL during the call.
     // Caller could close it after the call.

@@ -40,7 +40,6 @@ interface IComposerClient {
   void destroyVirtualDisplay(long display);
   android.hardware.graphics.composer3.ExecuteCommandsStatus executeCommands(int inLength, in android.hardware.common.NativeHandle[] inHandles);
   int getActiveConfig(long display);
-  void getClientTargetSupport(long display, int width, int height, android.hardware.graphics.common.PixelFormat format, android.hardware.graphics.common.Dataspace dataspace);
   android.hardware.graphics.composer3.ColorMode[] getColorModes(long display);
   float[] getDataspaceSaturationMatrix(android.hardware.graphics.common.Dataspace dataspace);
   int getDisplayAttribute(long display, int config, android.hardware.graphics.composer3.DisplayAttribute attribute);
@@ -86,4 +85,5 @@ interface IComposerClient {
   const int EX_UNSUPPORTED = 8;
   const int EX_SEAMLESS_NOT_ALLOWED = 9;
   const int EX_SEAMLESS_NOT_POSSIBLE = 10;
+  const int INVALID_CONFIGURATION = 2147483647;
 }

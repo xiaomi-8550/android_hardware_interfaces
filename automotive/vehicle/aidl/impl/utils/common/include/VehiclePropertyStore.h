@@ -24,6 +24,7 @@
 #include <unordered_map>
 
 #include <VehicleHalTypes.h>
+#include <VehicleObjectPool.h>
 #include <android-base/result.h>
 #include <android-base/thread_annotations.h>
 
@@ -39,8 +40,17 @@ namespace vehicle {
 // to get value for all areas for particular property.
 //
 // This class is thread-safe, however it uses blocking synchronization across all methods.
-class VehiclePropertyStore {
+class VehiclePropertyStore final {
   public:
+    explicit VehiclePropertyStore(std::shared_ptr<VehiclePropValuePool> valuePool)
+        : mValuePool(valuePool) {}
+
+    ~VehiclePropertyStore();
+
+    // Callback when a property value has been updated or a new value added.
+    using OnValueChangeCallback = std::function<void(
+            const ::aidl::android::hardware::automotive::vehicle::VehiclePropValue&)>;
+
     // Function that used to calculate unique token for given VehiclePropValue.
     using TokenFunction = ::std::function<int64_t(
             const ::aidl::android::hardware::automotive::vehicle::VehiclePropValue& value)>;
@@ -53,10 +63,13 @@ class VehiclePropertyStore {
             const ::aidl::android::hardware::automotive::vehicle::VehiclePropConfig& config,
             TokenFunction tokenFunc = nullptr);
 
-    // Stores provided value. Returns true if value was written returns false if config wasn't
-    // registered.
-    ::android::base::Result<void> writeValue(
-            const ::aidl::android::hardware::automotive::vehicle::VehiclePropValue& propValue);
+    // Stores provided value. Returns error if config wasn't registered. If 'updateStatus' is
+    // true, the 'status' in 'propValue' would be stored. Otherwise, if this is a new value,
+    // 'status' would be initialized to {@code VehiclePropertyStatus::AVAILABLE}, if this is to
+    // override an existing value, the status for the existing value would be used for the
+    // overridden value.
+    ::android::base::Result<void> writeValue(VehiclePropValuePool::RecyclableType propValue,
+                                             bool updateStatus = false);
 
     // Remove a given property value from the property store. The 'propValue' would be used to
     // generate the key for the value to remove.
@@ -67,24 +80,23 @@ class VehiclePropertyStore {
     void removeValuesForProperty(int32_t propId);
 
     // Read all the stored values.
-    std::vector<::aidl::android::hardware::automotive::vehicle::VehiclePropValue> readAllValues()
-            const;
+    std::vector<VehiclePropValuePool::RecyclableType> readAllValues() const;
 
     // Read all the values for the property.
-    ::android::base::Result<
-            std::vector<::aidl::android::hardware::automotive::vehicle::VehiclePropValue>>
+    ::android::base::Result<std::vector<VehiclePropValuePool::RecyclableType>>
     readValuesForProperty(int32_t propId) const;
 
-    // Read the value for the requested property.
-    ::android::base::Result<
-            std::unique_ptr<::aidl::android::hardware::automotive::vehicle::VehiclePropValue>>
-    readValue(
+    // Read the value for the requested property. Returns {@code StatusCode::NOT_AVAILABLE} if the
+    // value has not been set yet. Returns {@code StatusCode::INVALID_ARG} if the property is
+    // not configured.
+    ::android::base::Result<VehiclePropValuePool::RecyclableType> readValue(
             const ::aidl::android::hardware::automotive::vehicle::VehiclePropValue& request) const;
 
-    // Read the value for the requested property.
-    ::android::base::Result<
-            std::unique_ptr<::aidl::android::hardware::automotive::vehicle::VehiclePropValue>>
-    readValue(int32_t prop, int32_t area = 0, int64_t token = 0) const;
+    // Read the value for the requested property. Returns {@code StatusCode::NOT_AVAILABLE} if the
+    // value has not been set yet. Returns {@code StatusCode::INVALID_ARG} if the property is
+    // not configured.
+    ::android::base::Result<VehiclePropValuePool::RecyclableType> readValue(
+            int32_t prop, int32_t area = 0, int64_t token = 0) const;
 
     // Get all property configs.
     std::vector<::aidl::android::hardware::automotive::vehicle::VehiclePropConfig> getAllConfigs()
@@ -95,25 +107,36 @@ class VehiclePropertyStore {
             const ::aidl::android::hardware::automotive::vehicle::VehiclePropConfig*>
     getConfig(int32_t propId) const;
 
+    // Set a callback that would be called when a property value has been updated.
+    void setOnValueChangeCallback(const OnValueChangeCallback& callback);
+
+    inline std::shared_ptr<VehiclePropValuePool> getValuePool() { return mValuePool; }
+
   private:
     struct RecordId {
         int32_t area;
         int64_t token;
 
-        bool operator==(const RecordId& other) const;
-        bool operator<(const RecordId& other) const;
-
         std::string toString() const;
+
+        bool operator==(const RecordId& other) const;
+    };
+
+    struct RecordIdHash {
+        size_t operator()(RecordId const& recordId) const;
     };
 
     struct Record {
         ::aidl::android::hardware::automotive::vehicle::VehiclePropConfig propConfig;
         TokenFunction tokenFunction;
-        std::map<RecordId, ::aidl::android::hardware::automotive::vehicle::VehiclePropValue> values;
+        std::unordered_map<RecordId, VehiclePropValuePool::RecyclableType, RecordIdHash> values;
     };
 
+    // {@code VehiclePropValuePool} is thread-safe.
+    std::shared_ptr<VehiclePropValuePool> mValuePool;
     mutable std::mutex mLock;
     std::unordered_map<int32_t, Record> mRecordsByPropId GUARDED_BY(mLock);
+    OnValueChangeCallback mOnValueChangeCallback GUARDED_BY(mLock);
 
     const Record* getRecordLocked(int32_t propId) const;
 
@@ -123,9 +146,8 @@ class VehiclePropertyStore {
             const ::aidl::android::hardware::automotive::vehicle::VehiclePropValue& propValue,
             const Record& record) const;
 
-    ::android::base::Result<
-            std::unique_ptr<::aidl::android::hardware::automotive::vehicle::VehiclePropValue>>
-    readValueLocked(const RecordId& recId, const Record& record) const;
+    ::android::base::Result<VehiclePropValuePool::RecyclableType> readValueLocked(
+            const RecordId& recId, const Record& record) const;
 };
 
 }  // namespace vehicle

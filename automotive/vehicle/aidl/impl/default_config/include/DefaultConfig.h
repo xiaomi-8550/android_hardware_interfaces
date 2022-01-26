@@ -1016,8 +1016,8 @@ const std::vector<ConfigDeclaration> kVehicleProperties = {
         {
                 .config =
                         {
-                                .prop = toInt(VehicleProperty::EPOCH_TIME),
-                                .access = VehiclePropertyAccess::READ_WRITE,
+                                .prop = toInt(VehicleProperty::ANDROID_EPOCH_TIME),
+                                .access = VehiclePropertyAccess::WRITE,
                                 .changeMode = VehiclePropertyChangeMode::ON_CHANGE,
                         },
         },
@@ -1052,7 +1052,7 @@ const std::vector<ConfigDeclaration> kVehicleProperties = {
                                 .access = VehiclePropertyAccess::READ,
                                 .changeMode = VehiclePropertyChangeMode::ON_CHANGE,
                         },
-                .initialValue = {.int32Values = {0 /* ClusterHome */, -1 /* ClusterNone */}},
+                .initialValue = {.int32Values = {0 /* ClusterHome */}},
         },
         {
                 .config =
