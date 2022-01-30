@@ -56,6 +56,13 @@ class Tuner : public BnTuner {
     ::ndk::ScopedAStatus openLnbByName(const std::string& in_lnbName,
                                        std::vector<int32_t>* out_lnbId,
                                        std::shared_ptr<ILnb>* _aidl_return) override;
+    ::ndk::ScopedAStatus setLna(bool in_bEnable) override;
+    ::ndk::ScopedAStatus setMaxNumberOfFrontends(FrontendType in_frontendType,
+                                                 int32_t in_maxNumber) override;
+    ::ndk::ScopedAStatus getMaxNumberOfFrontends(FrontendType in_frontendType,
+                                                 int32_t* _aidl_return) override;
+
+    binder_status_t dump(int fd, const char** args, uint32_t numArgs) override;
 
     std::shared_ptr<Frontend> getFrontendById(int32_t frontendId);
     void setFrontendAsDemuxSource(int32_t frontendId, int32_t demuxId);
@@ -78,6 +85,7 @@ class Tuner : public BnTuner {
     // First used id will be 0.
     int32_t mLastUsedId = -1;
     vector<std::shared_ptr<Lnb>> mLnbs;
+    map<FrontendType, int32_t> mMaxUsableFrontends;
 };
 
 }  // namespace tuner

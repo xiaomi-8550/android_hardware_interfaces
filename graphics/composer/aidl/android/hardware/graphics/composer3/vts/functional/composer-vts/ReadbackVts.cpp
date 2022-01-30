@@ -32,7 +32,7 @@ const std::vector<ColorMode> ReadbackHelper::colorModes = {ColorMode::SRGB, Colo
 const std::vector<Dataspace> ReadbackHelper::dataspaces = {common::Dataspace::SRGB,
                                                            common::Dataspace::DISPLAY_P3};
 
-void TestLayer::write(CommandWriterBase& writer) {
+void TestLayer::write(ComposerClientWriter& writer) {
     writer.setLayerDisplayFrame(mDisplay, mLayer, mDisplayFrame);
     writer.setLayerSourceCrop(mDisplay, mLayer, mSourceCrop);
     writer.setLayerZOrder(mDisplay, mLayer, mZOrder);
@@ -242,18 +242,18 @@ void ReadbackBuffer::checkReadbackBuffer(std::vector<Color> expectedColors) {
 
     int outBytesPerPixel;
     int outBytesPerStride;
-    auto status = mGraphicBuffer->lockAsync(mUsage, mAccessRegion, nullptr, fenceHandle.get(),
+    void* bufData = nullptr;
+    auto status = mGraphicBuffer->lockAsync(mUsage, mAccessRegion, &bufData, fenceHandle.get(),
                                             &outBytesPerPixel, &outBytesPerStride);
     EXPECT_EQ(::android::OK, status);
     ASSERT_TRUE(mPixelFormat == PixelFormat::RGB_888 || mPixelFormat == PixelFormat::RGBA_8888);
-    ReadbackHelper::compareColorBuffers(expectedColors, mGraphicBuffer.get(),
-                                        static_cast<int32_t>(mStride), mWidth, mHeight,
-                                        mPixelFormat);
+    ReadbackHelper::compareColorBuffers(expectedColors, bufData, static_cast<int32_t>(mStride),
+                                        mWidth, mHeight, mPixelFormat);
     status = mGraphicBuffer->unlock();
     EXPECT_EQ(::android::OK, status);
 }
 
-void TestColorLayer::write(CommandWriterBase& writer) {
+void TestColorLayer::write(ComposerClientWriter& writer) {
     TestLayer::write(writer);
     writer.setLayerCompositionType(mDisplay, mLayer, Composition::SOLID_COLOR);
     writer.setLayerColor(mDisplay, mLayer, mColor);
@@ -296,7 +296,7 @@ TestBufferLayer::TestBufferLayer(const std::shared_ptr<IComposerClient>& client,
     setSourceCrop({0, 0, (float)width, (float)height});
 }
 
-void TestBufferLayer::write(CommandWriterBase& writer) {
+void TestBufferLayer::write(ComposerClientWriter& writer) {
     TestLayer::write(writer);
     writer.setLayerCompositionType(mDisplay, mLayer, mComposition);
     writer.setLayerVisibleRegion(mDisplay, mLayer, std::vector<Rect>(1, mDisplayFrame));
@@ -345,11 +345,11 @@ void TestBufferLayer::setBuffer(std::vector<Color> colors) {
     ASSERT_EQ(::android::OK, mGraphicBuffer->initCheck());
 }
 
-void TestBufferLayer::setDataspace(common::Dataspace dataspace, CommandWriterBase& writer) {
+void TestBufferLayer::setDataspace(common::Dataspace dataspace, ComposerClientWriter& writer) {
     writer.setLayerDataspace(mDisplay, mLayer, dataspace);
 }
 
-void TestBufferLayer::setToClientComposition(CommandWriterBase& writer) {
+void TestBufferLayer::setToClientComposition(ComposerClientWriter& writer) {
     writer.setLayerCompositionType(mDisplay, mLayer, Composition::CLIENT);
 }
 

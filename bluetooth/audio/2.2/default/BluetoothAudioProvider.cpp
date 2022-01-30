@@ -22,7 +22,7 @@
 
 #include "AudioPort_2_0_to_2_2_Wrapper.h"
 #include "BluetoothAudioSessionReport_2_2.h"
-#include "BluetoothAudioSupportedCodecsDB_2_1.h"
+#include "BluetoothAudioSupportedCodecsDB_2_2.h"
 
 namespace android {
 namespace hardware {
@@ -182,6 +182,29 @@ Return<void> BluetoothAudioProvider::endSession() {
    */
   stack_iface_ = nullptr;
   audio_config_ = {};
+
+  return Void();
+}
+
+Return<void> BluetoothAudioProvider::updateAudioConfiguration(
+    const AudioConfiguration& audioConfig) {
+  LOG(INFO) << __func__ << " - SessionType=" << toString(session_type_);
+
+  if (stack_iface_ == nullptr) {
+    LOG(INFO) << __func__ << " - SessionType=" << toString(session_type_)
+              << " has NO session";
+    return Void();
+  }
+
+  if (audioConfig.getDiscriminator() != audio_config_.getDiscriminator()) {
+    LOG(INFO) << __func__ << " - SessionType=" << toString(session_type_)
+              << " audio config type is not match";
+    return Void();
+  }
+
+  audio_config_ = audioConfig;
+  BluetoothAudioSessionReport_2_2::ReportAudioConfigChanged(session_type_,
+                                                            audio_config_);
 
   return Void();
 }
