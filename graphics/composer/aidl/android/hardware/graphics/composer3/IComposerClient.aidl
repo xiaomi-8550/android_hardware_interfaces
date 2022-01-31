@@ -18,9 +18,11 @@ package android.hardware.graphics.composer3;
 
 import android.hardware.graphics.composer3.ClientTargetProperty;
 import android.hardware.graphics.composer3.ColorMode;
+import android.hardware.graphics.composer3.CommandResultPayload;
 import android.hardware.graphics.composer3.ContentType;
 import android.hardware.graphics.composer3.DisplayAttribute;
 import android.hardware.graphics.composer3.DisplayCapability;
+import android.hardware.graphics.composer3.DisplayCommand;
 import android.hardware.graphics.composer3.DisplayConnectionType;
 import android.hardware.graphics.composer3.DisplayContentSample;
 import android.hardware.graphics.composer3.DisplayContentSamplingAttributes;
@@ -28,7 +30,6 @@ import android.hardware.graphics.composer3.DisplayIdentification;
 import android.hardware.graphics.composer3.FormatColorComponent;
 import android.hardware.graphics.composer3.HdrCapabilities;
 import android.hardware.graphics.composer3.IComposerCallback;
-import android.hardware.graphics.composer3.LayerGenericMetadataKey;
 import android.hardware.graphics.composer3.PerFrameMetadataKey;
 import android.hardware.graphics.composer3.PowerMode;
 import android.hardware.graphics.composer3.ReadbackBufferAttributes;
@@ -36,8 +37,6 @@ import android.hardware.graphics.composer3.RenderIntent;
 import android.hardware.graphics.composer3.VirtualDisplay;
 import android.hardware.graphics.composer3.VsyncPeriodChangeConstraints;
 import android.hardware.graphics.composer3.VsyncPeriodChangeTimeline;
-import android.hardware.graphics.composer3.command.CommandPayload;
-import android.hardware.graphics.composer3.command.CommandResultPayload;
 
 @VintfStability
 interface IComposerClient {
@@ -163,7 +162,7 @@ interface IComposerClient {
      *
      * @return are the command statuses.
      */
-    CommandResultPayload[] executeCommands(in CommandPayload[] commands);
+    CommandResultPayload[] executeCommands(in DisplayCommand[] commands);
 
     /**
      * Retrieves which display configuration is currently active.
@@ -185,7 +184,7 @@ interface IComposerClient {
     /**
      * Returns the color modes supported on this display.
      *
-     * All devices must support at least ColorMode::NATIVE.
+     * All devices must support at least ColorMode.NATIVE.
      *
      * @param display is the display to query.
      *
@@ -201,7 +200,7 @@ interface IComposerClient {
      *
      * When the layer dataspace is a legacy dataspace (see
      * common@1.1::Dataspace) and the display render intent is
-     * RenderIntent::ENHANCE, the pixel values can go through an
+     * RenderIntent.ENHANCE, the pixel values can go through an
      * implementation-defined saturation transform before being mapped to the
      * current color mode colorimetrically.
      *
@@ -245,22 +244,6 @@ interface IComposerClient {
      * @exception EX_UNSUPPORTED when attribute cannot be queried for the config.
      */
     int getDisplayAttribute(long display, int config, DisplayAttribute attribute);
-
-    /**
-     * Use getDisplayCapabilities instead. If brightness is supported, must return
-     * DisplayCapability::BRIGHTNESS as one of the display capabilities via getDisplayCapabilities.
-     * Only use getDisplayCapabilities as the source of truth to query brightness support.
-     *
-     * Gets whether brightness operations are supported on a display.
-     *
-     * @param display The display.
-     *
-     * @return Whether brightness operations are supported on the display.
-     *
-     * @exception EX_BAD_DISPLAY   when the display is invalid, or
-     * @exception EX_BAD_PARAMETER when the output parameter is invalid.
-     */
-    boolean getDisplayBrightnessSupport(long display);
 
     /**
      * Provides a list of supported capabilities (as described in the
@@ -371,21 +354,6 @@ interface IComposerClient {
     DisplayContentSamplingAttributes getDisplayedContentSamplingAttributes(long display);
 
     /**
-     * Returns whether the given display supports PowerMode::DOZE and
-     * PowerMode::DOZE_SUSPEND. DOZE_SUSPEND may not provide any benefit over
-     * DOZE (see the definition of PowerMode for more information), but if
-     * both DOZE and DOZE_SUSPEND are no different from PowerMode::ON, the
-     * device must not claim support.
-     *
-     * @param display is the display to query.
-     *
-     * @return is true only when the display supports doze modes.
-     *
-     * @exception EX_BAD_DISPLAY when an invalid display handle was passed in.
-     */
-    boolean getDozeSupport(long display);
-
-    /**
      * Returns the high dynamic range (HDR) capabilities of the given display,
      * which are invariant with regard to the active configuration.
      *
@@ -398,20 +366,6 @@ interface IComposerClient {
      * @exception EX_BAD_DISPLAY when an invalid display handle was passed in.
      */
     HdrCapabilities getHdrCapabilities(long display);
-
-    /**
-     * Retrieves the set of keys that may be passed into setLayerGenericMetadata
-     *
-     * Key names must meet the following requirements:
-     * - Must be specified in reverse domain name notation
-     * - Must not start with 'com.android' or 'android'
-     * - Must be unique within the returned vector
-     * - Must correspond to a matching HIDL struct type, which defines the
-     *   structure of its values. For example, the key 'com.example.V1-3.Foo'
-     *   should correspond to a value of type com.example@1.3::Foo, which is
-     *   defined in a vendor HAL extension
-     */
-    LayerGenericMetadataKey[] getLayerGenericMetadataKeys();
 
     /**
      * Returns the maximum number of virtual displays supported by this device
@@ -440,8 +394,8 @@ interface IComposerClient {
      *
      * The width and height of this buffer must be those of the currently-active
      * display configuration, and the usage flags must consist of the following:
-     *   BufferUsage::CPU_READ | BufferUsage::GPU_TEXTURE |
-     *   BufferUsage::COMPOSER_OUTPUT
+     *   BufferUsage.CPU_READ | BufferUsage.GPU_TEXTURE |
+     *   BufferUsage.COMPOSER_OUTPUT
      *
      * The format and dataspace provided must be sufficient such that if a
      * correctly-configured buffer is passed into setReadbackBuffer, filled by
@@ -510,14 +464,14 @@ interface IComposerClient {
      *   getReadbackBufferAttributes
      *   setReadbackBuffer
      */
-    ParcelFileDescriptor getReadbackBufferFence(long display);
+    @nullable ParcelFileDescriptor getReadbackBufferFence(long display);
 
     /**
      * Returns the render intents supported by the specified display and color
      * mode.
      *
-     * For SDR color modes, RenderIntent::COLORIMETRIC must be supported. For
-     * HDR color modes, RenderIntent::TONE_MAP_COLORIMETRIC must be supported.
+     * For SDR color modes, RenderIntent.COLORIMETRIC must be supported. For
+     * HDR color modes, RenderIntent.TONE_MAP_COLORIMETRIC must be supported.
      *
      * @param display is the display to query.
      * @param mode is the color mode to query.
@@ -531,11 +485,11 @@ interface IComposerClient {
 
     /**
      * Provides a list of all the content types supported by this display (any of
-     * ContentType::{GRAPHICS, PHOTO, CINEMA, GAME}). This list must not change after
+     * ContentType.{GRAPHICS, PHOTO, CINEMA, GAME}). This list must not change after
      * initialization.
      *
      * Content types are introduced in HDMI 1.4 and supporting them is optional. The
-     * ContentType::NONE is always supported and will not be returned by this method..
+     * ContentType.NONE is always supported and will not be returned by this method..
      *
      * @return out is a list of supported content types.
      *
@@ -602,7 +556,7 @@ interface IComposerClient {
      * be triggered.
      *
      * This function should only be called if the display reports support for
-     * DisplayCapability::AUTO_LOW_LATENCY_MODE from getDisplayCapabilities_2_4.
+     * DisplayCapability.AUTO_LOW_LATENCY_MODE from getDisplayCapabilities_2_4.
      *
      * @exception EX_BAD_DISPLAY when an invalid display handle was passed in.
      * @exception EX_UNSUPPORTED when AUTO_LOW_LATENCY_MODE is not supported by the composer
@@ -626,8 +580,8 @@ interface IComposerClient {
      * The color mode and render intent change must take effect on next
      * presentDisplay.
      *
-     * All devices must support at least ColorMode::NATIVE and
-     * RenderIntent::COLORIMETRIC, and displays are assumed to be in this mode
+     * All devices must support at least ColorMode.NATIVE and
+     * RenderIntent.COLORIMETRIC, and displays are assumed to be in this mode
      * upon hotplug.
      *
      * @param display is the display to which the color mode is set.
@@ -713,8 +667,8 @@ interface IComposerClient {
      * complete when this function returns. It is valid to call this function
      * multiple times with the same power mode.
      *
-     * All displays must support PowerMode::ON and PowerMode::OFF.  Whether a
-     * display supports PowerMode::DOZE or PowerMode::DOZE_SUSPEND may be
+     * All displays must support PowerMode.ON and PowerMode.OFF.  Whether a
+     * display supports PowerMode.DOZE or PowerMode.DOZE_SUSPEND may be
      * queried using getDozeSupport.
      *
      * @param display is the display to which the power mode is set.
@@ -733,13 +687,15 @@ interface IComposerClient {
      * This buffer must have been allocated as described in
      * getReadbackBufferAttributes and is in the dataspace provided by the same.
      *
+     * Also provides a file descriptor referring to a release sync fence
+     * object, which must be signaled when it is safe to write to the readback
+     * buffer. If it is already safe to write to the readback buffer, null may be passed instead.
+     *
      * If there is hardware protected content on the display at the time of the next
      * composition, the area of the readback buffer covered by such content must be
      * completely black. Any areas of the buffer not covered by such content may
      * optionally be black as well.
      *
-     * The release fence file descriptor provided works identically to the one
-     * described for setOutputBuffer.
      *
      * This function must not be called between any call to validateDisplay and a
      * subsequent call to presentDisplay.
@@ -747,7 +703,8 @@ interface IComposerClient {
      * Parameters:
      * @param display - the display on which to create the layer.
      * @param buffer - the new readback buffer
-     * @param releaseFence - a sync fence file descriptor as described in setOutputBuffer
+     * @param releaseFence - a sync fence file descriptor as described above or null if it is
+     *                       already safe to write to the readback buffer.
      *
      * @exception EX_BAD_DISPLAY - an invalid display handle was passed in
      * @exception EX_BAD_PARAMETER - the new readback buffer handle was invalid
@@ -757,7 +714,7 @@ interface IComposerClient {
      *   getReadbackBufferFence
      */
     void setReadbackBuffer(long display, in android.hardware.common.NativeHandle buffer,
-            in ParcelFileDescriptor releaseFence);
+            in @nullable ParcelFileDescriptor releaseFence);
 
     /**
      * Enables or disables the vsync signal for the given display. Virtual

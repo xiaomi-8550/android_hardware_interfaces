@@ -38,6 +38,8 @@ parcelable DemuxFilterMediaEvent {
   int streamId;
   boolean isPtsPresent;
   long pts;
+  boolean isDtsPresent;
+  long dts;
   long dataLength;
   long offset;
   android.hardware.common.NativeHandle avMemory;
@@ -46,4 +48,5 @@ parcelable DemuxFilterMediaEvent {
   int mpuSequenceNumber;
   boolean isPesPrivateData;
   android.hardware.tv.tuner.DemuxFilterMediaEventExtraMetaData extraMetaData;
+  android.hardware.tv.tuner.DemuxFilterScIndexMask scIndexMask;
 }

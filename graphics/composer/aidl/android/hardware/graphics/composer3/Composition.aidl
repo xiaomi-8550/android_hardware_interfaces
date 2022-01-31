@@ -66,11 +66,25 @@ enum Composition {
     /**
      * The device must handle the composition of this layer, as well as
      * its buffer updates and content synchronization. Only supported on
-     * devices which provide Capability::SIDEBAND_STREAM.
+     * devices which provide Capability.SIDEBAND_STREAM.
      *
      * Upon validateDisplay, the device may request a change from this
      * type to either DEVICE or CLIENT, but it is unlikely that content
      * will display correctly in these cases.
      */
     SIDEBAND = 5,
+    /**
+     * A display decoration layer contains a buffer which is used to provide
+     * anti-aliasing on the cutout region/rounded corners on the top and
+     * bottom of a display.
+     *
+     * Pixels in the buffer with an alpha of 0 (transparent) will show the
+     * content underneath, and pixels with a max alpha value will be rendered in
+     * black. An alpha in between will show the underlying content blended with
+     * black.
+     *
+     * Upon validateDisplay, the device may request a change from this type
+     * to either DEVICE or CLIENT.
+     */
+    DISPLAY_DECORATION = 6,
 }
