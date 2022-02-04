@@ -18,12 +18,14 @@
 
 #include <aidl/android/hardware/gnss/BnAGnss.h>
 #include <aidl/android/hardware/gnss/BnGnss.h>
+#include <aidl/android/hardware/gnss/BnGnssAntennaInfo.h>
 #include <aidl/android/hardware/gnss/BnGnssBatching.h>
 #include <aidl/android/hardware/gnss/BnGnssConfiguration.h>
 #include <aidl/android/hardware/gnss/BnGnssDebug.h>
 #include <aidl/android/hardware/gnss/BnGnssMeasurementInterface.h>
 #include <aidl/android/hardware/gnss/BnGnssPowerIndication.h>
 #include <aidl/android/hardware/gnss/BnGnssPsds.h>
+#include <aidl/android/hardware/gnss/measurement_corrections/BnMeasurementCorrectionsInterface.h>
 #include <aidl/android/hardware/gnss/visibility_control/BnGnssVisibilityControl.h>
 #include <atomic>
 #include <mutex>
@@ -69,6 +71,12 @@ class Gnss : public BnGnss {
     ndk::ScopedAStatus getExtensionGnssVisibilityControl(
             std::shared_ptr<android::hardware::gnss::visibility_control::IGnssVisibilityControl>*
                     iGnssVisibilityControl) override;
+    ndk::ScopedAStatus getExtensionGnssAntennaInfo(
+            std::shared_ptr<IGnssAntennaInfo>* iGnssAntennaInfo) override;
+    ndk::ScopedAStatus getExtensionMeasurementCorrections(
+            std::shared_ptr<android::hardware::gnss::measurement_corrections::
+                                    IMeasurementCorrectionsInterface>* iMeasurementCorrections)
+            override;
 
     std::shared_ptr<GnssConfiguration> mGnssConfiguration;
     std::shared_ptr<GnssPowerIndication> mGnssPowerIndication;
@@ -79,6 +87,7 @@ class Gnss : public BnGnss {
     std::vector<IGnssCallback::GnssSvInfo> filterBlocklistedSatellites(
             std::vector<IGnssCallback::GnssSvInfo> gnssSvInfoList);
     void reportGnssStatusValue(const IGnssCallback::GnssStatusValue gnssStatusValue) const;
+    std::unique_ptr<GnssLocation> getLocationFromHW();
 
     static std::shared_ptr<IGnssCallback> sGnssCallback;
 
