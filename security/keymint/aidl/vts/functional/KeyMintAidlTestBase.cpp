@@ -537,6 +537,9 @@ ErrorCode KeyMintAidlTestBase::Update(const string& input, string* output) {
     Status result;
     if (!output) return ErrorCode::UNEXPECTED_NULL_POINTER;
 
+    EXPECT_NE(op_, nullptr);
+    if (!op_) return ErrorCode::UNEXPECTED_NULL_POINTER;
+
     std::vector<uint8_t> o_put;
     result = op_->update(vector<uint8_t>(input.begin(), input.end()), {}, {}, &o_put);
 
@@ -809,6 +812,7 @@ void KeyMintAidlTestBase::LocalVerifyMessage(const string& message, const string
         if (padding == PaddingMode::RSA_PSS) {
             EXPECT_GT(EVP_PKEY_CTX_set_rsa_padding(pkey_ctx, RSA_PKCS1_PSS_PADDING), 0);
             EXPECT_GT(EVP_PKEY_CTX_set_rsa_pss_saltlen(pkey_ctx, EVP_MD_size(md)), 0);
+            EXPECT_GT(EVP_PKEY_CTX_set_rsa_mgf1_md(pkey_ctx, md), 0);
         }
 
         ASSERT_EQ(1, EVP_DigestVerifyUpdate(&digest_ctx,
