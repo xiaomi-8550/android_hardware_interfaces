@@ -76,7 +76,10 @@ class GraphicsComposerAidlTest : public ::testing::TestWithParam<std::string> {
         ASSERT_NE(binder, nullptr);
         ASSERT_NO_FATAL_FAILURE(mComposer = IComposer::fromBinder(binder));
         ASSERT_NE(mComposer, nullptr);
-        ASSERT_NO_FATAL_FAILURE(mComposer->createClient(&mComposerClient));
+
+        ndk::ScopedAStatus status;
+        ASSERT_NO_FATAL_FAILURE(status = mComposer->createClient(&mComposerClient));
+        ASSERT_TRUE(status.isOk());
 
         mComposerCallback = ::ndk::SharedRefBase::make<GraphicsComposerCallback>();
         EXPECT_TRUE(mComposerClient->registerCallback(mComposerCallback).isOk());
@@ -186,6 +189,14 @@ class GraphicsComposerAidlTest : public ::testing::TestWithParam<std::string> {
         auto resourceIt = mDisplayResources.find(display.get());
         ASSERT_NE(mDisplayResources.end(), resourceIt);
         resourceIt->second.layers.erase(layer);
+    }
+
+    bool hasCapability(Capability capability) {
+        std::vector<Capability> capabilities;
+        EXPECT_TRUE(mComposer->getCapabilities(&capabilities).isOk());
+        return std::any_of(
+                capabilities.begin(), capabilities.end(),
+                [&](const Capability& activeCapability) { return activeCapability == capability; });
     }
 
     // returns an invalid display id (one that has not been registered to a
@@ -1474,6 +1485,11 @@ class GraphicsComposerAidlCommandTest : public GraphicsComposerAidlTest {
     }
 
     void Test_expectedPresentTime(std::optional<int> framesDelay) {
+        if (hasCapability(Capability::PRESENT_FENCE_IS_NOT_RELIABLE)) {
+            GTEST_SUCCEED() << "Device has unreliable present fences capability, skipping";
+            return;
+        }
+
         ASSERT_TRUE(mComposerClient->setPowerMode(mPrimaryDisplay, PowerMode::ON).isOk());
 
         const auto vsyncPeriod = getVsyncPeriod();
@@ -1538,7 +1554,7 @@ TEST_P(GraphicsComposerAidlCommandTest, SetLayerColorTransform) {
     execute();
 
     const auto errors = mReader.takeErrors();
-    if (errors.size() == 1 && errors[0].errorCode == EX_UNSUPPORTED_OPERATION) {
+    if (errors.size() == 1 && errors[0].errorCode == IComposerClient::EX_UNSUPPORTED) {
         GTEST_SUCCEED() << "setLayerColorTransform is not supported";
         return;
     }
@@ -1555,7 +1571,7 @@ TEST_P(GraphicsComposerAidlCommandTest, SetDisplayBrightness) {
         execute();
         const auto errors = mReader.takeErrors();
         EXPECT_EQ(1, errors.size());
-        EXPECT_EQ(EX_UNSUPPORTED_OPERATION, errors[0].errorCode);
+        EXPECT_EQ(IComposerClient::EX_UNSUPPORTED, errors[0].errorCode);
         GTEST_SUCCEED() << "SetDisplayBrightness is not supported";
         return;
     }
@@ -1650,10 +1666,7 @@ TEST_P(GraphicsComposerAidlCommandTest, PRESENT_DISPLAY) {
  */
 // TODO(b/208441745) fix the test failure
 TEST_P(GraphicsComposerAidlCommandTest, PRESENT_DISPLAY_NO_LAYER_STATE_CHANGES) {
-    std::vector<Capability> capabilities;
-    EXPECT_TRUE(mComposer->getCapabilities(&capabilities).isOk());
-    if (none_of(capabilities.begin(), capabilities.end(),
-                [&](auto item) { return item == Capability::SKIP_VALIDATE; })) {
+    if (!hasCapability(Capability::SKIP_VALIDATE)) {
         GTEST_SUCCEED() << "Device does not have skip validate capability, skipping";
         return;
     }
@@ -1881,10 +1894,7 @@ TEST_P(GraphicsComposerAidlCommandTest, SET_LAYER_PLANE_ALPHA) {
 }
 
 TEST_P(GraphicsComposerAidlCommandTest, SET_LAYER_SIDEBAND_STREAM) {
-    std::vector<Capability> capabilities;
-    EXPECT_TRUE(mComposer->getCapabilities(&capabilities).isOk());
-    if (none_of(capabilities.begin(), capabilities.end(),
-                [&](auto& item) { return item == Capability::SIDEBAND_STREAM; })) {
+    if (!hasCapability(Capability::SIDEBAND_STREAM)) {
         GTEST_SUCCEED() << "no sideband stream support";
         return;
     }
@@ -2022,6 +2032,27 @@ TEST_P(GraphicsComposerAidlCommandTest, SET_LAYER_PER_FRAME_METADATA) {
     }
 
     EXPECT_TRUE(mComposerClient->destroyLayer(mPrimaryDisplay, layer).isOk());
+}
+
+TEST_P(GraphicsComposerAidlCommandTest, setLayerWhitePointNits) {
+    int64_t layer;
+    EXPECT_TRUE(mComposerClient->createLayer(mPrimaryDisplay, kBufferSlotCount, &layer).isOk());
+
+    mWriter.setLayerWhitePointNits(mPrimaryDisplay, layer, 200.f);
+    execute();
+    ASSERT_TRUE(mReader.takeErrors().empty());
+
+    mWriter.setLayerWhitePointNits(mPrimaryDisplay, layer, 1000.f);
+    execute();
+    ASSERT_TRUE(mReader.takeErrors().empty());
+
+    mWriter.setLayerWhitePointNits(mPrimaryDisplay, layer, 0.f);
+    execute();
+    ASSERT_TRUE(mReader.takeErrors().empty());
+
+    mWriter.setLayerWhitePointNits(mPrimaryDisplay, layer, -1.f);
+    execute();
+    ASSERT_TRUE(mReader.takeErrors().empty());
 }
 
 TEST_P(GraphicsComposerAidlCommandTest, setActiveConfigWithConstraints) {
