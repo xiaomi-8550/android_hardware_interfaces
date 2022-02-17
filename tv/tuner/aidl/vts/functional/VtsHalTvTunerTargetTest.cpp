@@ -640,6 +640,153 @@ TEST_P(TunerFilterAidlTest, testTimeFilter) {
     testTimeFilter(timeFilterMap[timeFilter.timeFilterId]);
 }
 
+static bool isMediaFilter(const FilterConfig& filterConfig) {
+    switch (filterConfig.type.mainType) {
+        case DemuxFilterMainType::TS: {
+            // TS Audio and Video filters are media filters
+            auto tsFilterType =
+                    filterConfig.type.subType.get<DemuxFilterSubType::Tag::tsFilterType>();
+            return (tsFilterType == DemuxTsFilterType::AUDIO ||
+                    tsFilterType == DemuxTsFilterType::VIDEO);
+        }
+        case DemuxFilterMainType::MMTP: {
+            // MMTP Audio and Video filters are media filters
+            auto mmtpFilterType =
+                    filterConfig.type.subType.get<DemuxFilterSubType::Tag::mmtpFilterType>();
+            return (mmtpFilterType == DemuxMmtpFilterType::AUDIO ||
+                    mmtpFilterType == DemuxMmtpFilterType::VIDEO);
+        }
+        default:
+            return false;
+    }
+}
+
+static int getDemuxFilterEventDataLength(const DemuxFilterEvent& event) {
+    switch (event.getTag()) {
+        case DemuxFilterEvent::Tag::section:
+            return event.get<DemuxFilterEvent::Tag::section>().dataLength;
+        case DemuxFilterEvent::Tag::media:
+            return event.get<DemuxFilterEvent::Tag::media>().dataLength;
+        case DemuxFilterEvent::Tag::pes:
+            return event.get<DemuxFilterEvent::Tag::pes>().dataLength;
+        case DemuxFilterEvent::Tag::download:
+            return event.get<DemuxFilterEvent::Tag::download>().dataLength;
+        case DemuxFilterEvent::Tag::ipPayload:
+            return event.get<DemuxFilterEvent::Tag::ipPayload>().dataLength;
+
+        case DemuxFilterEvent::Tag::tsRecord:
+        case DemuxFilterEvent::Tag::mmtpRecord:
+        case DemuxFilterEvent::Tag::temi:
+        case DemuxFilterEvent::Tag::monitorEvent:
+        case DemuxFilterEvent::Tag::startId:
+            return 0;
+    }
+}
+
+// TODO: move boilerplate into text fixture
+void TunerFilterAidlTest::testDelayHint(const FilterConfig& filterConf) {
+    int32_t feId;
+    int32_t demuxId;
+    std::shared_ptr<IDemux> demux;
+    int64_t filterId;
+
+    mFrontendTests.getFrontendIdByType(frontendMap[live.frontendId].type, feId);
+    ASSERT_TRUE(feId != INVALID_ID);
+    ASSERT_TRUE(mFrontendTests.openFrontendById(feId));
+    ASSERT_TRUE(mFrontendTests.setFrontendCallback());
+    ASSERT_TRUE(mDemuxTests.openDemux(demux, demuxId));
+    ASSERT_TRUE(mDemuxTests.setDemuxFrontendDataSource(feId));
+    mFilterTests.setDemux(demux);
+
+    ASSERT_TRUE(mFilterTests.openFilterInDemux(filterConf.type, filterConf.bufferSize));
+    ASSERT_TRUE(mFilterTests.getNewlyOpenedFilterId_64bit(filterId));
+
+    bool mediaFilter = isMediaFilter(filterConf);
+    auto filter = mFilterTests.getFilterById(filterId);
+
+    // startTime needs to be set before calling setDelayHint.
+    auto startTime = std::chrono::steady_clock::now();
+
+    auto timeDelayInMs = std::chrono::milliseconds(filterConf.timeDelayInMs);
+    if (timeDelayInMs.count() > 0) {
+        FilterDelayHint delayHint;
+        delayHint.hintType = FilterDelayHintType::TIME_DELAY_IN_MS;
+        delayHint.hintValue = timeDelayInMs.count();
+
+        // setDelayHint should fail for media filters.
+        ASSERT_EQ(filter->setDelayHint(delayHint).isOk(), !mediaFilter);
+    }
+
+    int dataDelayInBytes = filterConf.dataDelayInBytes;
+    if (dataDelayInBytes > 0) {
+        FilterDelayHint delayHint;
+        delayHint.hintType = FilterDelayHintType::DATA_SIZE_DELAY_IN_BYTES;
+        delayHint.hintValue = dataDelayInBytes;
+
+        // setDelayHint should fail for media filters.
+        ASSERT_EQ(filter->setDelayHint(delayHint).isOk(), !mediaFilter);
+    }
+
+    // start and stop filter (and wait for first callback) in order to
+    // circumvent callback scheduler race conditions after adjusting filter
+    // delays.
+    auto cb = mFilterTests.getFilterCallbacks().at(filterId);
+    auto future =
+            cb->verifyFilterCallback([](const std::vector<DemuxFilterEvent>&) { return true; });
+    mFilterTests.startFilter(filterId);
+
+    auto timeout = std::chrono::seconds(30);
+    ASSERT_EQ(future.wait_for(timeout), std::future_status::ready);
+
+    mFilterTests.stopFilter(filterId);
+
+    if (!mediaFilter) {
+        int callbackSize = 0;
+        future = cb->verifyFilterCallback(
+                [&callbackSize](const std::vector<DemuxFilterEvent>& events) {
+                    for (const auto& event : events) {
+                        callbackSize += getDemuxFilterEventDataLength(event);
+                    }
+                    return true;
+                });
+
+        // The configure stage can also produce events, so we should set the delay
+        // hint beforehand.
+        ASSERT_TRUE(mFilterTests.configFilter(filterConf.settings, filterId));
+
+        ASSERT_TRUE(mFilterTests.startFilter(filterId));
+
+        // block and wait for callback to be received.
+        ASSERT_EQ(future.wait_for(timeout), std::future_status::ready);
+        auto duration = std::chrono::steady_clock::now() - startTime;
+
+        bool delayHintTest = duration >= timeDelayInMs;
+        bool dataSizeTest = callbackSize >= dataDelayInBytes;
+
+        if (timeDelayInMs.count() > 0 && dataDelayInBytes > 0) {
+            ASSERT_TRUE(delayHintTest || dataSizeTest);
+        } else {
+            // if only one of time delay / data delay is configured, one of them
+            // holds true by default, so we want both assertions to be true.
+            ASSERT_TRUE(delayHintTest && dataSizeTest);
+        }
+
+        ASSERT_TRUE(mFilterTests.stopFilter(filterId));
+    }
+
+    ASSERT_TRUE(mFilterTests.closeFilter(filterId));
+    ASSERT_TRUE(mDemuxTests.closeDemux());
+    ASSERT_TRUE(mFrontendTests.closeFrontend());
+}
+
+TEST_P(TunerFilterAidlTest, FilterDelayHintTest) {
+    description("Test filter time delay hint.");
+
+    for (const auto& obj : filterMap) {
+        testDelayHint(obj.second);
+    }
+}
+
 TEST_P(TunerPlaybackAidlTest, PlaybackDataFlowWithTsSectionFilterTest) {
     description("Feed ts data from playback and configure Ts section filter to get output");
     if (!playback.support || playback.sectionFilterId.compare(emptyHardwareId) == 0) {
@@ -742,6 +889,22 @@ TEST_P(TunerFrontendAidlTest, LinkToCiCam) {
         return;
     }
     mFrontendTests.tuneTest(frontendMap[live.frontendId]);
+}
+
+TEST_P(TunerFrontendAidlTest, getHardwareInfo) {
+    description("Test Frontend get hardware info");
+    if (!live.hasFrontendConnection) {
+        return;
+    }
+    mFrontendTests.debugInfoTest(frontendMap[live.frontendId]);
+}
+
+TEST_P(TunerFrontendAidlTest, maxNumberOfFrontends) {
+    description("Test Max Frontend number");
+    if (!live.hasFrontendConnection) {
+        return;
+    }
+    mFrontendTests.maxNumberOfFrontendsTest();
 }
 
 TEST_P(TunerBroadcastAidlTest, BroadcastDataFlowVideoFilterTest) {

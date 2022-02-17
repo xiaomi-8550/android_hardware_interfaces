@@ -18,6 +18,9 @@
 #define android_hardware_automotive_vehicle_aidl_impl_utils_common_include_VehicleUtils_H_
 
 #include <VehicleHalTypes.h>
+
+#include <android-base/format.h>
+#include <android-base/result.h>
 #include <utils/Log.h>
 
 namespace android {
@@ -182,6 +185,100 @@ inline size_t getVehiclePropValueSize(
     size += prop.value.stringValue.size();
     return size;
 }
+
+template <class T>
+::aidl::android::hardware::automotive::vehicle::StatusCode getErrorCode(
+        const ::android::base::Result<T>& result) {
+    if (result.ok()) {
+        return ::aidl::android::hardware::automotive::vehicle::StatusCode::OK;
+    }
+    return static_cast<::aidl::android::hardware::automotive::vehicle::StatusCode>(
+            result.error().code());
+}
+
+template <class T>
+int getIntErrorCode(const ::android::base::Result<T>& result) {
+    return toInt(getErrorCode(result));
+}
+
+template <class T>
+std::string getErrorMsg(const ::android::base::Result<T>& result) {
+    if (result.ok()) {
+        return "";
+    }
+    return result.error().message();
+}
+
+template <class T>
+::ndk::ScopedAStatus toScopedAStatus(
+        const ::android::base::Result<T>& result,
+        ::aidl::android::hardware::automotive::vehicle::StatusCode status,
+        const std::string& additionalErrorMsg) {
+    if (result.ok()) {
+        return ::ndk::ScopedAStatus::ok();
+    }
+    return ::ndk::ScopedAStatus::fromServiceSpecificErrorWithMessage(
+            toInt(status),
+            fmt::format("{}, error: {}", additionalErrorMsg, getErrorMsg(result)).c_str());
+}
+
+template <class T>
+::ndk::ScopedAStatus toScopedAStatus(
+        const ::android::base::Result<T>& result,
+        ::aidl::android::hardware::automotive::vehicle::StatusCode status) {
+    return toScopedAStatus(result, status, "");
+}
+
+template <class T>
+::ndk::ScopedAStatus toScopedAStatus(const ::android::base::Result<T>& result) {
+    return toScopedAStatus(result, getErrorCode(result));
+}
+
+template <class T>
+::ndk::ScopedAStatus toScopedAStatus(const ::android::base::Result<T>& result,
+                                     const std::string& additionalErrorMsg) {
+    return toScopedAStatus(result, getErrorCode(result), additionalErrorMsg);
+}
+
+// Check whether the value is valid according to config.
+// We check for the following:
+// *  If the type is INT32, {@code value.int32Values} must contain one element.
+// *  If the type is INT32_VEC, {@code value.int32Values} must contain at least one element.
+// *  If the type is INT64, {@code value.int64Values} must contain one element.
+// *  If the type is INT64_VEC, {@code value.int64Values} must contain at least one element.
+// *  If the type is FLOAT, {@code value.floatValues} must contain one element.
+// *  If the type is FLOAT_VEC, {@code value.floatValues} must contain at least one element.
+// *  If the type is MIXED, see checkVendorMixedPropValue.
+::android::base::Result<void> checkPropValue(
+        const ::aidl::android::hardware::automotive::vehicle::VehiclePropValue& value,
+        const ::aidl::android::hardware::automotive::vehicle::VehiclePropConfig* config);
+
+// Check whether the Mixed type value is valid according to config.
+// We check for the following:
+// *  configArray[1] + configArray[2] + configArray[3] must be equal to the number of
+//    {@code value.int32Values} elements.
+// *  configArray[4] + configArray[5] must be equal to the number of {@code value.int64Values}
+//    elements.
+// *  configArray[6] + configArray[7] must be equal to the number of {@code value.floatValues}
+//    elements.
+// *  configArray[8] must be equal to the number of {@code value.byteValues} elements.
+::android::base::Result<void> checkVendorMixedPropValue(
+        const ::aidl::android::hardware::automotive::vehicle::VehiclePropValue& value,
+        const ::aidl::android::hardware::automotive::vehicle::VehiclePropConfig* config);
+
+// Check whether the value is within the configured range.
+// We check for the following types:
+// *  If type is INT32 or INT32_VEC, all {@code value.int32Values} elements must be within
+//    {@code minInt32Value} and {@code maxInt32Value} if either of them is not 0.
+// *  If type is INT64 or INT64_VEC, all {@code value.int64Values} elements must be within
+//    {@code minInt64Value} and {@code maxInt64Value} if either of them is not 0.
+// *  If type is FLOAT or FLOAT_VEC, all {@code value.floatValues} elements must be within
+//    {@code minFloatValues} and {@code maxFloatValues} if either of them is not 0.
+// We don't check other types. If more checks are required, they should be added in VehicleHardware
+// implementation.
+::android::base::Result<void> checkValueRange(
+        const ::aidl::android::hardware::automotive::vehicle::VehiclePropValue& value,
+        const ::aidl::android::hardware::automotive::vehicle::VehicleAreaConfig* config);
 
 }  // namespace vehicle
 }  // namespace automotive

@@ -19,6 +19,7 @@ package android.hardware.tv.tuner;
 import android.hardware.common.NativeHandle;
 
 import android.hardware.tv.tuner.DemuxFilterMediaEventExtraMetaData;
+import android.hardware.tv.tuner.DemuxFilterScIndexMask;
 
 /**
  * Filter Event for Audio or Video Filter.
@@ -38,6 +39,16 @@ parcelable DemuxFilterMediaEvent {
      * the same format as PTS (Presentation Time Stamp).
      */
     long pts;
+
+    /**
+     * true if DTS is present in the PES header.
+     */
+    boolean isDtsPresent;
+
+    /**
+     * Decode TimeStamp for audio or video frame.
+     */
+    long dts;
 
     /**
      * Data size in bytes of audio or video frame
@@ -74,4 +85,10 @@ parcelable DemuxFilterMediaEvent {
     boolean isPesPrivateData;
 
     DemuxFilterMediaEventExtraMetaData extraMetaData;
+
+    /**
+     * DemuxFilterScIndexMask for the key frame info. It's optional to hardware which can only
+     * access unit framing at decode stage.
+     */
+    DemuxFilterScIndexMask scIndexMask;
 }

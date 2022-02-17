@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include <aidl/android/hardware/tv/tuner/Result.h>
+
 #include "FrontendTests.h"
 
 ndk::ScopedAStatus FrontendCallback::onEvent(FrontendEventType frontendEventType) {
@@ -171,7 +173,8 @@ wait:
     }
 
     EXPECT_TRUE(scanMsgLockedReceived) << "Scan message LOCKED not received before END";
-    EXPECT_TRUE(targetFrequencyReceived) << "frequency not received before LOCKED on blindScan";
+    if (type == FrontendScanType::SCAN_BLIND)
+        EXPECT_TRUE(targetFrequencyReceived) << "frequency not received before LOCKED on blindScan";
     mScanMessageReceived = false;
     mScanMsgProcessed = true;
 }
@@ -397,6 +400,20 @@ void FrontendTests::verifyFrontendStatus(vector<FrontendStatusType> statusTypes,
                             expectStatuses[i].get<FrontendStatus::Tag::partialReceptionFlag>());
                 break;
             }
+            case FrontendStatusType::STREAM_ID_LIST: {
+                ASSERT_TRUE(std::equal(
+                        realStatuses[i].get<FrontendStatus::Tag::streamIdList>().begin(),
+                        realStatuses[i].get<FrontendStatus::Tag::streamIdList>().end(),
+                        expectStatuses[i].get<FrontendStatus::Tag::streamIdList>().begin()));
+                break;
+            }
+            case FrontendStatusType::DVBT_CELL_IDS: {
+                ASSERT_TRUE(std::equal(
+                        realStatuses[i].get<FrontendStatus::Tag::dvbtCellIds>().begin(),
+                        realStatuses[i].get<FrontendStatus::Tag::dvbtCellIds>().end(),
+                        expectStatuses[i].get<FrontendStatus::Tag::dvbtCellIds>().begin()));
+                break;
+            }
             default: {
                 continue;
             }
@@ -429,6 +446,7 @@ AssertionResult FrontendTests::tuneFrontend(FrontendConfig config, bool testWith
         getDvrTests()->startPlaybackInputThread(
                 mDvrConfig.playbackInputFile,
                 mDvrConfig.settings.get<DvrSettings::Tag::playback>());
+        getDvrTests()->startDvrPlayback();
     }
     mFrontendCallback->tuneTestOnLock(mFrontend, config.settings);
     return AssertionResult(true);
@@ -440,6 +458,7 @@ AssertionResult FrontendTests::stopTuneFrontend(bool testWithDemux) {
     status = mFrontend->stopTune();
     if (mIsSoftwareFe && testWithDemux) {
         getDvrTests()->stopPlaybackThread();
+        getDvrTests()->stopDvrPlayback();
         getDvrTests()->closeDvrPlayback();
     }
     return AssertionResult(status.isOk());
@@ -467,6 +486,13 @@ void FrontendTests::getFrontendIdByType(FrontendType feType, int32_t& feId) {
     feId = INVALID_ID;
 }
 
+AssertionResult FrontendTests::verifyHardwareInfo() {
+    EXPECT_TRUE(mFrontend) << "Test with openFrontendById first.";
+    std::string info;
+    ndk::ScopedAStatus status = mFrontend->getHardwareInfo(&info);
+    return AssertionResult(status.isOk() && !info.empty());
+}
+
 void FrontendTests::tuneTest(FrontendConfig frontendConf) {
     int32_t feId;
     getFrontendIdByType(frontendConf.type, feId);
@@ -481,6 +507,53 @@ void FrontendTests::tuneTest(FrontendConfig frontendConf) {
     verifyFrontendStatus(frontendConf.tuneStatusTypes, frontendConf.expectTuneStatuses);
     ASSERT_TRUE(stopTuneFrontend(false /*testWithDemux*/));
     ASSERT_TRUE(closeFrontend());
+}
+
+void FrontendTests::debugInfoTest(FrontendConfig frontendConf) {
+    int32_t feId;
+    getFrontendIdByType(frontendConf.type, feId);
+    ASSERT_TRUE(feId != INVALID_ID);
+    ASSERT_TRUE(openFrontendById(feId));
+    ASSERT_TRUE(setFrontendCallback());
+    ASSERT_TRUE(tuneFrontend(frontendConf, false /*testWithDemux*/));
+    ASSERT_TRUE(verifyHardwareInfo());
+    ASSERT_TRUE(stopTuneFrontend(false /*testWithDemux*/));
+    ASSERT_TRUE(closeFrontend());
+}
+
+void FrontendTests::maxNumberOfFrontendsTest() {
+    ASSERT_TRUE(getFrontendIds());
+    for (size_t i = 0; i < mFeIds.size(); i++) {
+        ASSERT_TRUE(getFrontendInfo(mFeIds[i]));
+        int32_t defaultMax = -1;
+        ndk::ScopedAStatus status;
+        // Check default value
+        status = mService->getMaxNumberOfFrontends(mFrontendInfo.type, &defaultMax);
+        ASSERT_TRUE(status.isOk());
+        ASSERT_TRUE(defaultMax > 0);
+        // Set to -1
+        status = mService->setMaxNumberOfFrontends(mFrontendInfo.type, -1);
+        ASSERT_TRUE(status.getServiceSpecificError() ==
+                    static_cast<int32_t>(Result::INVALID_ARGUMENT));
+        // Set to defaultMax + 1
+        status = mService->setMaxNumberOfFrontends(mFrontendInfo.type, defaultMax + 1);
+        ASSERT_TRUE(status.getServiceSpecificError() ==
+                    static_cast<int32_t>(Result::INVALID_ARGUMENT));
+        // Set to 0
+        status = mService->setMaxNumberOfFrontends(mFrontendInfo.type, 0);
+        ASSERT_TRUE(status.isOk());
+        // Check after set
+        int32_t currentMax = -1;
+        status = mService->getMaxNumberOfFrontends(mFrontendInfo.type, &currentMax);
+        ASSERT_TRUE(status.isOk());
+        ASSERT_TRUE(currentMax == 0);
+        // Reset to default
+        status = mService->setMaxNumberOfFrontends(mFrontendInfo.type, defaultMax);
+        ASSERT_TRUE(status.isOk());
+        status = mService->getMaxNumberOfFrontends(mFrontendInfo.type, &currentMax);
+        ASSERT_TRUE(status.isOk());
+        ASSERT_TRUE(defaultMax == currentMax);
+    }
 }
 
 void FrontendTests::scanTest(FrontendConfig frontendConf, FrontendScanType scanType) {

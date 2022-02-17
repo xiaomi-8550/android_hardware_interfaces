@@ -32,8 +32,17 @@
 // later when a module using the interface is updated, e.g., Mainline modules.
 
 package android.hardware.graphics.composer3;
-@Backing(type="int") @VintfStability
-enum DisplayRequest {
-  FLIP_CLIENT_TARGET = 1,
-  WRITE_CLIENT_TARGET_TO_OUTPUT = 2,
+@VintfStability
+parcelable DisplayRequest {
+  long display;
+  int mask;
+  android.hardware.graphics.composer3.DisplayRequest.LayerRequest[] layerRequests;
+  const int FLIP_CLIENT_TARGET = 1;
+  const int WRITE_CLIENT_TARGET_TO_OUTPUT = 2;
+  @VintfStability
+  parcelable LayerRequest {
+    long layer;
+    int mask;
+    const int CLEAR_CLIENT_TARGET = 1;
+  }
 }

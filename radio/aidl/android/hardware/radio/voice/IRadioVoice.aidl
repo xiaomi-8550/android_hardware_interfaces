@@ -117,9 +117,9 @@ oneway interface IRadioVoice {
      *
      * Response function is IRadioVoiceResponse.emergencyDialResponse()
      */
-    void emergencyDial(in int serial, in Dial dialInfo, in EmergencyServiceCategory categories,
-            in String[] urns, in EmergencyCallRouting routing,
-            in boolean hasKnownUserIntentEmergency, in boolean isTesting);
+    void emergencyDial(in int serial, in Dial dialInfo, in int categories, in String[] urns,
+            in EmergencyCallRouting routing, in boolean hasKnownUserIntentEmergency,
+            in boolean isTesting);
 
     /**
      * Request the radio's system selection module to exit emergency callback mode. Radio must not
@@ -267,6 +267,15 @@ oneway interface IRadioVoice {
     void hangupWaitingOrBackground(in int serial);
 
     /**
+     * Query current Voice NR enable state
+     *
+     * @param serial Serial number of request.
+     *
+     * Response function is IRadioVoiceResponse.isVoNrEnabledResponse()
+     */
+    void isVoNrEnabled(in int serial);
+
+    /**
      * Send UDUB (user determined user busy) to ringing or waiting call answer)
      *
      * @param serial Serial number of request.
@@ -402,6 +411,16 @@ oneway interface IRadioVoice {
      * Response function is IRadioVoiceResponse.setTtyModeResponse()
      */
     void setTtyMode(in int serial, in TtyMode mode);
+
+    /**
+     * Set Voice NR enable state
+     *
+     * @param serial Serial number of request.
+     * @param enable true for "enable vonr" and false for "disable vonr"
+     *
+     * Response function is IRadioVoiceResponse.setVoNrEnabledResponse()
+     */
+    void setVoNrEnabled(in int serial, in boolean enable);
 
     /**
      * Start playing a DTMF tone. Continue playing DTMF tone until stopDtmf is received. If a

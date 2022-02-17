@@ -31,6 +31,7 @@ class BluetoothAudioSession_2_1 {
   std::shared_ptr<BluetoothAudioSession> audio_session;
 
   ::android::hardware::bluetooth::audio::V2_1::SessionType session_type_2_1_;
+  ::android::hardware::bluetooth::audio::V2_1::SessionType raw_session_type_;
 
   // audio data configuration for both software and offloading
   ::android::hardware::bluetooth::audio::V2_1::AudioConfiguration
@@ -49,10 +50,6 @@ class BluetoothAudioSession_2_1 {
   BluetoothAudioSession_2_1(
       const ::android::hardware::bluetooth::audio::V2_1::SessionType&
           session_type);
-
-  // The function helps to check if this session is ready or not
-  // @return: true if the Bluetooth stack has started the specified session
-  bool IsSessionReady();
 
   std::shared_ptr<BluetoothAudioSession> GetAudioSession();
 

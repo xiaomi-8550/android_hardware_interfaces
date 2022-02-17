@@ -96,6 +96,8 @@ struct FilterConfig {
     AvStreamType streamType;
     int32_t ipCid;
     int32_t monitorEventTypes;
+    int timeDelayInMs = 0;
+    int dataDelayInBytes = 0;
 
     bool operator<(const FilterConfig& /*c*/) const { return false; }
 };
@@ -335,6 +337,12 @@ struct TunerTestingConfigAidlReader1_0 {
 
                 if (filterConfig.hasMonitorEventTypes()) {
                     filterMap[id].monitorEventTypes = (int32_t)filterConfig.getMonitorEventTypes();
+                }
+                if (filterConfig.hasTimeDelayInMs()) {
+                    filterMap[id].timeDelayInMs = filterConfig.getTimeDelayInMs();
+                }
+                if (filterConfig.hasDataDelayInBytes()) {
+                    filterMap[id].dataDelayInBytes = filterConfig.getDataDelayInBytes();
                 }
                 if (filterConfig.hasAvFilterSettings_optional()) {
                     auto av = filterConfig.getFirstAvFilterSettings_optional();
@@ -946,6 +954,7 @@ struct TunerTestingConfigAidlReader1_0 {
         settings.isCheckCrc = section->getIsCheckCrc();
         settings.isRepeat = section->getIsRepeat();
         settings.isRaw = section->getIsRaw();
+        settings.bitWidthOfLengthField = section->getBitWidthOfLengthField();
         return settings;
     }
 
@@ -956,6 +965,7 @@ struct TunerTestingConfigAidlReader1_0 {
         }
         auto av = filterConfig.getFirstAvFilterSettings_optional();
         settings.isPassthrough = av->getIsPassthrough();
+        settings.isSecureMemory = av->getIsSecureMemory();
         return settings;
     }
 

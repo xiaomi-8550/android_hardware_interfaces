@@ -30,10 +30,16 @@ cc_test {
     srcs: [
         "gnss_hal_test.cpp",
         "gnss_hal_test_cases.cpp",
+        "AGnssCallbackAidl.cpp",
+        "GnssAntennaInfoCallbackAidl.cpp",
         "GnssBatchingCallback.cpp",
         "GnssCallbackAidl.cpp",
+        "GnssGeofenceCallback.cpp",
         "GnssMeasurementCallbackAidl.cpp",
+        "GnssNavigationMessageCallback.cpp",
         "GnssPowerIndicationCallback.cpp",
+        "GnssVisibilityControlCallback.cpp",
+        "MeasurementCorrectionsCallback.cpp",
         "VtsHalGnssTargetTest.cpp",
     ],
     shared_libs: [

@@ -16,22 +16,57 @@
 
 package android.hardware.graphics.composer3;
 
-/**
- * Display requests returned by getDisplayRequests.
- */
 @VintfStability
-@Backing(type="int")
-enum DisplayRequest {
+parcelable DisplayRequest {
     /**
      * Instructs the client to provide a new client target buffer, even if
      * no layers are marked for client composition.
      */
-    FLIP_CLIENT_TARGET = 1 << 0,
+    const int FLIP_CLIENT_TARGET = 1 << 0;
+
     /**
      * Instructs the client to write the result of client composition
      * directly into the virtual display output buffer. If any of the
-     * layers are not marked as Composition::CLIENT or the given display
+     * layers are not marked as Composition.CLIENT or the given display
      * is not a virtual display, this request has no effect.
      */
-    WRITE_CLIENT_TARGET_TO_OUTPUT = 1 << 1,
+    const int WRITE_CLIENT_TARGET_TO_OUTPUT = 1 << 1;
+
+    /**
+     * The display which this commands refers to.
+     * @see IComposer.createDisplay
+     */
+    long display;
+
+    /**
+     * The display requests for the current validated state. This must be a
+     * bitwise-or of the constants in `DisplayRequest`.
+     */
+    int mask;
+
+    @VintfStability
+    parcelable LayerRequest {
+        /**
+         * The client must clear its target with transparent pixels where
+         * this layer would be. The client may ignore this request if the
+         * layer must be blended.
+         */
+        const int CLEAR_CLIENT_TARGET = 1 << 0;
+
+        /**
+         * The layer which this commands refers to.
+         * @see IComposer.createLayer
+         */
+        long layer;
+        /**
+         * The layer requests for the current validated state. This must be a
+         * bitwise-or of the constants in `LayerRequest`.
+         */
+        int mask;
+    }
+
+    /**
+     * The layer requests for the current validated state.
+     */
+    LayerRequest[] layerRequests;
 }

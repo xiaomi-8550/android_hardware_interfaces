@@ -76,24 +76,25 @@ class FakeVehicleHardwareTestHelper {
 class FakeVehicleHardwareTest : public ::testing::Test {
   protected:
     void SetUp() override {
-        getHardware()->registerOnPropertyChangeEvent(
+        auto callback = std::make_unique<IVehicleHardware::PropertyChangeCallback>(
                 [this](const std::vector<VehiclePropValue>& values) {
-                    return onPropertyChangeEvent(values);
+                    onPropertyChangeEvent(values);
                 });
+        getHardware()->registerOnPropertyChangeEvent(std::move(callback));
+        mSetValuesCallback = std::make_shared<IVehicleHardware::SetValuesCallback>(
+                [this](std::vector<SetValueResult> results) { onSetValues(results); });
+        mGetValuesCallback = std::make_shared<IVehicleHardware::GetValuesCallback>(
+                [this](std::vector<GetValueResult> results) { onGetValues(results); });
     }
 
     FakeVehicleHardware* getHardware() { return &mHardware; }
 
     StatusCode setValues(const std::vector<SetValueRequest>& requests) {
-        return getHardware()->setValues(
-                [this](const std::vector<SetValueResult> results) { return onSetValues(results); },
-                requests);
+        return getHardware()->setValues(mSetValuesCallback, requests);
     }
 
     StatusCode getValues(const std::vector<GetValueRequest>& requests) {
-        return getHardware()->getValues(
-                [this](const std::vector<GetValueResult> results) { return onGetValues(results); },
-                requests);
+        return getHardware()->getValues(mGetValuesCallback, requests);
     }
 
     StatusCode setValue(const VehiclePropValue& value) {
@@ -153,7 +154,7 @@ class FakeVehicleHardwareTest : public ::testing::Test {
         return toInt(result.error());
     }
 
-    void onSetValues(const std::vector<SetValueResult> results) {
+    void onSetValues(std::vector<SetValueResult> results) {
         for (auto& result : results) {
             mSetValueResults.push_back(result);
         }
@@ -161,7 +162,7 @@ class FakeVehicleHardwareTest : public ::testing::Test {
 
     const std::vector<SetValueResult>& getSetValueResults() { return mSetValueResults; }
 
-    void onGetValues(const std::vector<GetValueResult> results) {
+    void onGetValues(std::vector<GetValueResult> results) {
         for (auto& result : results) {
             mGetValueResults.push_back(result);
         }
@@ -169,7 +170,7 @@ class FakeVehicleHardwareTest : public ::testing::Test {
 
     const std::vector<GetValueResult>& getGetValueResults() { return mGetValueResults; }
 
-    void onPropertyChangeEvent(const std::vector<VehiclePropValue>& values) {
+    void onPropertyChangeEvent(std::vector<VehiclePropValue> values) {
         for (auto& value : values) {
             mChangedProperties.push_back(value);
         }
@@ -245,6 +246,8 @@ class FakeVehicleHardwareTest : public ::testing::Test {
     std::vector<SetValueResult> mSetValueResults;
     std::vector<GetValueResult> mGetValueResults;
     std::vector<VehiclePropValue> mChangedProperties;
+    std::shared_ptr<IVehicleHardware::SetValuesCallback> mSetValuesCallback;
+    std::shared_ptr<IVehicleHardware::GetValuesCallback> mGetValuesCallback;
 };
 
 TEST_F(FakeVehicleHardwareTest, testGetAllPropertyConfigs) {
@@ -367,9 +370,9 @@ TEST_F(FakeVehicleHardwareTest, testSetValuesError) {
 
 TEST_F(FakeVehicleHardwareTest, testRegisterOnPropertyChangeEvent) {
     // We have already registered this callback in Setup, here we are registering again.
-    getHardware()->registerOnPropertyChangeEvent(std::bind(
-            &FakeVehicleHardwareTest_testRegisterOnPropertyChangeEvent_Test::onPropertyChangeEvent,
-            this, std::placeholders::_1));
+    auto callback = std::make_unique<IVehicleHardware::PropertyChangeCallback>(
+            [this](const std::vector<VehiclePropValue>& values) { onPropertyChangeEvent(values); });
+    getHardware()->registerOnPropertyChangeEvent(std::move(callback));
 
     auto testValues = getTestPropValues();
     std::vector<SetValueRequest> requests;

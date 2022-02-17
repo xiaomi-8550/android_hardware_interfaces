@@ -17,19 +17,23 @@
 #define LOG_TAG "VehicleService"
 
 #include <DefaultVehicleHal.h>
+#include <FakeVehicleHardware.h>
 
 #include <android/binder_manager.h>
 #include <android/binder_process.h>
 #include <utils/Log.h>
 
 using ::android::hardware::automotive::vehicle::DefaultVehicleHal;
+using ::android::hardware::automotive::vehicle::fake::FakeVehicleHardware;
 
 int main(int /* argc */, char* /* argv */[]) {
-    std::shared_ptr<DefaultVehicleHal> vhal = ndk::SharedRefBase::make<DefaultVehicleHal>();
+    std::unique_ptr<FakeVehicleHardware> hardware = std::make_unique<FakeVehicleHardware>();
+    std::shared_ptr<DefaultVehicleHal> vhal =
+            ::ndk::SharedRefBase::make<DefaultVehicleHal>(std::move(hardware));
 
     ALOGI("Registering as service...");
-    binder_exception_t err = AServiceManager_addService(vhal->asBinder().get(),
-                                                        "android.hardware.automotive.vehicle");
+    binder_exception_t err = AServiceManager_addService(
+            vhal->asBinder().get(), "android.hardware.automotive.vehicle.IVehicle/default");
     if (err != EX_NONE) {
         ALOGE("failed to register android.hardware.automotive.vehicle service, exception: %d", err);
         return 1;

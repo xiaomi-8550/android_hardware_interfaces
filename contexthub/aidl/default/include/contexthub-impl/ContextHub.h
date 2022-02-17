@@ -18,6 +18,8 @@
 
 #include <aidl/android/hardware/contexthub/BnContextHub.h>
 
+#include <unordered_set>
+
 namespace aidl {
 namespace android {
 namespace hardware {
@@ -26,25 +28,28 @@ namespace contexthub {
 class ContextHub : public BnContextHub {
     ::ndk::ScopedAStatus getContextHubs(std::vector<ContextHubInfo>* out_contextHubInfos) override;
     ::ndk::ScopedAStatus loadNanoapp(int32_t in_contextHubId, const NanoappBinary& in_appBinary,
-                                     int32_t in_transactionId, bool* _aidl_return) override;
+                                     int32_t in_transactionId) override;
     ::ndk::ScopedAStatus unloadNanoapp(int32_t in_contextHubId, int64_t in_appId,
-                                       int32_t in_transactionId, bool* _aidl_return) override;
+                                       int32_t in_transactionId) override;
     ::ndk::ScopedAStatus disableNanoapp(int32_t in_contextHubId, int64_t in_appId,
-                                        int32_t in_transactionId, bool* _aidl_return) override;
+                                        int32_t in_transactionId) override;
     ::ndk::ScopedAStatus enableNanoapp(int32_t in_contextHubId, int64_t in_appId,
-                                       int32_t in_transactionId, bool* _aidl_return) override;
+                                       int32_t in_transactionId) override;
     ::ndk::ScopedAStatus onSettingChanged(Setting in_setting, bool in_enabled) override;
-    ::ndk::ScopedAStatus queryNanoapps(int32_t in_contextHubId, bool* _aidl_return) override;
-    ::ndk::ScopedAStatus registerCallback(int32_t in_contextHubId,
-                                          const std::shared_ptr<IContextHubCallback>& in_cb,
-                                          bool* _aidl_return) override;
+    ::ndk::ScopedAStatus queryNanoapps(int32_t in_contextHubId) override;
+    ::ndk::ScopedAStatus registerCallback(
+            int32_t in_contextHubId, const std::shared_ptr<IContextHubCallback>& in_cb) override;
     ::ndk::ScopedAStatus sendMessageToHub(int32_t in_contextHubId,
-                                          const ContextHubMessage& in_message,
-                                          bool* _aidl_return) override;
+                                          const ContextHubMessage& in_message) override;
+    ::ndk::ScopedAStatus onHostEndpointConnected(const HostEndpointInfo& in_info) override;
+
+    ::ndk::ScopedAStatus onHostEndpointDisconnected(char16_t in_hostEndpointId) override;
 
   private:
     static constexpr uint32_t kMockHubId = 0;
     std::shared_ptr<IContextHubCallback> mCallback;
+
+    std::unordered_set<char16_t> mConnectedHostEndpoints;
 };
 
 }  // namespace contexthub

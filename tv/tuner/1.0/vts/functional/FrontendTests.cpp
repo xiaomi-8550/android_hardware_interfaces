@@ -128,7 +128,8 @@ wait:
     }
 
     EXPECT_TRUE(scanMsgLockedReceived) << "Scan message LOCKED not received before END";
-    EXPECT_TRUE(targetFrequencyReceived) << "frequency not received before LOCKED on blindScan";
+    if (type == FrontendScanType::SCAN_BLIND)
+        EXPECT_TRUE(targetFrequencyReceived) << "frequency not received before LOCKED on blindScan";
     mScanMessageReceived = false;
     mScanMsgProcessed = true;
 }
@@ -376,6 +377,7 @@ AssertionResult FrontendTests::tuneFrontend(FrontendConfig config, bool testWith
         result &= getDvrTests()->getDvrPlaybackMQDescriptor() == success();
         getDvrTests()->startPlaybackInputThread(mDvrConfig.playbackInputFile,
                                                 mDvrConfig.settings.playback());
+        getDvrTests()->startDvrPlayback();
         if (!result) {
             ALOGW("[vts] Software frontend dvr configure failed.");
             return failure();
@@ -399,6 +401,7 @@ AssertionResult FrontendTests::stopTuneFrontend(bool testWithDemux) {
     status = mFrontend->stopTune();
     if (mIsSoftwareFe && testWithDemux) {
         getDvrTests()->stopPlaybackThread();
+        getDvrTests()->stopDvrPlayback();
         getDvrTests()->closeDvrPlayback();
     }
     return AssertionResult(status == Result::SUCCESS);

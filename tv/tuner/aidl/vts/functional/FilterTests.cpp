@@ -17,11 +17,40 @@
 #include "FilterTests.h"
 
 #include <inttypes.h>
+#include <algorithm>
 
 #include <aidl/android/hardware/tv/tuner/DemuxFilterMonitorEventType.h>
 #include <aidlcommonsupport/NativeHandle.h>
 
 using ::aidl::android::hardware::common::NativeHandle;
+
+::ndk::ScopedAStatus FilterCallback::onFilterEvent(const vector<DemuxFilterEvent>& events) {
+    android::Mutex::Autolock autoLock(mMsgLock);
+    // Temprarily we treat the first coming back filter data on the matching pid a success
+    // once all of the MQ are cleared, means we got all the expected output
+    readFilterEventsData(events);
+    mPidFilterOutputCount++;
+    mMsgCondition.signal();
+
+    for (auto it = mFilterCallbackVerifiers.begin(); it != mFilterCallbackVerifiers.end();) {
+        auto& [verifier, promise] = *it;
+        if (verifier(events)) {
+            promise.set_value();
+            it = mFilterCallbackVerifiers.erase(it);
+        } else {
+            ++it;
+        }
+    };
+
+    return ::ndk::ScopedAStatus::ok();
+}
+
+std::future<void> FilterCallback::verifyFilterCallback(FilterCallbackVerifier&& verifier) {
+    std::promise<void> promise;
+    auto future = promise.get_future();
+    mFilterCallbackVerifiers.emplace_back(std::move(verifier), std::move(promise));
+    return future;
+}
 
 void FilterCallback::testFilterDataOutput() {
     android::Mutex::Autolock autoLock(mMsgLock);
