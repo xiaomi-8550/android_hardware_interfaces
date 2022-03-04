@@ -46,4 +46,6 @@ interface IFrontend {
   int linkCiCam(in int ciCamId);
   void unlinkCiCam(in int ciCamId);
   String getHardwareInfo();
+  void removeOutputPid(int pid);
+  android.hardware.tv.tuner.FrontendStatusReadiness[] getFrontendStatusReadiness(in android.hardware.tv.tuner.FrontendStatusType[] statusTypes);
 }

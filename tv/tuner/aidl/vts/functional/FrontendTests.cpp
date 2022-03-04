@@ -298,6 +298,13 @@ AssertionResult FrontendTests::linkCiCam(int32_t ciCamId) {
     return AssertionResult(status.isOk());
 }
 
+AssertionResult FrontendTests::removeOutputPid(int32_t removePid) {
+    ndk::ScopedAStatus status;
+    status = mFrontend->removeOutputPid(removePid);
+    return AssertionResult(status.isOk() || status.getServiceSpecificError() ==
+                                                    static_cast<int32_t>(Result::UNAVAILABLE));
+}
+
 AssertionResult FrontendTests::unlinkCiCam(int32_t ciCamId) {
     ndk::ScopedAStatus status = mFrontend->unlinkCiCam(ciCamId);
     return AssertionResult(status.isOk());
@@ -414,6 +421,13 @@ void FrontendTests::verifyFrontendStatus(vector<FrontendStatusType> statusTypes,
                         expectStatuses[i].get<FrontendStatus::Tag::dvbtCellIds>().begin()));
                 break;
             }
+            case FrontendStatusType::ATSC3_ALL_PLP_INFO: {
+                ASSERT_TRUE(std::equal(
+                        realStatuses[i].get<FrontendStatus::Tag::allPlpInfo>().begin(),
+                        realStatuses[i].get<FrontendStatus::Tag::allPlpInfo>().end(),
+                        expectStatuses[i].get<FrontendStatus::Tag::allPlpInfo>().begin()));
+                break;
+            }
             default: {
                 continue;
             }
@@ -501,6 +515,7 @@ void FrontendTests::tuneTest(FrontendConfig frontendConf) {
     ASSERT_TRUE(setFrontendCallback());
     if (frontendConf.canConnectToCiCam) {
         ASSERT_TRUE(linkCiCam(frontendConf.ciCamId));
+        ASSERT_TRUE(removeOutputPid(frontendConf.removePid));
         ASSERT_TRUE(unlinkCiCam(frontendConf.ciCamId));
     }
     ASSERT_TRUE(tuneFrontend(frontendConf, false /*testWithDemux*/));
@@ -564,5 +579,49 @@ void FrontendTests::scanTest(FrontendConfig frontendConf, FrontendScanType scanT
     ASSERT_TRUE(setFrontendCallback());
     ASSERT_TRUE(scanFrontend(frontendConf, scanType));
     ASSERT_TRUE(stopScanFrontend());
+    ASSERT_TRUE(closeFrontend());
+}
+
+void FrontendTests::statusReadinessTest(FrontendConfig frontendConf) {
+    int32_t feId;
+    vector<FrontendStatusType> allTypes;
+    vector<FrontendStatusReadiness> readiness;
+    getFrontendIdByType(frontendConf.type, feId);
+    ASSERT_TRUE(feId != INVALID_ID);
+    ASSERT_TRUE(openFrontendById(feId));
+    ASSERT_TRUE(setFrontendCallback());
+    if (frontendConf.canConnectToCiCam) {
+        ASSERT_TRUE(linkCiCam(frontendConf.ciCamId));
+        ASSERT_TRUE(removeOutputPid(frontendConf.removePid));
+        ASSERT_TRUE(unlinkCiCam(frontendConf.ciCamId));
+    }
+    ASSERT_TRUE(getFrontendInfo(feId));
+    ASSERT_TRUE(tuneFrontend(frontendConf, false /*testWithDemux*/));
+
+    // TODO: find a better way to push all frontend status types
+    for (int32_t i = 0; i < static_cast<int32_t>(FrontendStatusType::ATSC3_ALL_PLP_INFO); i++) {
+        allTypes.push_back(static_cast<FrontendStatusType>(i));
+    }
+    ndk::ScopedAStatus status = mFrontend->getFrontendStatusReadiness(allTypes, &readiness);
+    ASSERT_TRUE(status.isOk());
+    ASSERT_TRUE(readiness.size() == allTypes.size());
+    for (int32_t i = 0; i < readiness.size(); i++) {
+        int32_t j = 0;
+        while (j < mFrontendInfo.statusCaps.size()) {
+            if (allTypes[i] == mFrontendInfo.statusCaps[j]) {
+                ASSERT_TRUE(readiness[i] == FrontendStatusReadiness::UNAVAILABLE ||
+                            readiness[i] == FrontendStatusReadiness::UNSTABLE ||
+                            readiness[i] == FrontendStatusReadiness::STABLE);
+                break;
+            }
+            j++;
+        }
+
+        if (j >= mFrontendInfo.statusCaps.size()) {
+            ASSERT_TRUE(readiness[i] == FrontendStatusReadiness::UNSUPPORTED);
+        }
+    }
+
+    ASSERT_TRUE(stopTuneFrontend(false /*testWithDemux*/));
     ASSERT_TRUE(closeFrontend());
 }
