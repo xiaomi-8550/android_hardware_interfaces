@@ -36,6 +36,7 @@ namespace implementation {
 namespace legacy_hal {
 // Import all the types defined inside the legacy HAL header files into this
 // namespace.
+using ::chre_nan_rtt_state;
 using ::frame_info;
 using ::frame_type;
 using ::FRAME_TYPE_80211_MGMT;
@@ -204,6 +205,11 @@ using ::WIFI_AC_BE;
 using ::WIFI_AC_BK;
 using ::WIFI_AC_VI;
 using ::WIFI_AC_VO;
+using ::WIFI_ANTENNA_1X1;
+using ::WIFI_ANTENNA_2X2;
+using ::WIFI_ANTENNA_3X3;
+using ::WIFI_ANTENNA_4X4;
+using ::WIFI_ANTENNA_UNSPECIFIED;
 using ::wifi_band;
 using ::WIFI_BAND_A;
 using ::WIFI_BAND_A_DFS;
@@ -281,6 +287,9 @@ using ::WIFI_POWER_SCENARIO_ON_BODY_CELL_ON;
 using ::WIFI_POWER_SCENARIO_ON_HEAD_CELL_OFF;
 using ::WIFI_POWER_SCENARIO_ON_HEAD_CELL_ON;
 using ::WIFI_POWER_SCENARIO_VOICE_CALL;
+using ::wifi_radio_combination;
+using ::wifi_radio_combination_matrix;
+using ::wifi_radio_configuration;
 using ::wifi_rate;
 using ::wifi_request_id;
 using ::wifi_ring_buffer_status;
@@ -448,6 +457,12 @@ struct TwtCallbackHandlers {
     std::function<void(const TwtInfoFrameReceived&)> on_info_frame_received;
     // Callback for TWT notification from the device
     std::function<void(const TwtDeviceNotify&)> on_device_notify;
+};
+
+// CHRE response and event callbacks struct.
+struct ChreCallbackHandlers {
+    // Callback for CHRE NAN RTT
+    std::function<void(chre_nan_rtt_state)> on_wifi_chre_nan_rtt_state;
 };
 
 /**
@@ -657,6 +672,16 @@ class WifiLegacyHal {
             uint32_t band_mask, uint32_t iface_mode_mask, uint32_t filter_mask);
 
     wifi_error triggerSubsystemRestart();
+
+    wifi_error setIndoorState(bool isIndoor);
+
+    std::pair<wifi_error, wifi_radio_combination_matrix*> getSupportedRadioCombinationsMatrix();
+
+    // CHRE NAN RTT function
+    wifi_error chreNanRttRequest(const std::string& iface_name, bool enable);
+
+    wifi_error chreRegisterHandler(const std::string& iface_name,
+                                   const ChreCallbackHandlers& handler);
 
   private:
     // Retrieve interface handles for all the available interfaces.

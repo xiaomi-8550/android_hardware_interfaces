@@ -37,6 +37,7 @@ static constexpr uint32_t kLinkLayerStatsDataMpduSizeThreshold = 128;
 static constexpr uint32_t kMaxWakeReasonStatsArraySize = 32;
 static constexpr uint32_t kMaxRingBuffers = 10;
 static constexpr uint32_t kMaxWifiUsableChannels = 256;
+static constexpr uint32_t kMaxSupportedRadioCombinationsMatrixLength = 256;
 // need a long timeout (1000ms) for chips that unload their driver.
 static constexpr uint32_t kMaxStopCompleteWaitMs = 1000;
 static constexpr char kDriverPropName[] = "wlan.driver.status";
@@ -353,6 +354,15 @@ void onAsyncTwtEventDeviceNotify(TwtDeviceNotify* event) {
     const auto lock = hidl_sync_util::acquireGlobalLock();
     if (on_twt_event_device_notify_callback && event) {
         on_twt_event_device_notify_callback(*event);
+    }
+}
+
+// Callback to report current CHRE NAN state
+std::function<void(chre_nan_rtt_state)> on_chre_nan_rtt_internal_callback;
+void onAsyncChreNanRttState(chre_nan_rtt_state state) {
+    const auto lock = hidl_sync_util::acquireGlobalLock();
+    if (on_chre_nan_rtt_internal_callback) {
+        on_chre_nan_rtt_internal_callback(state);
     }
 }
 
@@ -1533,6 +1543,47 @@ wifi_error WifiLegacyHal::triggerSubsystemRestart() {
     return global_func_table_.wifi_trigger_subsystem_restart(global_handle_);
 }
 
+wifi_error WifiLegacyHal::setIndoorState(bool isIndoor) {
+    return global_func_table_.wifi_set_indoor_state(global_handle_, isIndoor);
+}
+
+std::pair<wifi_error, wifi_radio_combination_matrix*>
+WifiLegacyHal::getSupportedRadioCombinationsMatrix() {
+    std::array<char, kMaxSupportedRadioCombinationsMatrixLength> buffer;
+    buffer.fill(0);
+    uint32_t size = 0;
+    wifi_radio_combination_matrix* radio_combination_matrix_ptr =
+            reinterpret_cast<wifi_radio_combination_matrix*>(buffer.data());
+    wifi_error status = global_func_table_.wifi_get_supported_radio_combinations_matrix(
+            global_handle_, buffer.size(), &size, radio_combination_matrix_ptr);
+    CHECK(size >= 0 && size <= kMaxSupportedRadioCombinationsMatrixLength);
+    return {status, radio_combination_matrix_ptr};
+}
+
+wifi_error WifiLegacyHal::chreNanRttRequest(const std::string& iface_name, bool enable) {
+    if (enable)
+        return global_func_table_.wifi_nan_rtt_chre_enable_request(0, getIfaceHandle(iface_name),
+                                                                   NULL);
+    else
+        return global_func_table_.wifi_nan_rtt_chre_disable_request(0, getIfaceHandle(iface_name));
+}
+
+wifi_error WifiLegacyHal::chreRegisterHandler(const std::string& iface_name,
+                                              const ChreCallbackHandlers& handler) {
+    if (on_chre_nan_rtt_internal_callback) {
+        return WIFI_ERROR_NOT_AVAILABLE;
+    }
+
+    on_chre_nan_rtt_internal_callback = handler.on_wifi_chre_nan_rtt_state;
+
+    wifi_error status = global_func_table_.wifi_chre_register_handler(getIfaceHandle(iface_name),
+                                                                      {onAsyncChreNanRttState});
+    if (status != WIFI_SUCCESS) {
+        on_chre_nan_rtt_internal_callback = nullptr;
+    }
+    return status;
+}
+
 void WifiLegacyHal::invalidate() {
     global_handle_ = nullptr;
     iface_name_to_handle_.clear();
@@ -1568,6 +1619,7 @@ void WifiLegacyHal::invalidate() {
     on_twt_event_teardown_completion_callback = nullptr;
     on_twt_event_info_frame_received_callback = nullptr;
     on_twt_event_device_notify_callback = nullptr;
+    on_chre_nan_rtt_internal_callback = nullptr;
 }
 
 }  // namespace legacy_hal
