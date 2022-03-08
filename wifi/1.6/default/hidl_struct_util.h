@@ -74,6 +74,11 @@ bool convertHidlCoexUnsafeChannelToLegacy(
 bool convertHidlVectorOfCoexUnsafeChannelToLegacy(
         const std::vector<V1_5::IWifiChip::CoexUnsafeChannel>& hidl_unsafe_channels,
         std::vector<legacy_hal::wifi_coex_unsafe_channel>* legacy_unsafe_channels);
+bool convertLegacyRadioCombinationsMatrixToHidl(
+        legacy_hal::wifi_radio_combination_matrix* legacy_matrix,
+        V1_6::WifiRadioCombinationMatrix* hidl_matrix);
+V1_5::WifiBand convertLegacyMacBandToHidlWifiBand(uint32_t band);
+V1_6::WifiAntennaMode convertLegacyAntennaConfigurationToHidl(uint32_t antenna_cfg);
 
 // STA iface conversion methods.
 bool convertLegacyFeaturesToHidlStaCapabilities(uint64_t legacy_feature_set,
@@ -116,41 +121,40 @@ bool convertHidlNanEnableRequestToLegacy(const V1_4::NanEnableRequest& hidl_requ
                                          legacy_hal::NanEnableRequest* legacy_request);
 bool convertHidlNanConfigRequestToLegacy(const V1_4::NanConfigRequest& hidl_request,
                                          legacy_hal::NanConfigRequest* legacy_request);
-bool convertHidlNanEnableRequest_1_4ToLegacy(
+bool convertHidlNanEnableRequest_1_6ToLegacy(
         const V1_4::NanEnableRequest& hidl_request1,
-        const V1_5::NanConfigRequestSupplemental& hidl_request2,
+        const V1_6::NanConfigRequestSupplemental& hidl_request2,
         legacy_hal::NanEnableRequest* legacy_request);
-bool convertHidlNanConfigRequest_1_4ToLegacy(
+bool convertHidlNanConfigRequest_1_6ToLegacy(
         const V1_4::NanConfigRequest& hidl_request1,
-        const V1_5::NanConfigRequestSupplemental& hidl_request2,
+        const V1_6::NanConfigRequestSupplemental& hidl_request2,
         legacy_hal::NanConfigRequest* legacy_request);
-bool convertHidlNanEnableRequest_1_5ToLegacy(
-        const V1_4::NanEnableRequest& hidl_request1,
-        const V1_5::NanConfigRequestSupplemental& hidl_request2,
-        legacy_hal::NanEnableRequest* legacy_request);
-bool convertHidlNanConfigRequest_1_5ToLegacy(
-        const V1_4::NanConfigRequest& hidl_request1,
-        const V1_5::NanConfigRequestSupplemental& hidl_request2,
-        legacy_hal::NanConfigRequest* legacy_request);
-bool convertHidlNanPublishRequestToLegacy(const NanPublishRequest& hidl_request,
+bool convertHidlNanPublishRequestToLegacy(const V1_6::NanPublishRequest& hidl_request,
                                           legacy_hal::NanPublishRequest* legacy_request);
-bool convertHidlNanSubscribeRequestToLegacy(const NanSubscribeRequest& hidl_request,
+bool convertHidlNanSubscribeRequestToLegacy(const V1_0::NanSubscribeRequest& hidl_request,
                                             legacy_hal::NanSubscribeRequest* legacy_request);
 bool convertHidlNanTransmitFollowupRequestToLegacy(
         const NanTransmitFollowupRequest& hidl_request,
         legacy_hal::NanTransmitFollowupRequest* legacy_request);
 bool convertHidlNanDataPathInitiatorRequestToLegacy(
-        const NanInitiateDataPathRequest& hidl_request,
+        const V1_0::NanInitiateDataPathRequest& hidl_request,
         legacy_hal::NanDataPathInitiatorRequest* legacy_request);
 bool convertHidlNanDataPathIndicationResponseToLegacy(
-        const NanRespondToDataPathIndicationRequest& hidl_response,
+        const V1_0::NanRespondToDataPathIndicationRequest& hidl_response,
         legacy_hal::NanDataPathIndicationResponse* legacy_response);
+bool convertHidlNanDataPathInitiatorRequest_1_6ToLegacy(
+        const V1_6::NanInitiateDataPathRequest& hidl_request,
+        legacy_hal::NanDataPathInitiatorRequest* legacy_request);
+bool convertHidlNanDataPathIndicationResponse_1_6ToLegacy(
+        const V1_6::NanRespondToDataPathIndicationRequest& hidl_response,
+        legacy_hal::NanDataPathIndicationResponse* legacy_response);
+
 bool convertLegacyNanResponseHeaderToHidl(const legacy_hal::NanResponseMsg& legacy_response,
                                           WifiNanStatus* wifiNanStatus);
 bool convertLegacyNanCapabilitiesResponseToHidl(const legacy_hal::NanCapabilities& legacy_response,
-                                                V1_5::NanCapabilities* hidl_response);
+                                                V1_6::NanCapabilities* hidl_response);
 bool convertLegacyNanMatchIndToHidl(const legacy_hal::NanMatchInd& legacy_ind,
-                                    NanMatchInd* hidl_ind);
+                                    V1_6::NanMatchInd* hidl_ind);
 bool convertLegacyNanFollowupIndToHidl(const legacy_hal::NanFollowupInd& legacy_ind,
                                        NanFollowupReceivedInd* hidl_ind);
 bool convertLegacyNanDataPathRequestIndToHidl(const legacy_hal::NanDataPathRequestInd& legacy_ind,

@@ -79,9 +79,14 @@ void GnssHalTest::SetPositionMode(const int min_interval_msec, const bool low_po
     const int kPreferredAccuracy = 0;  // Ideally perfect (matches GnssLocationProvider)
     const int kPreferredTimeMsec = 0;  // Ideally immediate
 
-    auto status = aidl_gnss_hal_->setPositionMode(
-            IGnss::GnssPositionMode::MS_BASED, IGnss::GnssPositionRecurrence::RECURRENCE_PERIODIC,
-            min_interval_msec, kPreferredAccuracy, kPreferredTimeMsec, low_power_mode);
+    IGnss::PositionModeOptions options;
+    options.mode = IGnss::GnssPositionMode::MS_BASED;
+    options.recurrence = IGnss::GnssPositionRecurrence::RECURRENCE_PERIODIC;
+    options.minIntervalMs = min_interval_msec;
+    options.preferredAccuracyMeters = kPreferredAccuracy;
+    options.preferredTimeMs = kPreferredTimeMsec;
+    options.lowPowerMode = low_power_mode;
+    auto status = aidl_gnss_hal_->setPositionMode(options);
 
     ASSERT_TRUE(status.isOk());
 }
@@ -95,9 +100,11 @@ bool GnssHalTest::StartAndCheckFirstLocation(const int min_interval_msec,
     }
 
     SetPositionMode(min_interval_msec, low_power_mode);
-    auto result = aidl_gnss_hal_->start();
+    auto status = aidl_gnss_hal_->start();
+    EXPECT_TRUE(status.isOk());
 
-    EXPECT_TRUE(result.isOk());
+    status = aidl_gnss_hal_->startSvStatus();
+    EXPECT_TRUE(status.isOk());
 
     /*
      * GnssLocationProvider support of AGPS SUPL & XtraDownloader is not available in VTS,
@@ -124,8 +131,10 @@ void GnssHalTest::StopAndClearLocations() {
         // Invoke the super method.
         return GnssHalTestTemplate<IGnss_V2_1>::StopAndClearLocations();
     }
+    auto status = aidl_gnss_hal_->stopSvStatus();
+    EXPECT_TRUE(status.isOk());
 
-    auto status = aidl_gnss_hal_->stop();
+    status = aidl_gnss_hal_->stop();
     EXPECT_TRUE(status.isOk());
 
     /*
