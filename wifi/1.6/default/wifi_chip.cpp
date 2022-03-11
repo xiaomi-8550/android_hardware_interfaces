@@ -728,6 +728,11 @@ Return<void> WifiChip::getSupportedRadioCombinationsMatrix(
                            &WifiChip::getSupportedRadioCombinationsMatrixInternal, hidl_status_cb);
 }
 
+Return<void> WifiChip::getAvailableModes_1_6(getAvailableModes_1_6_cb hidl_status_cb) {
+    return validateAndCall(this, WifiStatusCode::ERROR_WIFI_CHIP_INVALID,
+                           &WifiChip::getAvailableModesInternal_1_6, hidl_status_cb);
+}
+
 void WifiChip::invalidateAndRemoveAllIfaces() {
     invalidateAndClearBridgedApAll();
     invalidateAndClearAll(ap_ifaces_);
@@ -784,9 +789,59 @@ std::pair<WifiStatus, uint32_t> WifiChip::getCapabilitiesInternal() {
     return {createWifiStatus(WifiStatusCode::ERROR_NOT_SUPPORTED), 0};
 }
 
-std::pair<WifiStatus, std::vector<V1_4::IWifiChip::ChipMode>>
+std::pair<WifiStatus, std::vector<V1_0::IWifiChip::ChipMode>>
 WifiChip::getAvailableModesInternal() {
-    return {createWifiStatus(WifiStatusCode::SUCCESS), modes_};
+    // Deprecated support -- use getAvailableModes_1_6 for more granular concurrency combinations.
+    std::vector<V1_0::IWifiChip::ChipMode> modes_1_0 = {};
+    for (const auto& mode_1_6 : modes_) {
+        std::vector<V1_0::IWifiChip::ChipIfaceCombination> combos_1_0;
+        for (const auto& combo_1_6 : mode_1_6.availableCombinations) {
+            std::vector<V1_0::IWifiChip::ChipIfaceCombinationLimit> limits_1_0;
+            for (const auto& limit_1_6 : combo_1_6.limits) {
+                std::vector<IfaceType> types_1_0;
+                for (IfaceConcurrencyType type_1_6 : limit_1_6.types) {
+                    switch (type_1_6) {
+                        case IfaceConcurrencyType::STA:
+                            types_1_0.push_back(IfaceType::STA);
+                            break;
+                        case IfaceConcurrencyType::AP:
+                            types_1_0.push_back(IfaceType::AP);
+                            break;
+                        case IfaceConcurrencyType::AP_BRIDGED:
+                            // Ignore AP_BRIDGED
+                            break;
+                        case IfaceConcurrencyType::P2P:
+                            types_1_0.push_back(IfaceType::P2P);
+                            break;
+                        case IfaceConcurrencyType::NAN:
+                            types_1_0.push_back(IfaceType::NAN);
+                            break;
+                    }
+                }
+                if (types_1_0.empty()) {
+                    continue;
+                }
+                V1_0::IWifiChip::ChipIfaceCombinationLimit limit_1_0;
+                limit_1_0.types = hidl_vec(types_1_0);
+                limit_1_0.maxIfaces = limit_1_6.maxIfaces;
+                limits_1_0.push_back(limit_1_0);
+            }
+            if (limits_1_0.empty()) {
+                continue;
+            }
+            V1_0::IWifiChip::ChipIfaceCombination combo_1_0;
+            combo_1_0.limits = hidl_vec(limits_1_0);
+            combos_1_0.push_back(combo_1_0);
+        }
+        if (combos_1_0.empty()) {
+            continue;
+        }
+        V1_0::IWifiChip::ChipMode mode_1_0;
+        mode_1_0.id = mode_1_6.id;
+        mode_1_0.availableCombinations = hidl_vec(combos_1_0);
+        modes_1_0.push_back(mode_1_0);
+    }
+    return {createWifiStatus(WifiStatusCode::SUCCESS), modes_1_0};
 }
 
 WifiStatus WifiChip::configureChipInternal(
@@ -910,7 +965,7 @@ sp<WifiApIface> WifiChip::newWifiApIface(std::string& ifname) {
 }
 
 std::pair<WifiStatus, sp<V1_5::IWifiApIface>> WifiChip::createApIfaceInternal() {
-    if (!canCurrentModeSupportIfaceOfTypeWithCurrentIfaces(IfaceType::AP)) {
+    if (!canCurrentModeSupportConcurrencyTypeWithCurrentTypes(IfaceConcurrencyType::AP)) {
         return {createWifiStatus(WifiStatusCode::ERROR_NOT_AVAILABLE), {}};
     }
     std::string ifname = allocateApIfaceName();
@@ -923,7 +978,7 @@ std::pair<WifiStatus, sp<V1_5::IWifiApIface>> WifiChip::createApIfaceInternal() 
 }
 
 std::pair<WifiStatus, sp<V1_5::IWifiApIface>> WifiChip::createBridgedApIfaceInternal() {
-    if (!canCurrentModeSupportIfaceOfTypeWithCurrentIfaces(IfaceType::AP)) {
+    if (!canCurrentModeSupportConcurrencyTypeWithCurrentTypes(IfaceConcurrencyType::AP_BRIDGED)) {
         return {createWifiStatus(WifiStatusCode::ERROR_NOT_AVAILABLE), {}};
     }
     std::vector<std::string> ap_instances = allocateBridgedApInstanceNames();
@@ -1040,7 +1095,7 @@ WifiStatus WifiChip::removeIfaceInstanceFromBridgedApIfaceInternal(
 }
 
 std::pair<WifiStatus, sp<V1_4::IWifiNanIface>> WifiChip::createNanIfaceInternal() {
-    if (!canCurrentModeSupportIfaceOfTypeWithCurrentIfaces(IfaceType::NAN)) {
+    if (!canCurrentModeSupportConcurrencyTypeWithCurrentTypes(IfaceConcurrencyType::NAN)) {
         return {createWifiStatus(WifiStatusCode::ERROR_NOT_AVAILABLE), {}};
     }
     bool is_dedicated_iface = true;
@@ -1092,7 +1147,7 @@ WifiStatus WifiChip::removeNanIfaceInternal(const std::string& ifname) {
 }
 
 std::pair<WifiStatus, sp<IWifiP2pIface>> WifiChip::createP2pIfaceInternal() {
-    if (!canCurrentModeSupportIfaceOfTypeWithCurrentIfaces(IfaceType::P2P)) {
+    if (!canCurrentModeSupportConcurrencyTypeWithCurrentTypes(IfaceConcurrencyType::P2P)) {
         return {createWifiStatus(WifiStatusCode::ERROR_NOT_AVAILABLE), {}};
     }
     std::string ifname = getPredefinedP2pIfaceName();
@@ -1136,7 +1191,7 @@ WifiStatus WifiChip::removeP2pIfaceInternal(const std::string& ifname) {
 }
 
 std::pair<WifiStatus, sp<V1_6::IWifiStaIface>> WifiChip::createStaIfaceInternal() {
-    if (!canCurrentModeSupportIfaceOfTypeWithCurrentIfaces(IfaceType::STA)) {
+    if (!canCurrentModeSupportConcurrencyTypeWithCurrentTypes(IfaceConcurrencyType::STA)) {
         return {createWifiStatus(WifiStatusCode::ERROR_NOT_AVAILABLE), {}};
     }
     std::string ifname = allocateStaIfaceName();
@@ -1436,7 +1491,8 @@ WifiStatus WifiChip::triggerSubsystemRestartInternal() {
 
 std::pair<WifiStatus, sp<V1_6::IWifiRttController>> WifiChip::createRttControllerInternal_1_6(
         const sp<IWifiIface>& bound_iface) {
-    if (sta_ifaces_.size() == 0 && !canCurrentModeSupportIfaceOfType(IfaceType::STA)) {
+    if (sta_ifaces_.size() == 0 &&
+        !canCurrentModeSupportConcurrencyTypeWithCurrentTypes(IfaceConcurrencyType::STA)) {
         LOG(ERROR) << "createRttControllerInternal_1_6: Chip cannot support STAs "
                       "(and RTT by extension)";
         return {createWifiStatus(WifiStatusCode::ERROR_NOT_AVAILABLE), {}};
@@ -1487,6 +1543,11 @@ WifiChip::getSupportedRadioCombinationsMatrixInternal() {
         return {createWifiStatus(WifiStatusCode::ERROR_INVALID_ARGS), {}};
     }
     return {createWifiStatus(WifiStatusCode::SUCCESS), hidl_matrix};
+}
+
+std::pair<WifiStatus, std::vector<V1_6::IWifiChip::ChipMode>>
+WifiChip::getAvailableModesInternal_1_6() {
+    return {createWifiStatus(WifiStatusCode::SUCCESS), modes_};
 }
 
 WifiStatus WifiChip::handleChipConfiguration(
@@ -1606,7 +1667,8 @@ WifiStatus WifiChip::registerRadioModeChangeCallback() {
     return createWifiStatusFromLegacyError(legacy_status);
 }
 
-std::vector<V1_4::IWifiChip::ChipIfaceCombination> WifiChip::getCurrentModeIfaceCombinations() {
+std::vector<V1_6::IWifiChip::ChipConcurrencyCombination>
+WifiChip::getCurrentModeConcurrencyCombinations() {
     if (!isValidModeId(current_mode_id_)) {
         LOG(ERROR) << "Chip not configured in a mode yet";
         return {};
@@ -1616,27 +1678,39 @@ std::vector<V1_4::IWifiChip::ChipIfaceCombination> WifiChip::getCurrentModeIface
             return mode.availableCombinations;
         }
     }
-    CHECK(0) << "Expected to find iface combinations for current mode!";
+    CHECK(0) << "Expected to find concurrency combinations for current mode!";
     return {};
 }
 
-// Returns a map indexed by IfaceType with the number of ifaces currently
-// created of the corresponding type.
-std::map<IfaceType, size_t> WifiChip::getCurrentIfaceCombination() {
-    std::map<IfaceType, size_t> iface_counts;
-    iface_counts[IfaceType::AP] = ap_ifaces_.size();
-    iface_counts[IfaceType::NAN] = nan_ifaces_.size();
-    iface_counts[IfaceType::P2P] = p2p_ifaces_.size();
-    iface_counts[IfaceType::STA] = sta_ifaces_.size();
+// Returns a map indexed by IfaceConcurrencyType with the number of ifaces currently
+// created of the corresponding concurrency type.
+std::map<IfaceConcurrencyType, size_t> WifiChip::getCurrentConcurrencyCombination() {
+    std::map<IfaceConcurrencyType, size_t> iface_counts;
+    uint32_t num_ap = 0;
+    uint32_t num_ap_bridged = 0;
+    for (const auto& ap_iface : ap_ifaces_) {
+        std::string ap_iface_name = ap_iface->getName();
+        if (br_ifaces_ap_instances_.count(ap_iface_name) > 0 &&
+            br_ifaces_ap_instances_[ap_iface_name].size() > 1) {
+            num_ap_bridged++;
+        } else {
+            num_ap++;
+        }
+    }
+    iface_counts[IfaceConcurrencyType::AP] = num_ap;
+    iface_counts[IfaceConcurrencyType::AP_BRIDGED] = num_ap_bridged;
+    iface_counts[IfaceConcurrencyType::NAN] = nan_ifaces_.size();
+    iface_counts[IfaceConcurrencyType::P2P] = p2p_ifaces_.size();
+    iface_counts[IfaceConcurrencyType::STA] = sta_ifaces_.size();
     return iface_counts;
 }
 
-// This expands the provided iface combinations to a more parseable
+// This expands the provided concurrency combinations to a more parseable
 // form. Returns a vector of available combinations possible with the number
-// of ifaces of each type in the combination.
-// This method is a port of HalDeviceManager.expandIfaceCombos() from framework.
-std::vector<std::map<IfaceType, size_t>> WifiChip::expandIfaceCombinations(
-        const V1_4::IWifiChip::ChipIfaceCombination& combination) {
+// of each concurrency type in the combination.
+// This method is a port of HalDeviceManager.expandConcurrencyCombos() from framework.
+std::vector<std::map<IfaceConcurrencyType, size_t>> WifiChip::expandConcurrencyCombinations(
+        const V1_6::IWifiChip::ChipConcurrencyCombination& combination) {
     uint32_t num_expanded_combos = 1;
     for (const auto& limit : combination.limits) {
         for (uint32_t i = 0; i < limit.maxIfaces; i++) {
@@ -1644,12 +1718,14 @@ std::vector<std::map<IfaceType, size_t>> WifiChip::expandIfaceCombinations(
         }
     }
 
-    // Allocate the vector of expanded combos and reset all iface counts to 0
+    // Allocate the vector of expanded combos and reset all concurrency type counts to 0
     // in each combo.
-    std::vector<std::map<IfaceType, size_t>> expanded_combos;
+    std::vector<std::map<IfaceConcurrencyType, size_t>> expanded_combos;
     expanded_combos.resize(num_expanded_combos);
     for (auto& expanded_combo : expanded_combos) {
-        for (const auto type : {IfaceType::AP, IfaceType::NAN, IfaceType::P2P, IfaceType::STA}) {
+        for (const auto type :
+             {IfaceConcurrencyType::AP, IfaceConcurrencyType::AP_BRIDGED, IfaceConcurrencyType::NAN,
+              IfaceConcurrencyType::P2P, IfaceConcurrencyType::STA}) {
             expanded_combo[type] = 0;
         }
     }
@@ -1666,12 +1742,15 @@ std::vector<std::map<IfaceType, size_t>> WifiChip::expandIfaceCombinations(
     return expanded_combos;
 }
 
-bool WifiChip::canExpandedIfaceComboSupportIfaceOfTypeWithCurrentIfaces(
-        const std::map<IfaceType, size_t>& expanded_combo, IfaceType requested_type) {
-    const auto current_combo = getCurrentIfaceCombination();
+bool WifiChip::canExpandedConcurrencyComboSupportConcurrencyTypeWithCurrentTypes(
+        const std::map<IfaceConcurrencyType, size_t>& expanded_combo,
+        IfaceConcurrencyType requested_type) {
+    const auto current_combo = getCurrentConcurrencyCombination();
 
     // Check if we have space for 1 more iface of |type| in this combo
-    for (const auto type : {IfaceType::AP, IfaceType::NAN, IfaceType::P2P, IfaceType::STA}) {
+    for (const auto type :
+         {IfaceConcurrencyType::AP, IfaceConcurrencyType::AP_BRIDGED, IfaceConcurrencyType::NAN,
+          IfaceConcurrencyType::P2P, IfaceConcurrencyType::STA}) {
         size_t num_ifaces_needed = current_combo.at(type);
         if (type == requested_type) {
             num_ifaces_needed++;
@@ -1685,21 +1764,22 @@ bool WifiChip::canExpandedIfaceComboSupportIfaceOfTypeWithCurrentIfaces(
 }
 
 // This method does the following:
-// a) Enumerate all possible iface combos by expanding the current
-//    ChipIfaceCombination.
-// b) Check if the requested iface type can be added to the current mode
-//    with the iface combination that is already active.
-bool WifiChip::canCurrentModeSupportIfaceOfTypeWithCurrentIfaces(IfaceType requested_type) {
+// a) Enumerate all possible concurrency combos by expanding the current
+//    ChipConcurrencyCombination.
+// b) Check if the requested concurrency type can be added to the current mode
+//    with the concurrency combination that is already active.
+bool WifiChip::canCurrentModeSupportConcurrencyTypeWithCurrentTypes(
+        IfaceConcurrencyType requested_type) {
     if (!isValidModeId(current_mode_id_)) {
         LOG(ERROR) << "Chip not configured in a mode yet";
         return false;
     }
-    const auto combinations = getCurrentModeIfaceCombinations();
+    const auto combinations = getCurrentModeConcurrencyCombinations();
     for (const auto& combination : combinations) {
-        const auto expanded_combos = expandIfaceCombinations(combination);
+        const auto expanded_combos = expandConcurrencyCombinations(combination);
         for (const auto& expanded_combo : expanded_combos) {
-            if (canExpandedIfaceComboSupportIfaceOfTypeWithCurrentIfaces(expanded_combo,
-                                                                         requested_type)) {
+            if (canExpandedConcurrencyComboSupportConcurrencyTypeWithCurrentTypes(expanded_combo,
+                                                                                  requested_type)) {
                 return true;
             }
         }
@@ -1707,15 +1787,17 @@ bool WifiChip::canCurrentModeSupportIfaceOfTypeWithCurrentIfaces(IfaceType reque
     return false;
 }
 
-// Note: This does not consider ifaces already active. It only checks if the
-// provided expanded iface combination can support the requested combo.
-bool WifiChip::canExpandedIfaceComboSupportIfaceCombo(
-        const std::map<IfaceType, size_t>& expanded_combo,
-        const std::map<IfaceType, size_t>& req_combo) {
-    // Check if we have space for 1 more iface of |type| in this combo
-    for (const auto type : {IfaceType::AP, IfaceType::NAN, IfaceType::P2P, IfaceType::STA}) {
+// Note: This does not consider concurrency types already active. It only checks if the
+// provided expanded concurrency combination can support the requested combo.
+bool WifiChip::canExpandedConcurrencyComboSupportConcurrencyCombo(
+        const std::map<IfaceConcurrencyType, size_t>& expanded_combo,
+        const std::map<IfaceConcurrencyType, size_t>& req_combo) {
+    // Check if we have space for 1 more |type| in this combo
+    for (const auto type :
+         {IfaceConcurrencyType::AP, IfaceConcurrencyType::AP_BRIDGED, IfaceConcurrencyType::NAN,
+          IfaceConcurrencyType::P2P, IfaceConcurrencyType::STA}) {
         if (req_combo.count(type) == 0) {
-            // Iface of "type" not in the req_combo.
+            // Concurrency type not in the req_combo.
             continue;
         }
         size_t num_ifaces_needed = req_combo.at(type);
@@ -1727,21 +1809,22 @@ bool WifiChip::canExpandedIfaceComboSupportIfaceCombo(
     return true;
 }
 // This method does the following:
-// a) Enumerate all possible iface combos by expanding the current
-//    ChipIfaceCombination.
-// b) Check if the requested iface combo can be added to the current mode.
-// Note: This does not consider ifaces already active. It only checks if the
+// a) Enumerate all possible concurrency combos by expanding the current
+//    ChipConcurrencyCombination.
+// b) Check if the requested concurrency combo can be added to the current mode.
+// Note: This does not consider concurrency types already active. It only checks if the
 // current mode can support the requested combo.
-bool WifiChip::canCurrentModeSupportIfaceCombo(const std::map<IfaceType, size_t>& req_combo) {
+bool WifiChip::canCurrentModeSupportConcurrencyCombo(
+        const std::map<IfaceConcurrencyType, size_t>& req_combo) {
     if (!isValidModeId(current_mode_id_)) {
         LOG(ERROR) << "Chip not configured in a mode yet";
         return false;
     }
-    const auto combinations = getCurrentModeIfaceCombinations();
+    const auto combinations = getCurrentModeConcurrencyCombinations();
     for (const auto& combination : combinations) {
-        const auto expanded_combos = expandIfaceCombinations(combination);
+        const auto expanded_combos = expandConcurrencyCombinations(combination);
         for (const auto& expanded_combo : expanded_combos) {
-            if (canExpandedIfaceComboSupportIfaceCombo(expanded_combo, req_combo)) {
+            if (canExpandedConcurrencyComboSupportConcurrencyCombo(expanded_combo, req_combo)) {
                 return true;
             }
         }
@@ -1750,14 +1833,14 @@ bool WifiChip::canCurrentModeSupportIfaceCombo(const std::map<IfaceType, size_t>
 }
 
 // This method does the following:
-// a) Enumerate all possible iface combos by expanding the current
-//    ChipIfaceCombination.
-// b) Check if the requested iface type can be added to the current mode.
-bool WifiChip::canCurrentModeSupportIfaceOfType(IfaceType requested_type) {
-    // Check if we can support at least 1 iface of type.
-    std::map<IfaceType, size_t> req_iface_combo;
+// a) Enumerate all possible concurrency combos by expanding the current
+//    ChipConcurrencyCombination.
+// b) Check if the requested concurrency type can be added to the current mode.
+bool WifiChip::canCurrentModeSupportConcurrencyType(IfaceConcurrencyType requested_type) {
+    // Check if we can support at least 1 of the requested concurrency type.
+    std::map<IfaceConcurrencyType, size_t> req_iface_combo;
     req_iface_combo[requested_type] = 1;
-    return canCurrentModeSupportIfaceCombo(req_iface_combo);
+    return canCurrentModeSupportConcurrencyCombo(req_iface_combo);
 }
 
 bool WifiChip::isValidModeId(ChipModeId mode_id) {
@@ -1771,17 +1854,17 @@ bool WifiChip::isValidModeId(ChipModeId mode_id) {
 
 bool WifiChip::isStaApConcurrencyAllowedInCurrentMode() {
     // Check if we can support at least 1 STA & 1 AP concurrently.
-    std::map<IfaceType, size_t> req_iface_combo;
-    req_iface_combo[IfaceType::AP] = 1;
-    req_iface_combo[IfaceType::STA] = 1;
-    return canCurrentModeSupportIfaceCombo(req_iface_combo);
+    std::map<IfaceConcurrencyType, size_t> req_iface_combo;
+    req_iface_combo[IfaceConcurrencyType::STA] = 1;
+    req_iface_combo[IfaceConcurrencyType::AP] = 1;
+    return canCurrentModeSupportConcurrencyCombo(req_iface_combo);
 }
 
 bool WifiChip::isDualStaConcurrencyAllowedInCurrentMode() {
     // Check if we can support at least 2 STA concurrently.
-    std::map<IfaceType, size_t> req_iface_combo;
-    req_iface_combo[IfaceType::STA] = 2;
-    return canCurrentModeSupportIfaceCombo(req_iface_combo);
+    std::map<IfaceConcurrencyType, size_t> req_iface_combo;
+    req_iface_combo[IfaceConcurrencyType::STA] = 2;
+    return canCurrentModeSupportConcurrencyCombo(req_iface_combo);
 }
 
 std::string WifiChip::getFirstActiveWlanIfaceName() {

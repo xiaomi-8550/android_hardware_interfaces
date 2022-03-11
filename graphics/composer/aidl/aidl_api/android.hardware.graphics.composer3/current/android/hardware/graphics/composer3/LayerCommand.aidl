@@ -37,7 +37,6 @@ parcelable LayerCommand {
   long layer;
   @nullable android.hardware.graphics.common.Point cursorPosition;
   @nullable android.hardware.graphics.composer3.Buffer buffer;
-  @nullable android.hardware.graphics.composer3.Buffer bufferAhead;
   @nullable android.hardware.graphics.common.Rect[] damage;
   @nullable android.hardware.graphics.composer3.ParcelableBlendMode blendMode;
   @nullable android.hardware.graphics.composer3.Color color;
@@ -51,7 +50,7 @@ parcelable LayerCommand {
   @nullable android.hardware.graphics.common.Rect[] visibleRegion;
   @nullable android.hardware.graphics.composer3.ZOrder z;
   @nullable float[] colorTransform;
-  @nullable android.hardware.graphics.composer3.Luminance whitePointNits;
+  @nullable android.hardware.graphics.composer3.LayerBrightness brightness;
   @nullable android.hardware.graphics.composer3.PerFrameMetadata[] perFrameMetadata;
   @nullable android.hardware.graphics.composer3.PerFrameMetadataBlob[] perFrameMetadataBlob;
   @nullable android.hardware.graphics.common.Rect[] blockingRegion;
