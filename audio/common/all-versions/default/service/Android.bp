@@ -51,6 +51,7 @@ cc_binary {
     shared_libs: [
         "libcutils",
         "libbinder",
+        "libbinder_ndk",
         "libhwbinder",
         "libhidlbase",
         "liblog",
@@ -84,6 +85,7 @@ cc_binary {
     shared_libs: [
         "libcutils",
         "libbinder",
+        "libbinder_ndk",
         "libhwbinder",
         "libhidlbase",
         "liblog",
