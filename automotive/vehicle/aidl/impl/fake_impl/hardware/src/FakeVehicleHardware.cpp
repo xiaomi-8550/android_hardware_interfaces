@@ -68,6 +68,8 @@ using ::android::base::Result;
 using ::android::base::StartsWith;
 using ::android::base::StringPrintf;
 
+using StatusError = android::base::Error<VhalError>;
+
 const char* VENDOR_OVERRIDE_DIR = "/vendor/etc/automotive/vhaloverride/";
 const char* OVERRIDE_PROPERTY = "persist.vendor.vhal_init_value_override";
 
@@ -191,13 +193,13 @@ VehiclePropValuePool::RecyclableType FakeVehicleHardware::createApPowerStateReq(
     return req;
 }
 
-Result<void> FakeVehicleHardware::setApPowerStateReport(const VehiclePropValue& value) {
+Result<void, VhalError> FakeVehicleHardware::setApPowerStateReport(const VehiclePropValue& value) {
     auto updatedValue = mValuePool->obtain(value);
     updatedValue->timestamp = elapsedRealtimeNano();
 
     if (auto writeResult = mServerSidePropStore->writeValue(std::move(updatedValue));
         !writeResult.ok()) {
-        return Error(getIntErrorCode(writeResult))
+        return StatusError(getErrorCode(writeResult))
                << "failed to write value into property store, error: " << getErrorMsg(writeResult);
     }
 
@@ -211,14 +213,20 @@ Result<void> FakeVehicleHardware::setApPowerStateReport(const VehiclePropValue& 
         case toInt(VehicleApPowerStateReport::SHUTDOWN_CANCELLED):
             [[fallthrough]];
         case toInt(VehicleApPowerStateReport::WAIT_FOR_VHAL):
-            // CPMS is in WAIT_FOR_VHAL state, simply move to ON
-            // Send back to HAL
-            // ALWAYS update status for generated property value
+            // CPMS is in WAIT_FOR_VHAL state, simply move to ON and send back to HAL.
+            // Must erase existing state because in the case when Car Service crashes, the power
+            // state would already be ON when we receive WAIT_FOR_VHAL and thus new property change
+            // event would be generated. However, Car Service always expect a property change event
+            // even though there is not actual state change.
+            mServerSidePropStore->removeValuesForProperty(
+                    toInt(VehicleProperty::AP_POWER_STATE_REQ));
             prop = createApPowerStateReq(VehicleApPowerStateReq::ON);
+
+            // ALWAYS update status for generated property value
             if (auto writeResult =
                         mServerSidePropStore->writeValue(std::move(prop), /*updateStatus=*/true);
                 !writeResult.ok()) {
-                return Error(getIntErrorCode(writeResult))
+                return StatusError(getErrorCode(writeResult))
                        << "failed to write AP_POWER_STATE_REQ into property store, error: "
                        << getErrorMsg(writeResult);
             }
@@ -235,7 +243,7 @@ Result<void> FakeVehicleHardware::setApPowerStateReport(const VehiclePropValue& 
             if (auto writeResult =
                         mServerSidePropStore->writeValue(std::move(prop), /*updateStatus=*/true);
                 !writeResult.ok()) {
-                return Error(getIntErrorCode(writeResult))
+                return StatusError(getErrorCode(writeResult))
                        << "failed to write AP_POWER_STATE_REQ into property store, error: "
                        << getErrorMsg(writeResult);
             }
@@ -262,10 +270,10 @@ bool FakeVehicleHardware::isHvacPropAndHvacNotAvailable(int32_t propId) {
     return false;
 }
 
-Result<void> FakeVehicleHardware::setUserHalProp(const VehiclePropValue& value) {
+Result<void, VhalError> FakeVehicleHardware::setUserHalProp(const VehiclePropValue& value) {
     auto result = mFakeUserHal->onSetProperty(value);
     if (!result.ok()) {
-        return Error(getIntErrorCode(result))
+        return StatusError(getErrorCode(result))
                << "onSetProperty(): HAL returned error: " << getErrorMsg(result);
     }
     auto& updatedValue = result.value();
@@ -274,7 +282,7 @@ Result<void> FakeVehicleHardware::setUserHalProp(const VehiclePropValue& value) 
               updatedValue->toString().c_str());
         if (auto writeResult = mServerSidePropStore->writeValue(std::move(result.value()));
             !writeResult.ok()) {
-            return Error(getIntErrorCode(writeResult))
+            return StatusError(getErrorCode(writeResult))
                    << "failed to write value into property store, error: "
                    << getErrorMsg(writeResult);
         }
@@ -282,14 +290,14 @@ Result<void> FakeVehicleHardware::setUserHalProp(const VehiclePropValue& value) 
     return {};
 }
 
-Result<VehiclePropValuePool::RecyclableType> FakeVehicleHardware::getUserHalProp(
+FakeVehicleHardware::ValueResultType FakeVehicleHardware::getUserHalProp(
         const VehiclePropValue& value) const {
     auto propId = value.prop;
     ALOGI("get(): getting value for prop %d from User HAL", propId);
 
     auto result = mFakeUserHal->onGetProperty(value);
     if (!result.ok()) {
-        return Error(getIntErrorCode(result))
+        return StatusError(getErrorCode(result))
                << "get(): User HAL returned error: " << getErrorMsg(result);
     } else {
         auto& gotValue = result.value();
@@ -298,17 +306,16 @@ Result<VehiclePropValuePool::RecyclableType> FakeVehicleHardware::getUserHalProp
             gotValue->timestamp = elapsedRealtimeNano();
             return result;
         } else {
-            return Error(toInt(StatusCode::INTERNAL_ERROR))
-                   << "get(): User HAL returned null value";
+            return StatusError(StatusCode::INTERNAL_ERROR) << "get(): User HAL returned null value";
         }
     }
 }
 
-Result<VehiclePropValuePool::RecyclableType> FakeVehicleHardware::maybeGetSpecialValue(
+FakeVehicleHardware::ValueResultType FakeVehicleHardware::maybeGetSpecialValue(
         const VehiclePropValue& value, bool* isSpecialValue) const {
     *isSpecialValue = false;
     int32_t propId = value.prop;
-    Result<VehiclePropValuePool::RecyclableType> result;
+    ValueResultType result;
 
     if (mFakeUserHal->isSupported(propId)) {
         *isSpecialValue = true;
@@ -338,8 +345,8 @@ Result<VehiclePropValuePool::RecyclableType> FakeVehicleHardware::maybeGetSpecia
     return nullptr;
 }
 
-Result<void> FakeVehicleHardware::maybeSetSpecialValue(const VehiclePropValue& value,
-                                                       bool* isSpecialValue) {
+Result<void, VhalError> FakeVehicleHardware::maybeSetSpecialValue(const VehiclePropValue& value,
+                                                                  bool* isSpecialValue) {
     *isSpecialValue = false;
     VehiclePropValuePool::RecyclableType updatedValue;
     int32_t propId = value.prop;
@@ -351,7 +358,7 @@ Result<void> FakeVehicleHardware::maybeSetSpecialValue(const VehiclePropValue& v
 
     if (isHvacPropAndHvacNotAvailable(propId)) {
         *isSpecialValue = true;
-        return Error(toInt(StatusCode::NOT_AVAILABLE)) << "hvac not available";
+        return StatusError(StatusCode::NOT_AVAILABLE) << "hvac not available";
     }
 
     switch (propId) {
@@ -390,7 +397,7 @@ Result<void> FakeVehicleHardware::maybeSetSpecialValue(const VehiclePropValue& v
             updatedValue->areaId = value.areaId;
             if (auto writeResult = mServerSidePropStore->writeValue(std::move(updatedValue));
                 !writeResult.ok()) {
-                return Error(getIntErrorCode(writeResult))
+                return StatusError(getErrorCode(writeResult))
                        << "failed to write value into property store, error: "
                        << getErrorMsg(writeResult);
             }
@@ -435,13 +442,13 @@ StatusCode FakeVehicleHardware::setValues(std::shared_ptr<const SetValuesCallbac
     return StatusCode::OK;
 }
 
-Result<void> FakeVehicleHardware::setValue(const VehiclePropValue& value) {
+Result<void, VhalError> FakeVehicleHardware::setValue(const VehiclePropValue& value) {
     bool isSpecialValue = false;
     auto setSpecialValueResult = maybeSetSpecialValue(value, &isSpecialValue);
 
     if (isSpecialValue) {
         if (!setSpecialValueResult.ok()) {
-            return Error(getIntErrorCode(setSpecialValueResult))
+            return StatusError(getErrorCode(setSpecialValueResult))
                    << StringPrintf("failed to set special value for property ID: %d, error: %s",
                                    value.prop, getErrorMsg(setSpecialValueResult).c_str());
         }
@@ -454,7 +461,7 @@ Result<void> FakeVehicleHardware::setValue(const VehiclePropValue& value) {
 
     auto writeResult = mServerSidePropStore->writeValue(std::move(updatedValue));
     if (!writeResult.ok()) {
-        return Error(getIntErrorCode(writeResult))
+        return StatusError(getErrorCode(writeResult))
                << StringPrintf("failed to write value into property store, error: %s",
                                getErrorMsg(writeResult).c_str());
     }
@@ -495,13 +502,13 @@ StatusCode FakeVehicleHardware::getValues(std::shared_ptr<const GetValuesCallbac
     return StatusCode::OK;
 }
 
-Result<VehiclePropValuePool::RecyclableType> FakeVehicleHardware::getValue(
+FakeVehicleHardware::ValueResultType FakeVehicleHardware::getValue(
         const VehiclePropValue& value) const {
     bool isSpecialValue = false;
     auto result = maybeGetSpecialValue(value, &isSpecialValue);
     if (isSpecialValue) {
         if (!result.ok()) {
-            return Error(getIntErrorCode(result))
+            return StatusError(getErrorCode(result))
                    << StringPrintf("failed to get special value: %d, error: %s", value.prop,
                                    getErrorMsg(result).c_str());
         } else {
@@ -513,9 +520,9 @@ Result<VehiclePropValuePool::RecyclableType> FakeVehicleHardware::getValue(
     if (!readResult.ok()) {
         StatusCode errorCode = getErrorCode(readResult);
         if (errorCode == StatusCode::NOT_AVAILABLE) {
-            return Error(toInt(errorCode)) << "value has not been set yet";
+            return StatusError(errorCode) << "value has not been set yet";
         } else {
-            return Error(toInt(errorCode))
+            return StatusError(errorCode)
                    << "failed to get value, error: " << getErrorMsg(readResult);
         }
     }
