@@ -180,7 +180,8 @@ class CameraAidlTest : public ::testing::TestWithParam<std::string> {
             uint32_t streamConfigCounter, bool maxResolution,
             aidl::android::hardware::camera::metadata::RequestAvailableDynamicRangeProfilesMap
                     prof = ::aidl::android::hardware::camera::metadata::
-                            RequestAvailableDynamicRangeProfilesMap(0));
+                            RequestAvailableDynamicRangeProfilesMap::
+                                    ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD);
 
     void configurePreviewStreams(
             const std::string& name, const std::shared_ptr<ICameraProvider>& provider,
@@ -189,7 +190,8 @@ class CameraAidlTest : public ::testing::TestWithParam<std::string> {
             std::shared_ptr<ICameraDeviceSession>* session /*out*/, Stream* previewStream /*out*/,
             std::vector<HalStream>* halStreams /*out*/, bool* supportsPartialResults /*out*/,
             int32_t* partialResultCount /*out*/, bool* useHalBufManager /*out*/,
-            std::shared_ptr<DeviceCb>* cb /*out*/, int32_t streamConfigCounter = 0);
+            std::shared_ptr<DeviceCb>* cb /*out*/, int32_t streamConfigCounter = 0,
+            bool allowUnsupport = false);
 
     void configurePreviewStream(
             const std::string& name, const std::shared_ptr<ICameraProvider>& provider,
