@@ -26,7 +26,7 @@ namespace V1_6 {
 namespace implementation {
 namespace hidl_struct_util {
 
-using V1_5::NanConfigRequestSupplemental;
+using V1_6::NanConfigRequestSupplemental;
 
 WifiChannelWidthInMhz convertLegacyWifiChannelWidthToHidl(legacy_hal::wifi_channel_width type);
 
@@ -367,6 +367,21 @@ uint32_t convertHidlWifiBandToLegacyMacBand(V1_5::WifiBand hidl_band) {
     }
 }
 
+V1_5::WifiBand convertLegacyMacBandToHidlWifiBand(uint32_t band) {
+    switch (band) {
+        case legacy_hal::WLAN_MAC_2_4_BAND:
+            return V1_5::WifiBand::BAND_24GHZ;
+        case legacy_hal::WLAN_MAC_5_0_BAND:
+            return V1_5::WifiBand::BAND_5GHZ;
+        case legacy_hal::WLAN_MAC_6_0_BAND:
+            return V1_5::WifiBand::BAND_6GHZ;
+        case legacy_hal::WLAN_MAC_60_0_BAND:
+            return V1_5::WifiBand::BAND_60GHZ;
+        default:
+            return V1_5::WifiBand::BAND_UNSPECIFIED;
+    }
+}
+
 uint32_t convertHidlWifiIfaceModeToLegacy(uint32_t hidl_iface_mask) {
     uint32_t legacy_iface_mask = 0;
     if (hidl_iface_mask & V1_5::WifiIfaceMode::IFACE_MODE_STA) {
@@ -432,6 +447,9 @@ uint32_t convertHidlUsableChannelFilterToLegacy(uint32_t hidl_filter_mask) {
     }
     if (hidl_filter_mask & V1_5::IWifiChip::UsableChannelFilter::CONCURRENCY) {
         legacy_filter_mask |= legacy_hal::WIFI_USABLE_CHANNEL_FILTER_CONCURRENCY;
+    }
+    if (hidl_filter_mask & V1_6::IWifiChip::UsableChannelFilter::NAN_INSTANT_MODE) {
+        legacy_filter_mask |= WIFI_USABLE_CHANNEL_FILTER_NAN_INSTANT_MODE;
     }
     return legacy_filter_mask;
 }
@@ -1363,11 +1381,11 @@ bool convertHidlNanEnableRequestToLegacy(const V1_4::NanEnableRequest& hidl_requ
     return true;
 }
 
-bool convertHidlNanEnableRequest_1_4ToLegacy(const V1_4::NanEnableRequest& hidl_request1,
+bool convertHidlNanEnableRequest_1_6ToLegacy(const V1_4::NanEnableRequest& hidl_request1,
                                              const NanConfigRequestSupplemental& hidl_request2,
                                              legacy_hal::NanEnableRequest* legacy_request) {
     if (!legacy_request) {
-        LOG(ERROR) << "convertHidlNanEnableRequest_1_4ToLegacy: null legacy_request";
+        LOG(ERROR) << "convertHidlNanEnableRequest_1_6ToLegacy: null legacy_request";
         return false;
     }
 
@@ -1377,57 +1395,55 @@ bool convertHidlNanEnableRequest_1_4ToLegacy(const V1_4::NanEnableRequest& hidl_
     }
 
     legacy_request->config_discovery_beacon_int = 1;
-    legacy_request->discovery_beacon_interval = hidl_request2.V1_2.discoveryBeaconIntervalMs;
+    legacy_request->discovery_beacon_interval = hidl_request2.V1_5.V1_2.discoveryBeaconIntervalMs;
     legacy_request->config_nss = 1;
-    legacy_request->nss = hidl_request2.V1_2.numberOfSpatialStreamsInDiscovery;
+    legacy_request->nss = hidl_request2.V1_5.V1_2.numberOfSpatialStreamsInDiscovery;
     legacy_request->config_dw_early_termination = 1;
     legacy_request->enable_dw_termination =
-            hidl_request2.V1_2.enableDiscoveryWindowEarlyTermination;
+            hidl_request2.V1_5.V1_2.enableDiscoveryWindowEarlyTermination;
     legacy_request->config_enable_ranging = 1;
-    legacy_request->enable_ranging = hidl_request2.V1_2.enableRanging;
-
-    return true;
-}
-
-bool convertHidlNanEnableRequest_1_5ToLegacy(const V1_4::NanEnableRequest& hidl_request1,
-                                             const NanConfigRequestSupplemental& hidl_request2,
-                                             legacy_hal::NanEnableRequest* legacy_request) {
-    if (!legacy_request) {
-        LOG(ERROR) << "convertHidlNanEnableRequest_1_5ToLegacy: null legacy_request";
-        return false;
-    }
-
-    *legacy_request = {};
-    if (!convertHidlNanEnableRequest_1_4ToLegacy(hidl_request1, hidl_request2, legacy_request)) {
-        return false;
-    }
+    legacy_request->enable_ranging = hidl_request2.V1_5.V1_2.enableRanging;
 
     legacy_request->config_enable_instant_mode = 1;
-    legacy_request->enable_instant_mode = hidl_request2.enableInstantCommunicationMode;
+    legacy_request->enable_instant_mode = hidl_request2.V1_5.enableInstantCommunicationMode;
+    legacy_request->config_instant_mode_channel = 1;
+    legacy_request->instant_mode_channel = hidl_request2.instantModeChannel;
 
     return true;
 }
 
-bool convertHidlNanConfigRequest_1_5ToLegacy(const V1_4::NanConfigRequest& hidl_request1,
+bool convertHidlNanConfigRequest_1_6ToLegacy(const V1_4::NanConfigRequest& hidl_request1,
                                              const NanConfigRequestSupplemental& hidl_request2,
                                              legacy_hal::NanConfigRequest* legacy_request) {
     if (!legacy_request) {
-        LOG(ERROR) << "convertHidlNanConfigRequest_1_5ToLegacy: null legacy_request";
+        LOG(ERROR) << "convertHidlNanConfigRequest_1_6ToLegacy: null legacy_request";
         return false;
     }
 
     *legacy_request = {};
-    if (!convertHidlNanConfigRequest_1_4ToLegacy(hidl_request1, hidl_request2, legacy_request)) {
+    if (!convertHidlNanConfigRequestToLegacy(hidl_request1, legacy_request)) {
         return false;
     }
 
+    legacy_request->config_discovery_beacon_int = 1;
+    legacy_request->discovery_beacon_interval = hidl_request2.V1_5.V1_2.discoveryBeaconIntervalMs;
+    legacy_request->config_nss = 1;
+    legacy_request->nss = hidl_request2.V1_5.V1_2.numberOfSpatialStreamsInDiscovery;
+    legacy_request->config_dw_early_termination = 1;
+    legacy_request->enable_dw_termination =
+            hidl_request2.V1_5.V1_2.enableDiscoveryWindowEarlyTermination;
+    legacy_request->config_enable_ranging = 1;
+    legacy_request->enable_ranging = hidl_request2.V1_5.V1_2.enableRanging;
+
     legacy_request->config_enable_instant_mode = 1;
-    legacy_request->enable_instant_mode = hidl_request2.enableInstantCommunicationMode;
+    legacy_request->enable_instant_mode = hidl_request2.V1_5.enableInstantCommunicationMode;
+    legacy_request->config_instant_mode_channel = 1;
+    legacy_request->instant_mode_channel = hidl_request2.instantModeChannel;
 
     return true;
 }
 
-bool convertHidlNanPublishRequestToLegacy(const NanPublishRequest& hidl_request,
+bool convertHidlNanPublishRequestToLegacy(const V1_6::NanPublishRequest& hidl_request,
                                           legacy_hal::NanPublishRequest* legacy_request) {
     if (!legacy_request) {
         LOG(ERROR) << "convertHidlNanPublishRequestToLegacy: null legacy_request";
@@ -1494,6 +1510,15 @@ bool convertHidlNanPublishRequestToLegacy(const NanPublishRequest& hidl_request,
             hidl_request.baseConfigs.disableFollowupReceivedIndication ? 0x4 : 0x0;
     legacy_request->recv_indication_cfg |= 0x8;
     legacy_request->cipher_type = (unsigned int)hidl_request.baseConfigs.securityConfig.cipherType;
+
+    legacy_request->scid_len = hidl_request.baseConfigs.securityConfig.scid.size();
+    if (legacy_request->scid_len > NAN_MAX_SCID_BUF_LEN) {
+        LOG(ERROR) << "convertHidlNanPublishRequestToLegacy: scid_len too large";
+        return false;
+    }
+    memcpy(legacy_request->scid, hidl_request.baseConfigs.securityConfig.scid.data(),
+           legacy_request->scid_len);
+
     if (hidl_request.baseConfigs.securityConfig.securityType == NanDataPathSecurityType::PMK) {
         legacy_request->key_info.key_type = legacy_hal::NAN_SECURITY_KEY_INPUT_PMK;
         legacy_request->key_info.body.pmk_info.pmk_len =
@@ -1531,6 +1556,7 @@ bool convertHidlNanPublishRequestToLegacy(const NanPublishRequest& hidl_request,
             (hidl_request.baseConfigs.securityConfig.securityType != NanDataPathSecurityType::OPEN)
                     ? legacy_hal::NAN_DP_CONFIG_SECURITY
                     : legacy_hal::NAN_DP_CONFIG_NO_SECURITY;
+
     legacy_request->sdea_params.ranging_state = hidl_request.baseConfigs.rangingRequired
                                                         ? legacy_hal::NAN_RANGING_ENABLE
                                                         : legacy_hal::NAN_RANGING_DISABLE;
@@ -1554,7 +1580,7 @@ bool convertHidlNanPublishRequestToLegacy(const NanPublishRequest& hidl_request,
     return true;
 }
 
-bool convertHidlNanSubscribeRequestToLegacy(const NanSubscribeRequest& hidl_request,
+bool convertHidlNanSubscribeRequestToLegacy(const V1_0::NanSubscribeRequest& hidl_request,
                                             legacy_hal::NanSubscribeRequest* legacy_request) {
     if (!legacy_request) {
         LOG(ERROR) << "convertHidlNanSubscribeRequestToLegacy: legacy_request is null";
@@ -1835,35 +1861,8 @@ bool convertHidlNanConfigRequestToLegacy(const V1_4::NanConfigRequest& hidl_requ
     return true;
 }
 
-bool convertHidlNanConfigRequest_1_4ToLegacy(const V1_4::NanConfigRequest& hidl_request1,
-                                             const NanConfigRequestSupplemental& hidl_request2,
-                                             legacy_hal::NanConfigRequest* legacy_request) {
-    if (!legacy_request) {
-        LOG(ERROR) << "convertHidlNanConfigRequest_1_4ToLegacy: legacy_request "
-                      "is null";
-        return false;
-    }
-
-    *legacy_request = {};
-    if (!convertHidlNanConfigRequestToLegacy(hidl_request1, legacy_request)) {
-        return false;
-    }
-
-    legacy_request->config_discovery_beacon_int = 1;
-    legacy_request->discovery_beacon_interval = hidl_request2.V1_2.discoveryBeaconIntervalMs;
-    legacy_request->config_nss = 1;
-    legacy_request->nss = hidl_request2.V1_2.numberOfSpatialStreamsInDiscovery;
-    legacy_request->config_dw_early_termination = 1;
-    legacy_request->enable_dw_termination =
-            hidl_request2.V1_2.enableDiscoveryWindowEarlyTermination;
-    legacy_request->config_enable_ranging = 1;
-    legacy_request->enable_ranging = hidl_request2.V1_2.enableRanging;
-
-    return true;
-}
-
 bool convertHidlNanDataPathInitiatorRequestToLegacy(
-        const NanInitiateDataPathRequest& hidl_request,
+        const V1_0::NanInitiateDataPathRequest& hidl_request,
         legacy_hal::NanDataPathInitiatorRequest* legacy_request) {
     if (!legacy_request) {
         LOG(ERROR) << "convertHidlNanDataPathInitiatorRequestToLegacy: "
@@ -1939,8 +1938,91 @@ bool convertHidlNanDataPathInitiatorRequestToLegacy(
     return true;
 }
 
+bool convertHidlNanDataPathInitiatorRequest_1_6ToLegacy(
+        const V1_6::NanInitiateDataPathRequest& hidl_request,
+        legacy_hal::NanDataPathInitiatorRequest* legacy_request) {
+    if (!legacy_request) {
+        LOG(ERROR) << "convertHidlNanDataPathInitiatorRequest_1_6ToLegacy: "
+                      "legacy_request is null";
+        return false;
+    }
+    *legacy_request = {};
+
+    legacy_request->requestor_instance_id = hidl_request.peerId;
+    memcpy(legacy_request->peer_disc_mac_addr, hidl_request.peerDiscMacAddr.data(), 6);
+    legacy_request->channel_request_type =
+            convertHidlNanDataPathChannelCfgToLegacy(hidl_request.channelRequestType);
+    legacy_request->channel = hidl_request.channel;
+    if (strnlen(hidl_request.ifaceName.c_str(), IFNAMSIZ + 1) == IFNAMSIZ + 1) {
+        LOG(ERROR) << "convertHidlNanDataPathInitiatorRequest_1_6ToLegacy: "
+                      "ifaceName too long";
+        return false;
+    }
+    strncpy(legacy_request->ndp_iface, hidl_request.ifaceName.c_str(), IFNAMSIZ + 1);
+    legacy_request->ndp_cfg.security_cfg =
+            (hidl_request.securityConfig.securityType != NanDataPathSecurityType::OPEN)
+                    ? legacy_hal::NAN_DP_CONFIG_SECURITY
+                    : legacy_hal::NAN_DP_CONFIG_NO_SECURITY;
+    legacy_request->app_info.ndp_app_info_len = hidl_request.appInfo.size();
+    if (legacy_request->app_info.ndp_app_info_len > NAN_DP_MAX_APP_INFO_LEN) {
+        LOG(ERROR) << "convertHidlNanDataPathInitiatorRequest_1_6ToLegacy: "
+                      "ndp_app_info_len too large";
+        return false;
+    }
+    memcpy(legacy_request->app_info.ndp_app_info, hidl_request.appInfo.data(),
+           legacy_request->app_info.ndp_app_info_len);
+    legacy_request->cipher_type = (unsigned int)hidl_request.securityConfig.cipherType;
+    if (hidl_request.securityConfig.securityType == NanDataPathSecurityType::PMK) {
+        legacy_request->key_info.key_type = legacy_hal::NAN_SECURITY_KEY_INPUT_PMK;
+        legacy_request->key_info.body.pmk_info.pmk_len = hidl_request.securityConfig.pmk.size();
+        if (legacy_request->key_info.body.pmk_info.pmk_len != NAN_PMK_INFO_LEN) {
+            LOG(ERROR) << "convertHidlNanDataPathInitiatorRequest_1_6ToLegacy: "
+                          "invalid pmk_len";
+            return false;
+        }
+        memcpy(legacy_request->key_info.body.pmk_info.pmk, hidl_request.securityConfig.pmk.data(),
+               legacy_request->key_info.body.pmk_info.pmk_len);
+    }
+    if (hidl_request.securityConfig.securityType == NanDataPathSecurityType::PASSPHRASE) {
+        legacy_request->key_info.key_type = legacy_hal::NAN_SECURITY_KEY_INPUT_PASSPHRASE;
+        legacy_request->key_info.body.passphrase_info.passphrase_len =
+                hidl_request.securityConfig.passphrase.size();
+        if (legacy_request->key_info.body.passphrase_info.passphrase_len <
+            NAN_SECURITY_MIN_PASSPHRASE_LEN) {
+            LOG(ERROR) << "convertHidlNanDataPathInitiatorRequest_1_6ToLegacy: "
+                          "passphrase_len too small";
+            return false;
+        }
+        if (legacy_request->key_info.body.passphrase_info.passphrase_len >
+            NAN_SECURITY_MAX_PASSPHRASE_LEN) {
+            LOG(ERROR) << "convertHidlNanDataPathInitiatorRequest_1_6ToLegacy: "
+                          "passphrase_len too large";
+            return false;
+        }
+        memcpy(legacy_request->key_info.body.passphrase_info.passphrase,
+               hidl_request.securityConfig.passphrase.data(),
+               legacy_request->key_info.body.passphrase_info.passphrase_len);
+    }
+    legacy_request->service_name_len = hidl_request.serviceNameOutOfBand.size();
+    if (legacy_request->service_name_len > NAN_MAX_SERVICE_NAME_LEN) {
+        LOG(ERROR) << "convertHidlNanDataPathInitiatorRequest_1_6ToLegacy: "
+                      "service_name_len too large";
+        return false;
+    }
+    memcpy(legacy_request->service_name, hidl_request.serviceNameOutOfBand.data(),
+           legacy_request->service_name_len);
+    legacy_request->scid_len = hidl_request.securityConfig.scid.size();
+    if (legacy_request->scid_len > NAN_MAX_SCID_BUF_LEN) {
+        LOG(ERROR) << "convertHidlNanDataPathInitiatorRequest_1_6ToLegacy: scid_len too large";
+        return false;
+    }
+    memcpy(legacy_request->scid, hidl_request.securityConfig.scid.data(), legacy_request->scid_len);
+
+    return true;
+}
+
 bool convertHidlNanDataPathIndicationResponseToLegacy(
-        const NanRespondToDataPathIndicationRequest& hidl_request,
+        const V1_0::NanRespondToDataPathIndicationRequest& hidl_request,
         legacy_hal::NanDataPathIndicationResponse* legacy_request) {
     if (!legacy_request) {
         LOG(ERROR) << "convertHidlNanDataPathIndicationResponseToLegacy: "
@@ -2014,6 +2096,87 @@ bool convertHidlNanDataPathIndicationResponseToLegacy(
     return true;
 }
 
+bool convertHidlNanDataPathIndicationResponse_1_6ToLegacy(
+        const V1_6::NanRespondToDataPathIndicationRequest& hidl_request,
+        legacy_hal::NanDataPathIndicationResponse* legacy_request) {
+    if (!legacy_request) {
+        LOG(ERROR) << "convertHidlNanDataPathIndicationResponse_1_6ToLegacy: "
+                      "legacy_request is null";
+        return false;
+    }
+    *legacy_request = {};
+
+    legacy_request->rsp_code = hidl_request.acceptRequest ? legacy_hal::NAN_DP_REQUEST_ACCEPT
+                                                          : legacy_hal::NAN_DP_REQUEST_REJECT;
+    legacy_request->ndp_instance_id = hidl_request.ndpInstanceId;
+    if (strnlen(hidl_request.ifaceName.c_str(), IFNAMSIZ + 1) == IFNAMSIZ + 1) {
+        LOG(ERROR) << "convertHidlNanDataPathIndicationResponse_1_6ToLegacy: "
+                      "ifaceName too long";
+        return false;
+    }
+    strncpy(legacy_request->ndp_iface, hidl_request.ifaceName.c_str(), IFNAMSIZ + 1);
+    legacy_request->ndp_cfg.security_cfg =
+            (hidl_request.securityConfig.securityType != NanDataPathSecurityType::OPEN)
+                    ? legacy_hal::NAN_DP_CONFIG_SECURITY
+                    : legacy_hal::NAN_DP_CONFIG_NO_SECURITY;
+    legacy_request->app_info.ndp_app_info_len = hidl_request.appInfo.size();
+    if (legacy_request->app_info.ndp_app_info_len > NAN_DP_MAX_APP_INFO_LEN) {
+        LOG(ERROR) << "convertHidlNanDataPathIndicationResponse_1_6ToLegacy: "
+                      "ndp_app_info_len too large";
+        return false;
+    }
+    memcpy(legacy_request->app_info.ndp_app_info, hidl_request.appInfo.data(),
+           legacy_request->app_info.ndp_app_info_len);
+    legacy_request->cipher_type = (unsigned int)hidl_request.securityConfig.cipherType;
+    if (hidl_request.securityConfig.securityType == NanDataPathSecurityType::PMK) {
+        legacy_request->key_info.key_type = legacy_hal::NAN_SECURITY_KEY_INPUT_PMK;
+        legacy_request->key_info.body.pmk_info.pmk_len = hidl_request.securityConfig.pmk.size();
+        if (legacy_request->key_info.body.pmk_info.pmk_len != NAN_PMK_INFO_LEN) {
+            LOG(ERROR) << "convertHidlNanDataPathIndicationResponse_1_6ToLegacy: "
+                          "invalid pmk_len";
+            return false;
+        }
+        memcpy(legacy_request->key_info.body.pmk_info.pmk, hidl_request.securityConfig.pmk.data(),
+               legacy_request->key_info.body.pmk_info.pmk_len);
+    }
+    if (hidl_request.securityConfig.securityType == NanDataPathSecurityType::PASSPHRASE) {
+        legacy_request->key_info.key_type = legacy_hal::NAN_SECURITY_KEY_INPUT_PASSPHRASE;
+        legacy_request->key_info.body.passphrase_info.passphrase_len =
+                hidl_request.securityConfig.passphrase.size();
+        if (legacy_request->key_info.body.passphrase_info.passphrase_len <
+            NAN_SECURITY_MIN_PASSPHRASE_LEN) {
+            LOG(ERROR) << "convertHidlNanDataPathIndicationResponse_1_6ToLegacy: "
+                          "passphrase_len too small";
+            return false;
+        }
+        if (legacy_request->key_info.body.passphrase_info.passphrase_len >
+            NAN_SECURITY_MAX_PASSPHRASE_LEN) {
+            LOG(ERROR) << "convertHidlNanDataPathIndicationResponse_1_6ToLegacy: "
+                          "passphrase_len too large";
+            return false;
+        }
+        memcpy(legacy_request->key_info.body.passphrase_info.passphrase,
+               hidl_request.securityConfig.passphrase.data(),
+               legacy_request->key_info.body.passphrase_info.passphrase_len);
+    }
+    legacy_request->service_name_len = hidl_request.serviceNameOutOfBand.size();
+    if (legacy_request->service_name_len > NAN_MAX_SERVICE_NAME_LEN) {
+        LOG(ERROR) << "convertHidlNanDataPathIndicationResponse_1_6ToLegacy: "
+                      "service_name_len too large";
+        return false;
+    }
+    memcpy(legacy_request->service_name, hidl_request.serviceNameOutOfBand.data(),
+           legacy_request->service_name_len);
+    legacy_request->scid_len = hidl_request.securityConfig.scid.size();
+    if (legacy_request->scid_len > NAN_MAX_SCID_BUF_LEN) {
+        LOG(ERROR) << "convertHidlNanDataPathIndicationResponse_1_6ToLegacy: scid_len too large";
+        return false;
+    }
+    memcpy(legacy_request->scid, hidl_request.securityConfig.scid.data(), legacy_request->scid_len);
+
+    return true;
+}
+
 bool convertLegacyNanResponseHeaderToHidl(const legacy_hal::NanResponseMsg& legacy_response,
                                           WifiNanStatus* wifiNanStatus) {
     if (!wifiNanStatus) {
@@ -2028,7 +2191,7 @@ bool convertLegacyNanResponseHeaderToHidl(const legacy_hal::NanResponseMsg& lega
 }
 
 bool convertLegacyNanCapabilitiesResponseToHidl(const legacy_hal::NanCapabilities& legacy_response,
-                                                V1_5::NanCapabilities* hidl_response) {
+                                                V1_6::NanCapabilities* hidl_response) {
     if (!hidl_response) {
         LOG(ERROR) << "convertLegacyNanCapabilitiesResponseToHidl: "
                       "hidl_response is null";
@@ -2036,29 +2199,29 @@ bool convertLegacyNanCapabilitiesResponseToHidl(const legacy_hal::NanCapabilitie
     }
     *hidl_response = {};
 
-    hidl_response->V1_0.maxConcurrentClusters = legacy_response.max_concurrent_nan_clusters;
-    hidl_response->V1_0.maxPublishes = legacy_response.max_publishes;
-    hidl_response->V1_0.maxSubscribes = legacy_response.max_subscribes;
-    hidl_response->V1_0.maxServiceNameLen = legacy_response.max_service_name_len;
-    hidl_response->V1_0.maxMatchFilterLen = legacy_response.max_match_filter_len;
-    hidl_response->V1_0.maxTotalMatchFilterLen = legacy_response.max_total_match_filter_len;
-    hidl_response->V1_0.maxServiceSpecificInfoLen = legacy_response.max_service_specific_info_len;
-    hidl_response->V1_0.maxExtendedServiceSpecificInfoLen =
+    hidl_response->maxConcurrentClusters = legacy_response.max_concurrent_nan_clusters;
+    hidl_response->maxPublishes = legacy_response.max_publishes;
+    hidl_response->maxSubscribes = legacy_response.max_subscribes;
+    hidl_response->maxServiceNameLen = legacy_response.max_service_name_len;
+    hidl_response->maxMatchFilterLen = legacy_response.max_match_filter_len;
+    hidl_response->maxTotalMatchFilterLen = legacy_response.max_total_match_filter_len;
+    hidl_response->maxServiceSpecificInfoLen = legacy_response.max_service_specific_info_len;
+    hidl_response->maxExtendedServiceSpecificInfoLen =
             legacy_response.max_sdea_service_specific_info_len;
-    hidl_response->V1_0.maxNdiInterfaces = legacy_response.max_ndi_interfaces;
-    hidl_response->V1_0.maxNdpSessions = legacy_response.max_ndp_sessions;
-    hidl_response->V1_0.maxAppInfoLen = legacy_response.max_app_info_len;
-    hidl_response->V1_0.maxQueuedTransmitFollowupMsgs =
+    hidl_response->maxNdiInterfaces = legacy_response.max_ndi_interfaces;
+    hidl_response->maxNdpSessions = legacy_response.max_ndp_sessions;
+    hidl_response->maxAppInfoLen = legacy_response.max_app_info_len;
+    hidl_response->maxQueuedTransmitFollowupMsgs =
             legacy_response.max_queued_transmit_followup_msgs;
-    hidl_response->V1_0.maxSubscribeInterfaceAddresses = legacy_response.max_subscribe_address;
-    hidl_response->V1_0.supportedCipherSuites = legacy_response.cipher_suites_supported;
+    hidl_response->maxSubscribeInterfaceAddresses = legacy_response.max_subscribe_address;
+    hidl_response->supportedCipherSuites = legacy_response.cipher_suites_supported;
     hidl_response->instantCommunicationModeSupportFlag = legacy_response.is_instant_mode_supported;
 
     return true;
 }
 
 bool convertLegacyNanMatchIndToHidl(const legacy_hal::NanMatchInd& legacy_ind,
-                                    NanMatchInd* hidl_ind) {
+                                    V1_6::NanMatchInd* hidl_ind) {
     if (!hidl_ind) {
         LOG(ERROR) << "convertLegacyNanMatchIndToHidl: hidl_ind is null";
         return false;
@@ -2080,14 +2243,14 @@ bool convertLegacyNanMatchIndToHidl(const legacy_hal::NanMatchInd& legacy_ind,
     hidl_ind->matchOccuredInBeaconFlag = legacy_ind.match_occured_flag == 1;
     hidl_ind->outOfResourceFlag = legacy_ind.out_of_resource_flag == 1;
     hidl_ind->rssiValue = legacy_ind.rssi_value;
-    hidl_ind->peerCipherType = (NanCipherSuiteType)legacy_ind.peer_cipher_type;
+    hidl_ind->peerCipherType = (V1_6::NanCipherSuiteType)legacy_ind.peer_cipher_type;
     hidl_ind->peerRequiresSecurityEnabledInNdp =
             legacy_ind.peer_sdea_params.security_cfg == legacy_hal::NAN_DP_CONFIG_SECURITY;
     hidl_ind->peerRequiresRanging =
             legacy_ind.peer_sdea_params.ranging_state == legacy_hal::NAN_RANGING_ENABLE;
-    hidl_ind->rangingMeasurementInCm = legacy_ind.range_info.range_measurement_mm / 10;
+    hidl_ind->rangingMeasurementInMm = legacy_ind.range_info.range_measurement_mm;
     hidl_ind->rangingIndicationType = legacy_ind.range_info.ranging_event_type;
-
+    hidl_ind->scid = std::vector<uint8_t>(legacy_ind.scid, legacy_ind.scid + legacy_ind.scid_len);
     return true;
 }
 
@@ -2754,6 +2917,85 @@ bool convertHidlVectorOfCoexUnsafeChannelToLegacy(
         }
         legacy_unsafe_channels->push_back(legacy_unsafe_channel);
     }
+    return true;
+}
+
+V1_6::WifiAntennaMode convertLegacyAntennaConfigurationToHidl(uint32_t antenna_cfg) {
+    switch (antenna_cfg) {
+        case legacy_hal::WIFI_ANTENNA_1X1:
+            return V1_6::WifiAntennaMode::WIFI_ANTENNA_MODE_1X1;
+        case legacy_hal::WIFI_ANTENNA_2X2:
+            return V1_6::WifiAntennaMode::WIFI_ANTENNA_MODE_2X2;
+        case legacy_hal::WIFI_ANTENNA_3X3:
+            return V1_6::WifiAntennaMode::WIFI_ANTENNA_MODE_3X3;
+        case legacy_hal::WIFI_ANTENNA_4X4:
+            return V1_6::WifiAntennaMode::WIFI_ANTENNA_MODE_4X4;
+        default:
+            return V1_6::WifiAntennaMode::WIFI_ANTENNA_MODE_UNSPECIFIED;
+    }
+}
+
+bool convertLegacyWifiRadioConfigurationToHidl(
+        legacy_hal::wifi_radio_configuration* radio_configuration,
+        V1_6::WifiRadioConfiguration* hidl_radio_configuration) {
+    if (!hidl_radio_configuration) {
+        return false;
+    }
+    *hidl_radio_configuration = {};
+    hidl_radio_configuration->bandInfo =
+            hidl_struct_util::convertLegacyMacBandToHidlWifiBand(radio_configuration->band);
+    if (hidl_radio_configuration->bandInfo == V1_5::WifiBand::BAND_UNSPECIFIED) {
+        LOG(ERROR) << "Unspecified band";
+        return false;
+    }
+    hidl_radio_configuration->antennaMode =
+            hidl_struct_util::convertLegacyAntennaConfigurationToHidl(
+                    radio_configuration->antenna_cfg);
+    return true;
+}
+
+bool convertLegacyRadioCombinationsMatrixToHidl(
+        legacy_hal::wifi_radio_combination_matrix* legacy_matrix,
+        WifiRadioCombinationMatrix* hidl_matrix) {
+    if (!hidl_matrix || !legacy_matrix) {
+        return false;
+    }
+    *hidl_matrix = {};
+
+    int num_combinations = legacy_matrix->num_radio_combinations;
+    std::vector<V1_6::WifiRadioCombination> radio_combinations_vec;
+    if (!num_combinations) {
+        LOG(ERROR) << "zero radio combinations";
+        return false;
+    }
+    wifi_radio_combination* l_radio_combinations_ptr = legacy_matrix->radio_combinations;
+    for (int i = 0; i < num_combinations; i++) {
+        int num_configurations = l_radio_combinations_ptr->num_radio_configurations;
+        WifiRadioCombination radioCombination;
+        std::vector<V1_6::WifiRadioConfiguration> radio_configurations_vec;
+        if (!num_configurations) {
+            LOG(ERROR) << "zero radio configurations";
+            return false;
+        }
+        for (int j = 0; j < num_configurations; j++) {
+            WifiRadioConfiguration radioConfiguration;
+            wifi_radio_configuration* l_radio_configurations_ptr =
+                    &l_radio_combinations_ptr->radio_configurations[j];
+            if (!hidl_struct_util::convertLegacyWifiRadioConfigurationToHidl(
+                        l_radio_configurations_ptr, &radioConfiguration)) {
+                LOG(ERROR) << "Error converting wifi radio configuration";
+                return false;
+            }
+            radio_configurations_vec.push_back(radioConfiguration);
+        }
+        radioCombination.radioConfigurations = radio_configurations_vec;
+        radio_combinations_vec.push_back(radioCombination);
+        l_radio_combinations_ptr =
+                (wifi_radio_combination*)((u8*)l_radio_combinations_ptr +
+                                          sizeof(wifi_radio_combination) +
+                                          (sizeof(wifi_radio_configuration) * num_configurations));
+    }
+    hidl_matrix->radioCombinations = radio_combinations_vec;
     return true;
 }
 

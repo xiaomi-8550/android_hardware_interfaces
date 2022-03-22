@@ -50,9 +50,11 @@ class Gnss : public BnGnss {
     ndk::ScopedAStatus injectLocation(const GnssLocation& location) override;
     ndk::ScopedAStatus injectBestLocation(const GnssLocation& location) override;
     ndk::ScopedAStatus deleteAidingData(GnssAidingData aidingDataFlags) override;
-    ndk::ScopedAStatus setPositionMode(GnssPositionMode mode, GnssPositionRecurrence recurrence,
-                                       int minIntervalMs, int preferredAccuracyMeters,
-                                       int preferredTimeMs, bool lowPowerMode) override;
+    ndk::ScopedAStatus setPositionMode(const PositionModeOptions& options) override;
+    ndk::ScopedAStatus startSvStatus() override;
+    ndk::ScopedAStatus stopSvStatus() override;
+    ndk::ScopedAStatus startNmea() override;
+    ndk::ScopedAStatus stopNmea() override;
 
     ndk::ScopedAStatus getExtensionPsds(std::shared_ptr<IGnssPsds>* iGnssPsds) override;
     ndk::ScopedAStatus getExtensionGnssConfiguration(
@@ -85,9 +87,10 @@ class Gnss : public BnGnss {
 
   private:
     void reportLocation(const GnssLocation&) const;
+    void reportSvStatus() const;
     void reportSvStatus(const std::vector<IGnssCallback::GnssSvInfo>& svInfoList) const;
     std::vector<IGnssCallback::GnssSvInfo> filterBlocklistedSatellites(
-            std::vector<IGnssCallback::GnssSvInfo> gnssSvInfoList);
+            std::vector<IGnssCallback::GnssSvInfo> gnssSvInfoList) const;
     void reportGnssStatusValue(const IGnssCallback::GnssStatusValue gnssStatusValue) const;
     std::unique_ptr<GnssLocation> getLocationFromHW();
 
@@ -95,6 +98,7 @@ class Gnss : public BnGnss {
 
     std::atomic<long> mMinIntervalMs;
     std::atomic<bool> mIsActive;
+    std::atomic<bool> mIsSvStatusActive;
     std::atomic<bool> mFirstFixReceived;
     std::thread mThread;
 

@@ -18,6 +18,7 @@ package android.hardware.graphics.common;
 
 /**
  * Buffer usage definitions.
+ * @hide
  */
 @VintfStability
 @Backing(type="long")
@@ -107,7 +108,32 @@ enum BufferUsage {
     /* Bits 28-31 are reserved for vendor usage */
 
     /**
-    * Buffer is used for front-buffer rendering
+    * Buffer is used for front-buffer rendering.
+    *
+    * To satisfy an allocation with this usage, the resulting buffer
+    * must operate as equivalent to shared memory for all targets.
+    *
+    * For CPU_USAGE_* other than NEVER, this means the buffer must
+    * "lock in place". The buffers must be directly accessible via mapping.
+    *
+    * For GPU_RENDER_TARGET the buffer must behave equivalent to a
+    * single-buffered EGL surface. For example glFlush must perform
+    * a flush, same as if the default framebuffer was single-buffered.
+    *
+    * For COMPOSER_* the HWC must not perform any caching for this buffer
+    * when submitted for composition. HWCs do not need to do any form
+    * of auto-refresh, and they are allowed to cache composition results between
+    * presents from SF (such as for panel self-refresh), but for any given
+    * present the buffer must be composited from even if it otherwise appears
+    * to be the same as a previous composition.
+    *
+    * If the GPU & HWC supports EGL_SINGLE_BUFFER, then it is recommended that
+    * FRONT_BUFFER usage is supported for the same formats as supported by
+    * EGL_SINGLE_BUFFER. In particular, it is recommended that the following
+    * combination is supported when possible:
+    *    Format = RGBA_8888
+    *    Usage = FRONT_BUFFER | GPU_RENDER_TARGET | COMPOSER_OVERLAY
+    *
     */
     FRONT_BUFFER                       = 1L << 32,
 

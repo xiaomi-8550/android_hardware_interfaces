@@ -33,8 +33,7 @@ cc_binary {
     static_libs: [
         "DefaultVehicleHal",
         "FakeVehicleHardware",
-        "VehicleHalUtils",
-        "android-automotive-large-parcelable-vendor-lib",
+        "VehicleHalUtilsVendor",
     ],
     header_libs: [
         "IVehicleHardware",
@@ -49,20 +48,17 @@ cc_library {
     vendor: true,
     defaults: [
         "VehicleHalDefaults",
-        "android-automotive-large-parcelable-defaults",
     ],
     local_include_dirs: ["include"],
     export_include_dirs: ["include"],
     srcs: [
         "src/ConnectedClient.cpp",
         "src/DefaultVehicleHal.cpp",
-        "src/PendingRequestPool.cpp",
         "src/RecurrentTimer.cpp",
         "src/SubscriptionManager.cpp",
     ],
     static_libs: [
-        "VehicleHalUtils",
-        "android-automotive-large-parcelable-vendor-lib",
+        "VehicleHalUtilsVendor",
     ],
     header_libs: [
         "IVehicleHardware",

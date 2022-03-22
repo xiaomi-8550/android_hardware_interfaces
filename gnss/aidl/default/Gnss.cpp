@@ -22,6 +22,7 @@
 #include "AGnss.h"
 #include "AGnssRil.h"
 #include "DeviceFileReader.h"
+#include "FixLocationParser.h"
 #include "GnssAntennaInfo.h"
 #include "GnssBatching.h"
 #include "GnssConfiguration.h"
@@ -32,11 +33,9 @@
 #include "GnssPsds.h"
 #include "GnssVisibilityControl.h"
 #include "MeasurementCorrectionsInterface.h"
-#include "NmeaFixInfo.h"
 #include "Utils.h"
 
 namespace aidl::android::hardware::gnss {
-using ::android::hardware::gnss::common::NmeaFixInfo;
 using ::android::hardware::gnss::common::Utils;
 
 using ndk::ScopedAStatus;
@@ -70,9 +69,12 @@ ScopedAStatus Gnss::setCallback(const std::shared_ptr<IGnssCallback>& callback) 
 }
 
 std::unique_ptr<GnssLocation> Gnss::getLocationFromHW() {
+    if (!::android::hardware::gnss::common::ReplayUtils::hasFixedLocationDeviceFile()) {
+        return nullptr;
+    }
     std::string inputStr =
             ::android::hardware::gnss::common::DeviceFileReader::Instance().getLocationData();
-    return ::android::hardware::gnss::common::NmeaFixInfo::getAidlLocationFromInputStr(inputStr);
+    return ::android::hardware::gnss::common::FixLocationParser::getLocationFromInputStr(inputStr);
 }
 
 ScopedAStatus Gnss::start() {
@@ -85,15 +87,13 @@ ScopedAStatus Gnss::start() {
     mIsActive = true;
     this->reportGnssStatusValue(IGnssCallback::GnssStatusValue::SESSION_BEGIN);
     mThread = std::thread([this]() {
-        auto svStatus = filterBlocklistedSatellites(Utils::getMockSvInfoList());
-        this->reportSvStatus(svStatus);
+        this->reportSvStatus();
         if (!mFirstFixReceived) {
             std::this_thread::sleep_for(std::chrono::milliseconds(TTFF_MILLIS));
             mFirstFixReceived = true;
         }
         while (mIsActive == true) {
-            auto svStatus = filterBlocklistedSatellites(Utils::getMockSvInfoList());
-            this->reportSvStatus(svStatus);
+            this->reportSvStatus();
 
             auto currentLocation = getLocationFromHW();
             mGnssPowerIndication->notePowerConsumption();
@@ -122,6 +122,13 @@ void Gnss::reportLocation(const GnssLocation& location) const {
     return;
 }
 
+void Gnss::reportSvStatus() const {
+    if (mIsSvStatusActive) {
+        auto svStatus = filterBlocklistedSatellites(Utils::getMockSvInfoList());
+        reportSvStatus(svStatus);
+    }
+}
+
 void Gnss::reportSvStatus(const std::vector<GnssSvInfo>& svInfoList) const {
     std::unique_lock<std::mutex> lock(mMutex);
     if (sGnssCallback == nullptr) {
@@ -134,7 +141,8 @@ void Gnss::reportSvStatus(const std::vector<GnssSvInfo>& svInfoList) const {
     }
 }
 
-std::vector<GnssSvInfo> Gnss::filterBlocklistedSatellites(std::vector<GnssSvInfo> gnssSvInfoList) {
+std::vector<GnssSvInfo> Gnss::filterBlocklistedSatellites(
+        std::vector<GnssSvInfo> gnssSvInfoList) const {
     ALOGD("filterBlocklistedSatellites");
     for (uint32_t i = 0; i < gnssSvInfoList.size(); i++) {
         if (mGnssConfiguration->isBlocklisted(gnssSvInfoList[i])) {
@@ -163,6 +171,26 @@ ScopedAStatus Gnss::stop() {
     if (mThread.joinable()) {
         mThread.join();
     }
+    return ScopedAStatus::ok();
+}
+
+ScopedAStatus Gnss::startSvStatus() {
+    ALOGD("startSvStatus");
+    mIsSvStatusActive = true;
+    return ScopedAStatus::ok();
+}
+
+ScopedAStatus Gnss::stopSvStatus() {
+    ALOGD("stopSvStatus");
+    mIsSvStatusActive = false;
+    return ScopedAStatus::ok();
+}
+ScopedAStatus Gnss::startNmea() {
+    ALOGD("startNmea");
+    return ScopedAStatus::ok();
+}
+ScopedAStatus Gnss::stopNmea() {
+    ALOGD("stopNmea");
     return ScopedAStatus::ok();
 }
 
@@ -208,11 +236,10 @@ ScopedAStatus Gnss::deleteAidingData(GnssAidingData aidingDataFlags) {
     return ScopedAStatus::ok();
 }
 
-ScopedAStatus Gnss::setPositionMode(GnssPositionMode, GnssPositionRecurrence, int minIntervalMs,
-                                    int /* preferredAccuracyMeters */, int /* preferredTimeMs */,
-                                    bool lowPowerMode) {
-    ALOGD("setPositionMode. minIntervalMs:%d, lowPowerMode:%d", minIntervalMs, (int)lowPowerMode);
-    mMinIntervalMs = minIntervalMs;
+ScopedAStatus Gnss::setPositionMode(const PositionModeOptions& options) {
+    ALOGD("setPositionMode. minIntervalMs:%d, lowPowerMode:%d", options.minIntervalMs,
+          (int)options.lowPowerMode);
+    mMinIntervalMs = options.minIntervalMs;
     return ScopedAStatus::ok();
 }
 
