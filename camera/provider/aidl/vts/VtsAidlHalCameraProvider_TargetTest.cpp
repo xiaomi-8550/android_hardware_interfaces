@@ -50,7 +50,7 @@ const uint32_t kMaxStillHeight = 1536;
 
 const int64_t kEmptyFlushTimeoutMSec = 200;
 
-const static std::vector<int32_t> kMandatoryUseCases = {
+const static std::vector<int64_t> kMandatoryUseCases = {
         ANDROID_SCALER_AVAILABLE_STREAM_USE_CASES_DEFAULT,
         ANDROID_SCALER_AVAILABLE_STREAM_USE_CASES_PREVIEW,
         ANDROID_SCALER_AVAILABLE_STREAM_USE_CASES_STILL_CAPTURE,
@@ -2981,16 +2981,16 @@ TEST_P(CameraAidlTest, configureStreamsUseCases) {
         ASSERT_NE(0u, outputPreviewStreams.size());
 
         // Combine valid and invalid stream use cases
-        std::vector<int32_t> useCases(kMandatoryUseCases);
+        std::vector<int64_t> useCases(kMandatoryUseCases);
         useCases.push_back(ANDROID_SCALER_AVAILABLE_STREAM_USE_CASES_VIDEO_CALL + 1);
 
-        std::vector<int32_t> supportedUseCases;
+        std::vector<int64_t> supportedUseCases;
         camera_metadata_ro_entry entry;
         auto retcode = find_camera_metadata_ro_entry(
                 staticMeta, ANDROID_SCALER_AVAILABLE_STREAM_USE_CASES, &entry);
         if ((0 == retcode) && (entry.count > 0)) {
-            supportedUseCases.insert(supportedUseCases.end(), entry.data.i32,
-                                     entry.data.i32 + entry.count);
+            supportedUseCases.insert(supportedUseCases.end(), entry.data.i64,
+                                     entry.data.i64 + entry.count);
         } else {
             supportedUseCases.push_back(ANDROID_SCALER_AVAILABLE_STREAM_USE_CASES_DEFAULT);
         }
@@ -3020,7 +3020,7 @@ TEST_P(CameraAidlTest, configureStreamsUseCases) {
         ASSERT_TRUE(ret.isOk());
         config.sessionParams = req;
 
-        for (int32_t useCase : useCases) {
+        for (int64_t useCase : useCases) {
             bool useCaseSupported = std::find(supportedUseCases.begin(), supportedUseCases.end(),
                                               useCase) != supportedUseCases.end();
 
@@ -3034,12 +3034,13 @@ TEST_P(CameraAidlTest, configureStreamsUseCases) {
 
             bool combSupported;
             ret = cameraDevice->isStreamCombinationSupported(config, &combSupported);
-            ASSERT_TRUE((ret.isOk()) || (static_cast<int32_t>(Status::OPERATION_NOT_SUPPORTED) ==
-                                         ret.getServiceSpecificError()));
-            if (ret.isOk()) {
-                ASSERT_EQ(combSupported, useCaseSupported);
+            if (static_cast<int32_t>(Status::OPERATION_NOT_SUPPORTED) ==
+                ret.getServiceSpecificError()) {
+                continue;
             }
+
             ASSERT_TRUE(ret.isOk());
+            ASSERT_EQ(combSupported, useCaseSupported);
 
             std::vector<HalStream> halStreams;
             ret = mSession->configureStreams(config, &halStreams);
