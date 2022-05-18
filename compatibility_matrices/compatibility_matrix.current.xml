@@ -26,6 +26,18 @@
         </interface>
     </hal>
     <hal format="aidl" optional="true">
+        <name>android.hardware.audio.core</name>
+        <version>1</version>
+        <interface>
+            <name>IModule</name>
+            <instance>default</instance>
+        </interface>
+        <interface>
+            <name>IConfig</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="aidl" optional="true">
          <name>android.hardware.authsecret</name>
          <version>1</version>
          <interface>
@@ -130,6 +142,7 @@
         <interface>
             <name>IFingerprint</name>
             <instance>default</instance>
+            <instance>virtual</instance>
         </interface>
     </hal>
     <hal format="hidl" optional="true">
