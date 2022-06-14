@@ -100,13 +100,15 @@ parcelable ProtectedData {
      *     SignerName = tstr
      *
      *     DKCertChain = [
-     *         2* X509Certificate       // Root -> ... -> Leaf. "Root" is the vendor self-signed
+     *         2* Certificate           // Root -> ... -> Leaf. "Root" is the vendor self-signed
      *                                  // cert, "Leaf" contains DK_pub. There may also be
      *                                  // intermediate certificates between Root and Leaf.
      *     ]
      *
-     *     // A bstr containing a DER-encoded X.509 certificate (RSA, NIST P-curve, or edDSA)
-     *     X509Certificate = bstr
+     *     // Certificates may be either:
+     *     // 1. COSE_Sign1, with payload containing PubKeyEd25519 or PubKeyECDSA256
+     *     // 2. a bstr containing a DER-encoded X.509 certificate (RSA, NIST P-curve, or edDSA)
+     *     Certificate = COSE_Sign1 / bstr
      *
      *     // The SignedMac, which authenticates the MAC key that is used to authenticate the
      *     // keysToSign.
