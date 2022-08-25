@@ -2448,6 +2448,29 @@ TEST_P(NewKeyGenerationTest, EcdsaInvalidCurve) {
 }
 
 /*
+ * NewKeyGenerationTest.EcdsaMissingCurve
+ *
+ * Verifies that EC key generation fails if EC_CURVE not specified after KeyMint V2.
+ */
+TEST_P(NewKeyGenerationTest, EcdsaMissingCurve) {
+    if (AidlVersion() < 2) {
+        /*
+         * The KeyMint V1 spec required that EC_CURVE be specified for EC keys.
+         * However, this was not checked at the time so we can only be strict about checking this
+         * for implementations of KeyMint version 2 and above.
+         */
+        GTEST_SKIP() << "Requiring EC_CURVE only strict since KeyMint v2";
+    }
+    /* If EC_CURVE not provided, generateKey
+     * must return ErrorCode::UNSUPPORTED_KEY_SIZE or ErrorCode::UNSUPPORTED_EC_CURVE.
+     */
+    auto result = GenerateKey(
+            AuthorizationSetBuilder().EcdsaKey(256).Digest(Digest::NONE).SetDefaultValidity());
+    ASSERT_TRUE(result == ErrorCode::UNSUPPORTED_KEY_SIZE ||
+                result == ErrorCode::UNSUPPORTED_EC_CURVE);
+}
+
+/*
  * NewKeyGenerationTest.EcdsaMismatchKeySize
  *
  * Verifies that specifying mismatched key size and curve for EC key generation returns
@@ -7525,7 +7548,6 @@ class KeyAgreementTest : public KeyMintAidlTestBase {
             uint8_t privKeyData[32];
             uint8_t pubKeyData[32];
             X25519_keypair(pubKeyData, privKeyData);
-            *localPublicKey = vector<uint8_t>(pubKeyData, pubKeyData + 32);
             *localPrivKey = EVP_PKEY_Ptr(EVP_PKEY_new_raw_private_key(
                     EVP_PKEY_X25519, nullptr, privKeyData, sizeof(privKeyData)));
         } else {
@@ -7537,16 +7559,15 @@ class KeyAgreementTest : public KeyMintAidlTestBase {
             ASSERT_EQ(EC_KEY_generate_key(ecKey.get()), 1);
             *localPrivKey = EVP_PKEY_Ptr(EVP_PKEY_new());
             ASSERT_EQ(EVP_PKEY_set1_EC_KEY(localPrivKey->get(), ecKey.get()), 1);
-
-            // Get encoded form of the public part of the locally generated key...
-            unsigned char* p = nullptr;
-            int localPublicKeySize = i2d_PUBKEY(localPrivKey->get(), &p);
-            ASSERT_GT(localPublicKeySize, 0);
-            *localPublicKey =
-                    vector<uint8_t>(reinterpret_cast<const uint8_t*>(p),
-                                    reinterpret_cast<const uint8_t*>(p + localPublicKeySize));
-            OPENSSL_free(p);
         }
+
+        // Get encoded form of the public part of the locally generated key...
+        unsigned char* p = nullptr;
+        int localPublicKeySize = i2d_PUBKEY(localPrivKey->get(), &p);
+        ASSERT_GT(localPublicKeySize, 0);
+        *localPublicKey = vector<uint8_t>(reinterpret_cast<const uint8_t*>(p),
+                                          reinterpret_cast<const uint8_t*>(p + localPublicKeySize));
+        OPENSSL_free(p);
     }
 
     void GenerateKeyMintEcKey(EcCurve curve, EVP_PKEY_Ptr* kmPubKey) {
@@ -7641,6 +7662,9 @@ TEST_P(KeyAgreementTest, Ecdh) {
     //
     for (auto curve : ValidCurves()) {
         for (auto localCurve : ValidCurves()) {
+            SCOPED_TRACE(testing::Message()
+                         << "local-curve-" << localCurve << "-keymint-curve-" << curve);
+
             // Generate EC key locally (with access to private key material)
             EVP_PKEY_Ptr localPrivKey;
             vector<uint8_t> localPublicKey;
