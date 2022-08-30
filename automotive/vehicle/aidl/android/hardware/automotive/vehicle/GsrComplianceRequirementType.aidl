@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 The Android Open Source Project
+ * Copyright (C) 2022 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,20 +14,21 @@
  * limitations under the License.
  */
 
-package android.hardware.radio.messaging;
+package android.hardware.automotive.vehicle;
 
+/**
+ * Used by GENERAL_SAFETY_REGULATION_COMPLIANCE_REQUIREMENT to indicate what
+ * kind of general safety regulation compliance requirement is enforced.
+ */
 @VintfStability
-@JavaDerive(toString=true)
-parcelable GsmSmsMessage {
+@Backing(type="int")
+enum GsrComplianceRequirementType {
     /**
-     * SMSC address in GSM BCD format prefixed by a length byte (as expected by TS 27.005)
-     * or empty string for default SMSC
+     * GSR compliance is not required.
      */
-    String smscPdu;
+    GSR_COMPLIANCE_NOT_REQUIRED = 0,
     /**
-     * SMS in PDU format as an ASCII hex string less the SMSC address.
-     * TP-Layer-Length is be "strlen(pdu)/2
-     * TP - MessageRef field of pdu must not be modified by modem
+     * GSR compliance is required through system image.
      */
-    String pdu;
+    GSR_COMPLIANCE_REQUIRED_THROUGH_SYSTEM_IMAGE = 1,
 }
