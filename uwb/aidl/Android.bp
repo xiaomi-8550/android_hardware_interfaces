@@ -21,9 +21,6 @@ aidl_interface {
             enabled: false,
         },
         ndk: {
-            vndk: {
-                enabled: true,
-            },
             apex_available: [
                 "//apex_available:platform",
                 "com.android.uwb",
@@ -50,6 +47,7 @@ aidl_interface {
 
 aidl_interface {
     name: "android.hardware.uwb.fira_android",
+    owner: "google",
     vendor_available: true,
     srcs: ["android/hardware/uwb/fira_android/*.aidl"],
     stability: "vintf",
