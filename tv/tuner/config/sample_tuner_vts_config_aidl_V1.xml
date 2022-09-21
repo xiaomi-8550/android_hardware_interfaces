@@ -68,7 +68,8 @@
             <frontend id="FE_DVBS_0" type="DVBS" isSoftwareFrontend="true"
                       connectToCicamId="0" removeOutputPid="10" frequency="578000000"
                       endFrequency="800000000">
-              <dvbsFrontendSettings inputStreamId="0" symbolRate="0"/>
+              <dvbsFrontendSettings inputStreamId="0" symbolRate="0" inversion="0" modulation="0" coderate="0"
+                                    rolloff="0" pilot="0" standard="0" vcmMode="0" scanType="0" isDiseqcRxMessage="true"/>
             </frontend>
             <frontend id="FE_DVBT_0" type="DVBT" isSoftwareFrontend="true"
                       connectToCicamId="0" removeOutputPid="10" frequency="578000000"
@@ -195,7 +196,6 @@
                       videoFilterConnection="FILTER_VIDEO_DEFAULT"
                       dvrSoftwareFeConnection="DVR_PLAYBACK_0"
                       dvrSourceConnection="DVR_PLAYBACK_1">
-                      <optionalFilters>FILTER_TS_RECORD_0 FILTER_IP_IP_0</optionalFilters>
         </descrambling>
         <timeFilter timeFilterConnection="TIME_FILTER_0"/>
         <lnbLive frontendConnection="FE_DVBS_0"
@@ -208,5 +208,11 @@
                    dvrRecordConnection="DVR_RECORD_0"
                    lnbConnection="LNB_0"
                    diseqcMsgSender="DISEQC_POWER_ON"/>
+        <lnbDescrambling frontendConnection="FE_DVBS_0"
+                        audioFilterConnection="FILTER_AUDIO_DEFAULT"
+                        videoFilterConnection="FILTER_VIDEO_DEFAULT"
+                        lnbConnection="LNB_1"
+                        descramblerConnection="DESCRAMBLER_0"/>
+
     </dataFlowConfiguration>
 </TunerConfiguration>

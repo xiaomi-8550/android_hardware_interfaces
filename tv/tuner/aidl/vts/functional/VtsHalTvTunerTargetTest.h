@@ -65,12 +65,22 @@ AssertionResult filterDataOutputTestBase(FilterTests& tests) {
 }
 
 void clearIds() {
+    lnbIds.clear();
+    diseqcMsgs.clear();
+    frontendIds.clear();
+    ipFilterIds.clear();
+    pcrFilterIds.clear();
     recordDvrIds.clear();
+    timeFilterIds.clear();
+    descramblerIds.clear();
     audioFilterIds.clear();
     videoFilterIds.clear();
     playbackDvrIds.clear();
     recordFilterIds.clear();
+    sectionFilterIds.clear();
 }
+
+enum class Dataflow_Context { LNBRECORD, RECORD, DESCRAMBLING, LNBDESCRAMBLING };
 
 class TunerLnbAidlTest : public testing::TestWithParam<std::string> {
   public:
@@ -148,7 +158,7 @@ class TunerFilterAidlTest : public testing::TestWithParam<std::string> {
             mService = nullptr;
         }
         ASSERT_NE(mService, nullptr);
-        initConfiguration();
+        ASSERT_TRUE(initConfiguration());
 
         mFrontendTests.setService(mService);
         mDemuxTests.setService(mService);
@@ -259,7 +269,7 @@ class TunerRecordAidlTest : public testing::TestWithParam<std::string> {
             mService = nullptr;
         }
         ASSERT_NE(mService, nullptr);
-        initConfiguration();
+        ASSERT_TRUE(initConfiguration());
 
         mFrontendTests.setService(mService);
         mDemuxTests.setService(mService);
@@ -271,7 +281,6 @@ class TunerRecordAidlTest : public testing::TestWithParam<std::string> {
     virtual void TearDown() override {
         clearIds();
         mService = nullptr;
-        mLnbId = nullptr;
     }
 
   protected:
@@ -284,7 +293,7 @@ class TunerRecordAidlTest : public testing::TestWithParam<std::string> {
     void recordSingleFilterTestWithLnb(FilterConfig filterConf, FrontendConfig frontendConf,
                                        DvrConfig dvrConf, LnbConfig lnbConf);
     void recordSingleFilterTest(FilterConfig filterConf, FrontendConfig frontendConf,
-                                DvrConfig dvrConf);
+                                DvrConfig dvrConf, Dataflow_Context context);
 
     std::shared_ptr<ITuner> mService;
     FrontendTests mFrontendTests;
@@ -294,7 +303,7 @@ class TunerRecordAidlTest : public testing::TestWithParam<std::string> {
     LnbTests mLnbTests;
 
   private:
-    int32_t* mLnbId = nullptr;
+    int32_t mLnbId = INVALID_LNB_ID;
 };
 
 GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(TunerRecordAidlTest);
@@ -309,7 +318,7 @@ class TunerFrontendAidlTest : public testing::TestWithParam<std::string> {
             mService = nullptr;
         }
         ASSERT_NE(mService, nullptr);
-        initConfiguration();
+        ASSERT_TRUE(initConfiguration());
 
         mFrontendTests.setService(mService);
     }
@@ -340,7 +349,7 @@ class TunerBroadcastAidlTest : public testing::TestWithParam<std::string> {
             mService = nullptr;
         }
         ASSERT_NE(mService, nullptr);
-        initConfiguration();
+        ASSERT_TRUE(initConfiguration());
 
         mFrontendTests.setService(mService);
         mDemuxTests.setService(mService);
@@ -352,7 +361,6 @@ class TunerBroadcastAidlTest : public testing::TestWithParam<std::string> {
     virtual void TearDown() override {
         clearIds();
         mService = nullptr;
-        mLnbId = nullptr;
     }
 
   protected:
@@ -375,7 +383,7 @@ class TunerBroadcastAidlTest : public testing::TestWithParam<std::string> {
     void mediaFilterUsingSharedMemoryTest(FilterConfig filterConf, FrontendConfig frontendConf);
 
   private:
-    int32_t* mLnbId = nullptr;
+    int32_t mLnbId = INVALID_LNB_ID;
 };
 
 GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(TunerBroadcastAidlTest);
@@ -399,6 +407,7 @@ class TunerDescramblerAidlTest : public testing::TestWithParam<std::string> {
         mDvrTests.setService(mService);
         mDescramblerTests.setService(mService);
         mDescramblerTests.setCasService(mCasService);
+        mLnbTests.setService(mService);
     }
 
     virtual void TearDown() override {
@@ -412,7 +421,11 @@ class TunerDescramblerAidlTest : public testing::TestWithParam<std::string> {
     }
 
     void scrambledBroadcastTest(set<struct FilterConfig> mediaFilterConfs,
-                                FrontendConfig frontendConf, DescramblerConfig descConfig);
+                                FrontendConfig frontendConf, DescramblerConfig descConfig,
+                                Dataflow_Context context);
+    void scrambledBroadcastTestWithLnb(set<struct FilterConfig>& mediaFilterConfs,
+                                       FrontendConfig& frontendConf, DescramblerConfig& descConfig,
+                                       LnbConfig& lnbConfig);
     AssertionResult filterDataOutputTest();
 
     std::shared_ptr<ITuner> mService;
@@ -422,6 +435,10 @@ class TunerDescramblerAidlTest : public testing::TestWithParam<std::string> {
     FilterTests mFilterTests;
     DescramblerTests mDescramblerTests;
     DvrTests mDvrTests;
+    LnbTests mLnbTests;
+
+  private:
+    int32_t mLnbId = INVALID_LNB_ID;
 };
 
 GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(TunerDescramblerAidlTest);
