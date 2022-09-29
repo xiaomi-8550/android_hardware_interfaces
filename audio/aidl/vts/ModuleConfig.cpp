@@ -15,25 +15,50 @@
  */
 
 #include <algorithm>
+#include <chrono>
 
-#include <android/media/audio/common/AudioIoFlags.h>
-#include <android/media/audio/common/AudioOutputFlags.h>
+#include <aidl/android/media/audio/common/AudioIoFlags.h>
+#include <aidl/android/media/audio/common/AudioOutputFlags.h>
 
 #include "ModuleConfig.h"
 
 using namespace android;
+using namespace std::chrono_literals;
 
-using android::hardware::audio::core::IModule;
-using android::media::audio::common::AudioChannelLayout;
-using android::media::audio::common::AudioFormatDescription;
-using android::media::audio::common::AudioFormatType;
-using android::media::audio::common::AudioIoFlags;
-using android::media::audio::common::AudioOutputFlags;
-using android::media::audio::common::AudioPort;
-using android::media::audio::common::AudioPortConfig;
-using android::media::audio::common::AudioPortExt;
-using android::media::audio::common::AudioProfile;
-using android::media::audio::common::Int;
+using aidl::android::hardware::audio::core::IModule;
+using aidl::android::media::audio::common::AudioChannelLayout;
+using aidl::android::media::audio::common::AudioEncapsulationMode;
+using aidl::android::media::audio::common::AudioFormatDescription;
+using aidl::android::media::audio::common::AudioFormatType;
+using aidl::android::media::audio::common::AudioIoFlags;
+using aidl::android::media::audio::common::AudioOffloadInfo;
+using aidl::android::media::audio::common::AudioOutputFlags;
+using aidl::android::media::audio::common::AudioPort;
+using aidl::android::media::audio::common::AudioPortConfig;
+using aidl::android::media::audio::common::AudioPortExt;
+using aidl::android::media::audio::common::AudioProfile;
+using aidl::android::media::audio::common::AudioUsage;
+using aidl::android::media::audio::common::Int;
+
+// static
+std::optional<AudioOffloadInfo> ModuleConfig::generateOffloadInfoIfNeeded(
+        const AudioPortConfig& portConfig) {
+    if (portConfig.flags.has_value() &&
+        portConfig.flags.value().getTag() == AudioIoFlags::Tag::output &&
+        (portConfig.flags.value().get<AudioIoFlags::Tag::output>() &
+         1 << static_cast<int>(AudioOutputFlags::COMPRESS_OFFLOAD)) != 0) {
+        AudioOffloadInfo offloadInfo;
+        offloadInfo.base.sampleRate = portConfig.sampleRate.value().value;
+        offloadInfo.base.channelMask = portConfig.channelMask.value();
+        offloadInfo.base.format = portConfig.format.value();
+        offloadInfo.bitRatePerSecond = 256;                                // Arbitrary value.
+        offloadInfo.durationUs = std::chrono::microseconds(1min).count();  // Arbitrary value.
+        offloadInfo.usage = AudioUsage::MEDIA;
+        offloadInfo.encapsulationMode = AudioEncapsulationMode::NONE;
+        return offloadInfo;
+    }
+    return {};
+}
 
 template <typename T>
 auto findById(const std::vector<T>& v, int32_t id) {
@@ -46,20 +71,38 @@ ModuleConfig::ModuleConfig(IModule* module) {
     for (const auto& port : mPorts) {
         if (port.ext.getTag() != AudioPortExt::Tag::device) continue;
         const auto& devicePort = port.ext.get<AudioPortExt::Tag::device>();
-        const bool isInput = port.flags.getTag() == AudioIoFlags::Tag::input;
         if (devicePort.device.type.connection.empty()) {
+            const bool isInput = port.flags.getTag() == AudioIoFlags::Tag::input;
             // Permanently attached device.
             if (isInput) {
                 mAttachedSourceDevicePorts.insert(port.id);
             } else {
                 mAttachedSinkDevicePorts.insert(port.id);
             }
+        } else if (port.profiles.empty()) {
+            mExternalDevicePorts.insert(port.id);
         }
     }
     if (!mStatus.isOk()) return;
     mStatus = module->getAudioRoutes(&mRoutes);
     if (!mStatus.isOk()) return;
     mStatus = module->getAudioPortConfigs(&mInitialConfigs);
+}
+
+std::vector<AudioPort> ModuleConfig::getAttachedDevicePorts() const {
+    std::vector<AudioPort> result;
+    std::copy_if(mPorts.begin(), mPorts.end(), std::back_inserter(result), [&](const auto& port) {
+        return mAttachedSinkDevicePorts.count(port.id) != 0 ||
+               mAttachedSourceDevicePorts.count(port.id) != 0;
+    });
+    return result;
+}
+
+std::vector<AudioPort> ModuleConfig::getExternalDevicePorts() const {
+    std::vector<AudioPort> result;
+    std::copy_if(mPorts.begin(), mPorts.end(), std::back_inserter(result),
+                 [&](const auto& port) { return mExternalDevicePorts.count(port.id) != 0; });
+    return result;
 }
 
 std::vector<AudioPort> ModuleConfig::getInputMixPorts() const {
@@ -229,10 +272,27 @@ std::vector<ModuleConfig::SrcSinkGroup> ModuleConfig::getRoutableSrcSinkGroups(b
     return result;
 }
 
-static std::vector<AudioPortConfig> combineAudioConfigs(const AudioPort& port,
-                                                        const AudioProfile& profile) {
-    std::vector<AudioPortConfig> configs;
-    configs.reserve(profile.channelMasks.size() * profile.sampleRates.size());
+std::string ModuleConfig::toString() const {
+    std::string result;
+    result.append("Ports: ");
+    result.append(android::internal::ToString(mPorts));
+    result.append("\nInitial configs: ");
+    result.append(android::internal::ToString(mInitialConfigs));
+    result.append("\nAttached sink device ports: ");
+    result.append(android::internal::ToString(mAttachedSinkDevicePorts));
+    result.append("\nAttached source device ports: ");
+    result.append(android::internal::ToString(mAttachedSourceDevicePorts));
+    result.append("\nExternal device ports: ");
+    result.append(android::internal::ToString(mExternalDevicePorts));
+    result.append("\nRoutes: ");
+    result.append(android::internal::ToString(mRoutes));
+    return result;
+}
+
+static size_t combineAudioConfigs(const AudioPort& port, const AudioProfile& profile,
+                                  std::vector<AudioPortConfig>* result) {
+    const size_t newConfigCount = profile.channelMasks.size() * profile.sampleRates.size();
+    result->reserve(result->capacity() + newConfigCount);
     for (auto channelMask : profile.channelMasks) {
         for (auto sampleRate : profile.sampleRates) {
             AudioPortConfig config{};
@@ -242,66 +302,32 @@ static std::vector<AudioPortConfig> combineAudioConfigs(const AudioPort& port,
             config.sampleRate = sr;
             config.channelMask = channelMask;
             config.format = profile.format;
+            config.flags = port.flags;
             config.ext = port.ext;
-            configs.push_back(config);
+            result->push_back(std::move(config));
         }
     }
-    return configs;
+    return newConfigCount;
 }
 
-std::vector<AudioPortConfig> ModuleConfig::generateInputAudioMixPortConfigs(
-        const std::vector<AudioPort>& ports, bool singleProfile) const {
+static bool isDynamicProfile(const AudioProfile& profile) {
+    return (profile.format.type == AudioFormatType::DEFAULT && profile.format.encoding.empty()) ||
+           profile.sampleRates.empty() || profile.channelMasks.empty();
+}
+
+std::vector<AudioPortConfig> ModuleConfig::generateAudioMixPortConfigs(
+        const std::vector<AudioPort>& ports, bool isInput, bool singleProfile) const {
     std::vector<AudioPortConfig> result;
     for (const auto& mixPort : ports) {
-        if (getAttachedSourceDevicesPortsForMixPort(mixPort).empty()) {
-            continue;  // no attached devices
+        if (getAttachedDevicesPortsForMixPort(isInput, mixPort).empty()) {
+            continue;
         }
         for (const auto& profile : mixPort.profiles) {
-            if (profile.format.type == AudioFormatType::DEFAULT || profile.sampleRates.empty() ||
-                profile.channelMasks.empty()) {
-                continue;  // dynamic profile
-            }
-            auto configs = combineAudioConfigs(mixPort, profile);
-            for (auto& config : configs) {
-                config.flags = mixPort.flags;
-                result.push_back(config);
-                if (singleProfile) return result;
-            }
-        }
-    }
-    return result;
-}
-
-static std::tuple<AudioIoFlags, bool> generateOutFlags(const AudioPort& mixPort) {
-    static const AudioIoFlags offloadFlags = AudioIoFlags::make<AudioIoFlags::Tag::output>(
-            (1 << static_cast<int>(AudioOutputFlags::COMPRESS_OFFLOAD)) |
-            (1 << static_cast<int>(AudioOutputFlags::DIRECT)));
-    const bool isOffload = (mixPort.flags.get<AudioIoFlags::Tag::output>() &
-                            (1 << static_cast<int>(AudioOutputFlags::COMPRESS_OFFLOAD))) != 0;
-    return {isOffload ? offloadFlags : mixPort.flags, isOffload};
-}
-
-std::vector<AudioPortConfig> ModuleConfig::generateOutputAudioMixPortConfigs(
-        const std::vector<AudioPort>& ports, bool singleProfile) const {
-    std::vector<AudioPortConfig> result;
-    for (const auto& mixPort : ports) {
-        if (getAttachedSinkDevicesPortsForMixPort(mixPort).empty()) {
-            continue;  // no attached devices
-        }
-        auto [flags, isOffload] = generateOutFlags(mixPort);
-        (void)isOffload;
-        for (const auto& profile : mixPort.profiles) {
-            if (profile.format.type == AudioFormatType::DEFAULT) continue;
-            auto configs = combineAudioConfigs(mixPort, profile);
-            for (auto& config : configs) {
-                // Some combinations of flags declared in the config file require special
-                // treatment.
-                // if (isOffload) {
-                //     config.offloadInfo.info(generateOffloadInfo(config.base));
-                // }
-                config.flags = flags;
-                result.push_back(config);
-                if (singleProfile) return result;
+            if (isDynamicProfile(profile)) continue;
+            combineAudioConfigs(mixPort, profile, &result);
+            if (singleProfile && !result.empty()) {
+                result.resize(1);
+                return result;
             }
         }
     }
@@ -314,15 +340,21 @@ std::vector<AudioPortConfig> ModuleConfig::generateAudioDevicePortConfigs(
     for (const auto& devicePort : ports) {
         const size_t resultSizeBefore = result.size();
         for (const auto& profile : devicePort.profiles) {
-            auto configs = combineAudioConfigs(devicePort, profile);
-            result.insert(result.end(), configs.begin(), configs.end());
-            if (singleProfile && !result.empty()) return result;
+            combineAudioConfigs(devicePort, profile, &result);
+            if (singleProfile && !result.empty()) {
+                result.resize(1);
+                return result;
+            }
         }
         if (resultSizeBefore == result.size()) {
-            AudioPortConfig empty;
-            empty.portId = devicePort.id;
-            empty.ext = devicePort.ext;
-            result.push_back(empty);
+            std::copy_if(mInitialConfigs.begin(), mInitialConfigs.end(), std::back_inserter(result),
+                         [&](const auto& config) { return config.portId == devicePort.id; });
+            if (resultSizeBefore == result.size()) {
+                AudioPortConfig empty;
+                empty.portId = devicePort.id;
+                empty.ext = devicePort.ext;
+                result.push_back(empty);
+            }
         }
         if (singleProfile) return result;
     }

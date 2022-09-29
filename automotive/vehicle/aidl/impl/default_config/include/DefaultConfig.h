@@ -36,6 +36,7 @@ using ::aidl::android::hardware::automotive::vehicle::EvConnectorType;
 using ::aidl::android::hardware::automotive::vehicle::EvsServiceState;
 using ::aidl::android::hardware::automotive::vehicle::EvsServiceType;
 using ::aidl::android::hardware::automotive::vehicle::FuelType;
+using ::aidl::android::hardware::automotive::vehicle::GsrComplianceRequirementType;
 using ::aidl::android::hardware::automotive::vehicle::RawPropValues;
 using ::aidl::android::hardware::automotive::vehicle::VehicleApPowerStateReport;
 using ::aidl::android::hardware::automotive::vehicle::VehicleApPowerStateReq;
@@ -170,6 +171,17 @@ const std::vector<ConfigDeclaration> kVehicleProperties = {
                                          toInt(VehicleUnit::KILOMETERS_PER_HOUR)},
                  },
          .initialValue = {.int32Values = {toInt(VehicleUnit::KILOMETERS_PER_HOUR)}}},
+
+        {.config =
+                 {
+                         .prop = toInt(VehicleProperty::EV_BATTERY_DISPLAY_UNITS),
+                         .access = VehiclePropertyAccess::READ_WRITE,
+                         .changeMode = VehiclePropertyChangeMode::ON_CHANGE,
+                         .configArray = {toInt(VehicleUnit::WATT_HOUR),
+                                         toInt(VehicleUnit::AMPERE_HOURS),
+                                         toInt(VehicleUnit::KILOWATT_HOUR)},
+                 },
+         .initialValue = {.int32Values = {toInt(VehicleUnit::KILOWATT_HOUR)}}},
 
         {.config =
                  {
@@ -352,8 +364,9 @@ const std::vector<ConfigDeclaration> kVehicleProperties = {
                          .prop = toInt(VehicleProperty::VEHICLE_CURB_WEIGHT),
                          .access = VehiclePropertyAccess::READ,
                          .changeMode = VehiclePropertyChangeMode::STATIC,
+                         .configArray = {/*gross weight kg=*/2948},
                  },
-         .initialValue = {.int32Values = {30}}},
+         .initialValue = {.int32Values = {2211 /*kg*/}}},
 
         {.config =
                  {
@@ -466,6 +479,15 @@ const std::vector<ConfigDeclaration> kVehicleProperties = {
                          .configArray = {(int)VehicleUnit::LITER, (int)VehicleUnit::US_GALLON},
                  },
          .initialValue = {.int32Values = {(int)VehicleUnit::LITER}}},
+
+        {.config =
+                 {
+                         .prop = toInt(
+                                 VehicleProperty::FUEL_CONSUMPTION_UNITS_DISTANCE_OVER_VOLUME),
+                         .access = VehiclePropertyAccess::READ_WRITE,
+                         .changeMode = VehiclePropertyChangeMode::ON_CHANGE,
+                 },
+         .initialValue = {.int32Values = {1}}},
 
         {.config =
                  {
@@ -724,6 +746,16 @@ const std::vector<ConfigDeclaration> kVehicleProperties = {
 
         {.config =
                  {
+                         .prop = toInt(VehicleProperty::ENGINE_COOLANT_TEMP),
+                         .access = VehiclePropertyAccess::READ,
+                         .changeMode = VehiclePropertyChangeMode::CONTINUOUS,
+                         .minSampleRate = 1.0f,
+                         .maxSampleRate = 10.0f,
+                 },
+         .initialValue = {.floatValues = {75.0f}}},
+
+        {.config =
+                 {
                          .prop = toInt(VehicleProperty::ENGINE_OIL_LEVEL),
                          .access = VehiclePropertyAccess::READ,
                          .changeMode = VehiclePropertyChangeMode::ON_CHANGE,
@@ -835,7 +867,7 @@ const std::vector<ConfigDeclaration> kVehicleProperties = {
         {.config = {.prop = toInt(VehicleProperty::AP_POWER_STATE_REQ),
                     .access = VehiclePropertyAccess::READ,
                     .changeMode = VehiclePropertyChangeMode::ON_CHANGE,
-                    .configArray = {3}}},
+                    .configArray = {0}}},
 
         {.config = {.prop = toInt(VehicleProperty::AP_POWER_STATE_REPORT),
                     .access = VehiclePropertyAccess::READ_WRITE,
@@ -893,14 +925,6 @@ const std::vector<ConfigDeclaration> kVehicleProperties = {
 
         {.config =
                  {
-                         .prop = toInt(VehicleProperty::FOG_LIGHTS_STATE),
-                         .access = VehiclePropertyAccess::READ,
-                         .changeMode = VehiclePropertyChangeMode::ON_CHANGE,
-                 },
-         .initialValue = {.int32Values = {LIGHT_STATE_ON}}},
-
-        {.config =
-                 {
                          .prop = toInt(VehicleProperty::FRONT_FOG_LIGHTS_STATE),
                          .access = VehiclePropertyAccess::READ,
                          .changeMode = VehiclePropertyChangeMode::ON_CHANGE,
@@ -939,14 +963,7 @@ const std::vector<ConfigDeclaration> kVehicleProperties = {
                  },
          .initialValue = {.int32Values = {LIGHT_SWITCH_AUTO}}},
 
-        {.config =
-                 {
-                         .prop = toInt(VehicleProperty::FOG_LIGHTS_SWITCH),
-                         .access = VehiclePropertyAccess::READ_WRITE,
-                         .changeMode = VehiclePropertyChangeMode::ON_CHANGE,
-                 },
-         .initialValue = {.int32Values = {LIGHT_SWITCH_AUTO}}},
-
+        // FOG_LIGHTS_SWITCH must not be implemented when FRONT_FOG_LIGHTS_SWITCH is implemented
         {.config =
                  {
                          .prop = toInt(VehicleProperty::FRONT_FOG_LIGHTS_SWITCH),
@@ -955,6 +972,7 @@ const std::vector<ConfigDeclaration> kVehicleProperties = {
                  },
          .initialValue = {.int32Values = {LIGHT_SWITCH_AUTO}}},
 
+        // FOG_LIGHTS_SWITCH must not be implemented when REAR_FOG_LIGHTS_SWITCH is implemented
         {.config =
                  {
                          .prop = toInt(VehicleProperty::REAR_FOG_LIGHTS_SWITCH),
@@ -1244,6 +1262,19 @@ const std::vector<ConfigDeclaration> kVehicleProperties = {
                                 .access = VehiclePropertyAccess::READ_WRITE,
                                 .changeMode = VehiclePropertyChangeMode::ON_CHANGE,
                         },
+        },
+        {
+                .config =
+                        {
+                                .prop = toInt(
+                                        VehicleProperty::
+                                                GENERAL_SAFETY_REGULATION_COMPLIANCE_REQUIREMENT),
+                                .access = VehiclePropertyAccess::READ,
+                                .changeMode = VehiclePropertyChangeMode::STATIC,
+                        },
+                .initialValue = {.int32Values = {toInt(
+                                         GsrComplianceRequirementType::
+                                                 GSR_COMPLIANCE_REQUIRED_THROUGH_SYSTEM_IMAGE)}},
         },
 #ifdef ENABLE_VENDOR_CLUSTER_PROPERTY_FOR_TESTING
         // Vendor propetry for E2E ClusterHomeService testing.

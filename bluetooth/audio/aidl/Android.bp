@@ -40,9 +40,6 @@ aidl_interface {
             enabled: false,
         },
         ndk: {
-            vndk: {
-                enabled: true,
-            },
             apex_available: [
                 "//apex_available:platform",
                 "com.android.bluetooth",
@@ -59,6 +56,15 @@ aidl_interface {
                 "android.hardware.audio.common-V1",
             ],
         },
+        {
+            version: "2",
+            imports: [
+                "android.hardware.common-V2",
+                "android.hardware.common.fmq-V1",
+                "android.hardware.audio.common-V1",
+            ],
+        },
+
     ],
 
 }

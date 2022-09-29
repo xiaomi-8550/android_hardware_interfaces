@@ -50,7 +50,9 @@ using ::android::AidlMessageQueue;
 using ::android::hardware::EventFlag;
 
 using FilterMQ = AidlMessageQueue<int8_t, SynchronizedReadWrite>;
-const uint32_t BUFFER_SIZE_16M = 0x1000000;
+// Large buffer size can lead to sudden crashes due to being de-allocated
+// by the memory management system. Change the buffer size when needed.
+const uint32_t BUFFER_SIZE = 0x800000;  // 8 MB
 
 class Demux;
 class Dvr;
@@ -256,9 +258,13 @@ class Filter : public BnFilter {
     std::mutex mFilterOutputLock;
     std::mutex mRecordFilterOutputLock;
 
+    // handle single Section filter
+    uint32_t mSectionSizeLeft = 0;
+    vector<int8_t> mSectionOutput;
+
     // temp handle single PES filter
     // TODO handle mulptiple Pes filters
-    int mPesSizeLeft = 0;
+    uint32_t mPesSizeLeft = 0;
     vector<int8_t> mPesOutput;
 
     // A map from data id to ion handle

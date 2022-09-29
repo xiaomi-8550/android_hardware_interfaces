@@ -67,6 +67,7 @@ using ::aidl::android::hardware::automotive::vehicle::VehiclePropValue;
 
 using ::android::base::EqualsIgnoreCase;
 using ::android::base::Error;
+using ::android::base::GetIntProperty;
 using ::android::base::ParseFloat;
 using ::android::base::Result;
 using ::android::base::ScopedLockAssertion;
@@ -75,6 +76,7 @@ using ::android::base::StringPrintf;
 
 const char* VENDOR_OVERRIDE_DIR = "/vendor/etc/automotive/vhaloverride/";
 const char* OVERRIDE_PROPERTY = "persist.vendor.vhal_init_value_override";
+const char* POWER_STATE_REQ_CONFIG_PROPERTY = "ro.vendor.fake_vhal.ap_power_state_req.config";
 
 // A list of supported options for "--set" command.
 const std::unordered_set<std::string> SET_PROP_OPTIONS = {
@@ -163,7 +165,10 @@ void FakeVehicleHardware::init() {
         VehiclePropConfig cfg = it.config;
         VehiclePropertyStore::TokenFunction tokenFunction = nullptr;
 
-        if (cfg.prop == OBD2_FREEZE_FRAME) {
+        if (cfg.prop == toInt(VehicleProperty::AP_POWER_STATE_REQ)) {
+            int config = GetIntProperty(POWER_STATE_REQ_CONFIG_PROPERTY, /*default_value=*/0);
+            cfg.configArray[0] = config;
+        } else if (cfg.prop == OBD2_FREEZE_FRAME) {
             tokenFunction = [](const VehiclePropValue& propValue) { return propValue.timestamp; };
         }
 
@@ -225,17 +230,16 @@ VhalResult<void> FakeVehicleHardware::setApPowerStateReport(const VehiclePropVal
             [[fallthrough]];
         case toInt(VehicleApPowerStateReport::WAIT_FOR_VHAL):
             // CPMS is in WAIT_FOR_VHAL state, simply move to ON and send back to HAL.
-            // Must erase existing state because in the case when Car Service crashes, the power
-            // state would already be ON when we receive WAIT_FOR_VHAL and thus new property change
-            // event would be generated. However, Car Service always expect a property change event
-            // even though there is not actual state change.
-            mServerSidePropStore->removeValuesForProperty(
-                    toInt(VehicleProperty::AP_POWER_STATE_REQ));
             prop = createApPowerStateReq(VehicleApPowerStateReq::ON);
 
-            // ALWAYS update status for generated property value
+            // ALWAYS update status for generated property value, and force a property update event
+            // because in the case when Car Service crashes, the power state would already be ON
+            // when we receive WAIT_FOR_VHAL and thus new property change event would be generated.
+            // However, Car Service always expect a property change event even though there is no
+            // actual state change.
             if (auto writeResult =
-                        mServerSidePropStore->writeValue(std::move(prop), /*updateStatus=*/true);
+                        mServerSidePropStore->writeValue(std::move(prop), /*updateStatus=*/true,
+                                                         VehiclePropertyStore::EventMode::ALWAYS);
                 !writeResult.ok()) {
                 return StatusError(getErrorCode(writeResult))
                        << "failed to write AP_POWER_STATE_REQ into property store, error: "
@@ -1238,10 +1242,10 @@ StatusCode FakeVehicleHardware::updateSampleRate(int32_t propId, int32_t areaId,
             return;
         }
         result.value()->timestamp = elapsedRealtimeNano();
-        // Must remove the value before writing, otherwise, we would generate no update event since
-        // the value is the same.
-        mServerSidePropStore->removeValue(*result.value());
-        mServerSidePropStore->writeValue(std::move(result.value()));
+        // For continuous properties, we must generate a new onPropertyChange event periodically
+        // according to the sample rate.
+        mServerSidePropStore->writeValue(std::move(result.value()), /*updateStatus=*/true,
+                                         VehiclePropertyStore::EventMode::ALWAYS);
     });
     mRecurrentTimer->registerTimerCallback(interval, action);
     mRecurrentActions[propIdAreaId] = action;
