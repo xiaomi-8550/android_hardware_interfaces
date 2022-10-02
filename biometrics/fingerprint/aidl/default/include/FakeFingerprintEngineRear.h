@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 The Android Open Source Project
+ * Copyright (C) 2021 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,26 +14,18 @@
  * limitations under the License.
  */
 
-package {
-    default_applicable_licenses: ["Android-Apache-2.0"],
-}
+#pragma once
+#include "FakeFingerprintEngine.h"
 
-cc_defaults {
-    name: "EvsHalDefaults",
-    defaults: ["android.hardware.graphics.common-ndk_static"],
-    static_libs: [
-        "android.hardware.automotive.evs-V1-ndk",
-        "android.hardware.common-V2-ndk",
-    ],
-    shared_libs: [
-        "libbase",
-        "liblog",
-        "libutils",
-    ],
-    cflags: [
-        "-Wall",
-        "-Wextra",
-        "-Werror",
-        "-Wthread-safety",
-    ],
-}
+using namespace ::aidl::android::hardware::biometrics::common;
+
+namespace aidl::android::hardware::biometrics::fingerprint {
+
+// A fake engine that is backed by system properties instead of hardware.
+class FakeFingerprintEngineRear : public FakeFingerprintEngine {
+  public:
+    FakeFingerprintEngineRear() : FakeFingerprintEngine() {}
+    ~FakeFingerprintEngineRear() {}
+};
+
+}  // namespace aidl::android::hardware::biometrics::fingerprint

@@ -14,26 +14,16 @@
  * limitations under the License.
  */
 
-package {
-    default_applicable_licenses: ["Android-Apache-2.0"],
-}
+#include "FakeFingerprintEngineRear.h"
 
-cc_defaults {
-    name: "EvsHalDefaults",
-    defaults: ["android.hardware.graphics.common-ndk_static"],
-    static_libs: [
-        "android.hardware.automotive.evs-V1-ndk",
-        "android.hardware.common-V2-ndk",
-    ],
-    shared_libs: [
-        "libbase",
-        "liblog",
-        "libutils",
-    ],
-    cflags: [
-        "-Wall",
-        "-Wextra",
-        "-Werror",
-        "-Wthread-safety",
-    ],
-}
+#include <android-base/logging.h>
+#include <android-base/parseint.h>
+
+#include <fingerprint.sysprop.h>
+
+#include "util/CancellationSignal.h"
+#include "util/Util.h"
+
+using namespace ::android::fingerprint::virt;
+
+namespace aidl::android::hardware::biometrics::fingerprint {}
