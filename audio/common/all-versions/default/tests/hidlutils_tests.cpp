@@ -17,7 +17,6 @@
 #include <array>
 #include <string>
 
-#include <android-base/test_utils.h>
 #include <gtest/gtest.h>
 
 #define LOG_TAG "HidlUtils_Test"
@@ -1125,12 +1124,15 @@ using FilterTestTypeParams = ::testing::Types<hidl_vec<AudioTag>, std::vector<st
 TYPED_TEST_SUITE(FilterTest, FilterTestTypeParams);
 
 TYPED_TEST(FilterTest, FilterOutNonVendorTags) {
-    SKIP_WITH_HWASAN; // b/230535046
     TypeParam emptyTags;
     EXPECT_EQ(emptyTags, HidlUtils::filterOutNonVendorTags(emptyTags));
 
-    TypeParam allVendorTags = {{"VX_GOOGLE_VR_42", "VX_GOOGLE_1E100"}};
-    EXPECT_EQ(allVendorTags, HidlUtils::filterOutNonVendorTags(allVendorTags));
+    // b/248421569, allocate two vendor tags at a time can run out of memory
+    // TypeParam allVendorTags = {{"VX_GOOGLE_VR_42", "VX_GOOGLE_1E100"}};
+    TypeParam allVendorTags1 = {{"VX_GOOGLE_VR_42"}};
+    EXPECT_EQ(allVendorTags1, HidlUtils::filterOutNonVendorTags(allVendorTags1));
+    TypeParam allVendorTags2 = {{"VX_GOOGLE_1E100"}};
+    EXPECT_EQ(allVendorTags2, HidlUtils::filterOutNonVendorTags(allVendorTags2));
 
     TypeParam oneVendorTag = {{"", "VX_GOOGLE_VR", "random_string"}};
     TypeParam oneVendorTagOnly = HidlUtils::filterOutNonVendorTags(oneVendorTag);
