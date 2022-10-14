@@ -16,8 +16,8 @@
 
 package android.hardware.radio.network;
 import android.hardware.radio.AccessNetwork;
-import android.hardware.radio.network.RegState;
 import android.hardware.radio.network.Domain;
+import android.hardware.radio.network.RegState;
 
 @VintfStability
 @JavaDerive(toString=true)
@@ -54,4 +54,10 @@ parcelable EmergencyRegResult {
      * This should not be set if UE is not in 5G mode.
      */
     byte nwProvidedEmf;
+
+    /** 3-digit Mobile Country Code, 000..999, empty string if unknown. */
+    String mcc = "";
+
+    /** 2 or 3-digit Mobile Network Code, 00..999, empty string if unknown. */
+    String mnc = "";
 }
