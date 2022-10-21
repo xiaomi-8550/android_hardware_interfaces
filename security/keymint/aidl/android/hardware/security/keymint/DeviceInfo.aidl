@@ -49,7 +49,6 @@ parcelable DeviceInfo {
      *         "security_level" : "tee" / "strongbox",
      *         "fused": 1 / 0,  ; 1 if secure boot is enforced for the processor that the IRPC
      *                          ; implementation is contained in. 0 otherwise.
-     *         "cert_type": "widevine" / "keymint"
      *     }
      */
     byte[] deviceInfo;
