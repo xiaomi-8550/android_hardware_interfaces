@@ -97,11 +97,8 @@ class RadioNetwork : public RadioCompatBase,
             int32_t serial,
             const ::aidl::android::hardware::radio::network::EmergencyNetworkScanTrigger&
                     scanTrigger) override;
-    ::ndk::ScopedAStatus cancelEmergencyNetworkScan(int32_t serial) override;
+    ::ndk::ScopedAStatus cancelEmergencyNetworkScan(int32_t serial, bool resetScan) override;
     ::ndk::ScopedAStatus exitEmergencyMode(int32_t serial) override;
-    ::ndk::ScopedAStatus getRegistrationState(
-            int32_t serial, ::aidl::android::hardware::radio::RadioTechnologyFamily ratFamily,
-            ::aidl::android::hardware::radio::network::Domain domain) override;
 
   protected:
     std::shared_ptr<::aidl::android::hardware::radio::network::IRadioNetworkResponse> respond();

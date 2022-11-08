@@ -168,7 +168,7 @@
     </hal>
     <hal format="aidl" optional="true">
         <name>android.hardware.camera.provider</name>
-        <version>1</version>
+        <version>1-2</version>
         <interface>
             <name>ICameraProvider</name>
             <regex-instance>[^/]+/[0-9]+</regex-instance>
@@ -177,6 +177,13 @@
     <hal format="hidl" optional="true">
         <name>android.hardware.cas</name>
         <version>1.1-2</version>
+        <interface>
+            <name>IMediaCasService</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="aidl" optional="true">
+        <name>android.hardware.cas</name>
         <interface>
             <name>IMediaCasService</name>
             <instance>default</instance>
@@ -197,7 +204,7 @@
             <instance>default</instance>
         </interface>
     </hal>
-    <hal format="aidl" optional="true">
+    <hal format="aidl" optional="true" updatable-via-apex="true">
         <name>android.hardware.drm</name>
         <version>1</version>
         <interface>
@@ -230,7 +237,7 @@
     </hal>
     <hal format="aidl" optional="true">
         <name>android.hardware.gnss</name>
-        <version>2</version>
+        <version>3</version>
         <interface>
             <name>IGnss</name>
             <instance>default</instance>
@@ -441,7 +448,7 @@
     </hal>
     <hal format="aidl" optional="true">
         <name>android.hardware.radio.data</name>
-        <version>2</version>
+        <version>1</version>
         <interface>
             <name>IRadioData</name>
             <instance>slot1</instance>
@@ -499,12 +506,30 @@
             <instance>slot3</instance>
         </interface>
     </hal>
+    <hal format="aidl" optional="true">
+        <name>android.hardware.radio.ims</name>
+        <version>1</version>
+        <interface>
+            <name>IRadioIms</name>
+            <instance>slot1</instance>
+            <instance>slot2</instance>
+            <instance>slot3</instance>
+        </interface>
+    </hal>
     <hal format="hidl" optional="true">
         <name>android.hardware.radio</name>
         <version>1.2</version>
         <interface>
             <name>ISap</name>
             <instance>slot1</instance>
+        </interface>
+    </hal>
+    <hal format="aidl" optional="true">
+        <name>android.hardware.radio.ims.media</name>
+        <version>1</version>
+        <interface>
+            <name>IImsMedia</name>
+            <instance>default</instance>
         </interface>
     </hal>
     <hal format="hidl" optional="true">
@@ -599,14 +624,6 @@
         <name>android.hardware.tv.hdmi</name>
         <interface>
             <name>IHdmi</name>
-            <instance>default</instance>
-        </interface>
-    </hal>
-    <hal format="hidl" optional="true">
-        <name>android.hardware.tv.input</name>
-        <version>1.0</version>
-        <interface>
-            <name>ITvInput</name>
             <instance>default</instance>
         </interface>
     </hal>

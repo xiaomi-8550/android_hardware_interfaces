@@ -17,6 +17,7 @@
 #pragma once
 
 #include <android-base/thread_annotations.h>
+#include <utils/Looper.h>
 #include <wakeup_client.grpc.pb.h>
 #include <condition_variable>
 #include <mutex>
@@ -41,20 +42,61 @@ class FakeTaskGenerator final {
     constexpr static uint8_t DATA[] = {0xde, 0xad, 0xbe, 0xef};
 };
 
+struct TaskInfo {
+    // This is unique per-task. Note that a task might be popped and put back into the task queue,
+    // it will have a new task ID but the same clientId in the task data.
+    int taskId;
+    int64_t timestampInMs;
+    GetRemoteTasksResponse taskData;
+};
+
+struct TaskInfoComparator {
+    // We want the smallest timestamp and smallest task ID on top.
+    bool operator()(const TaskInfo& l, const TaskInfo& r) {
+        return l.timestampInMs > r.timestampInMs ||
+               (l.timestampInMs == r.timestampInMs && l.taskId > r.taskId);
+    }
+};
+
+// forward-declaration.
+class TaskQueue;
+
+class TaskTimeoutMessageHandler final : public android::MessageHandler {
+  public:
+    TaskTimeoutMessageHandler(TaskQueue* taskQueue);
+    void handleMessage(const android::Message& message) override;
+
+  private:
+    TaskQueue* mTaskQueue;
+};
+
 // TaskQueue is thread-safe.
 class TaskQueue final {
   public:
+    TaskQueue();
+    ~TaskQueue();
+
     void add(const GetRemoteTasksResponse& response);
     std::optional<GetRemoteTasksResponse> maybePopOne();
     void waitForTask();
     void stopWait();
+    void handleTaskTimeout();
+    bool isEmpty();
 
   private:
+    std::thread mCheckTaskTimeoutThread;
     std::mutex mLock;
-    std::queue<GetRemoteTasksResponse> mTasks GUARDED_BY(mLock);
+    std::priority_queue<TaskInfo, std::vector<TaskInfo>, TaskInfoComparator> mTasks
+            GUARDED_BY(mLock);
     // A variable to notify mTasks is not empty.
     std::condition_variable mTasksNotEmptyCv;
     bool mStopped GUARDED_BY(mLock);
+    android::sp<Looper> mLooper;
+    android::sp<TaskTimeoutMessageHandler> mTaskTimeoutMessageHandler;
+    std::atomic<int> mTaskIdCounter = 0;
+
+    void checkForTestTimeoutLoop();
+    void waitForTaskWithLock(std::unique_lock<std::mutex>& lock);
 };
 
 class TestWakeupClientServiceImpl final : public WakeupClient::Service {
@@ -76,6 +118,8 @@ class TestWakeupClientServiceImpl final : public WakeupClient::Service {
     std::thread mThread;
     // A variable to notify server is stopping.
     std::condition_variable mServerStoppedCv;
+    // Whether wakeup AP is required for executing tasks.
+    std::atomic<bool> mWakeupRequired = false;
     std::mutex mLock;
     bool mServerStopped GUARDED_BY(mLock);
 
@@ -85,6 +129,8 @@ class TestWakeupClientServiceImpl final : public WakeupClient::Service {
     TaskQueue mTaskQueue;
 
     void fakeTaskGenerateLoop();
+
+    void wakeupApplicationProcessor();
 };
 
 }  // namespace remoteaccess

@@ -17,9 +17,7 @@
 package android.hardware.radio.network;
 
 import android.hardware.radio.AccessNetwork;
-import android.hardware.radio.RadioTechnologyFamily;
 import android.hardware.radio.network.CdmaRoamingType;
-import android.hardware.radio.network.Domain;
 import android.hardware.radio.network.EmergencyMode;
 import android.hardware.radio.network.EmergencyNetworkScanTrigger;
 import android.hardware.radio.network.IRadioNetworkIndication;
@@ -105,7 +103,6 @@ oneway interface IRadioNetwork {
      * @param serial Serial number of request.
      *
      * Response function is IRadioNetworkResponse.getDataRegistrationStateResponse()
-     * @deprecated use getRegistrationState()
      */
     void getDataRegistrationState(in int serial);
 
@@ -170,7 +167,6 @@ oneway interface IRadioNetwork {
      * @param serial Serial number of request.
      *
      * Response function is IRadioNetworkResponse.getVoiceRegistrationStateResponse()
-     * @deprecated use getRegistrationState()
      */
     void getVoiceRegistrationState(in int serial);
 
@@ -459,8 +455,8 @@ oneway interface IRadioNetwork {
      * Triggers an Emergency network scan.
      *
      * @param serial Serial number of the request.
-     * @param request Defines the radio target networks/preferred network/
-     * Max Scan Time and type of service to be scanned.
+     * @param request Contains the preferred networks and type of service to be scanned.
+     *                See {@link EmergencyNetworkScanTrigger}.
      *
      * Response function is IRadioEmergencyResponse.triggerEmergencyNetworkScanResponse()
      */
@@ -470,10 +466,13 @@ oneway interface IRadioNetwork {
      * Cancels ongoing Emergency network scan
      *
      * @param serial Serial number of the request.
+     * @param resetScan Indicates how the next {@link #triggerEmergencyNetworkScan} should work.
+     *        If {@code true}, then the modem shall start the new scan from the beginning,
+     *        otherwise the modem shall resume from the last search.
      *
      * Response function is IRadioEmergencyResponse.cancelEmergencyNetworkScan()
      */
-    void cancelEmergencyNetworkScan(in int serial);
+    void cancelEmergencyNetworkScan(int serial, boolean resetScan);
 
     /**
      * Exits ongoing Emergency Mode
@@ -483,15 +482,4 @@ oneway interface IRadioNetwork {
      * Response function is IRadioEmergencyResponse.exitEmergencyModeResponse()
      */
     void exitEmergencyMode(in int serial);
-
-    /**
-     * Request current registration state.
-     *
-     * @param serial Serial number of request.
-     * @param ratFamily RadioTechnologyFamily of request.
-     * @param domain Domain PS or CS of request.
-     *
-     * Response function is IRadioNetworkResponse.getRegistrationStateResponse()
-     */
-    void getRegistrationState(in int serial, in RadioTechnologyFamily ratFamily, in Domain domain);
 }
