@@ -153,8 +153,6 @@ oneway interface IRadioNetworkResponse {
      *   RadioError:RADIO_NOT_AVAILABLE
      *   RadioError:INTERNAL_ERR
      *   RadioError:NOT_PROVISIONED
-     *
-     * @deprecated use getRegistrationStateResponse()
      */
     void getDataRegistrationStateResponse(
             in RadioResponseInfo info, in RegStateResult dataRegResponse);
@@ -261,8 +259,6 @@ oneway interface IRadioNetworkResponse {
      *   RadioError:NONE
      *   RadioError:RADIO_NOT_AVAILABLE
      *   RadioError:INTERNAL_ERR
-     *
-     * @deprecated use getRegistrationStateResponse()
      */
     void getVoiceRegistrationStateResponse(
             in RadioResponseInfo info, in RegStateResult voiceRegResponse);
@@ -579,11 +575,15 @@ oneway interface IRadioNetworkResponse {
     oneway void getUsageSettingResponse(in RadioResponseInfo info, in UsageSetting usageSetting);
 
     /**
+     * Response of setEmergencyMode.
+     * This is an optional API.
+     *
      * @param info Response info struct containing response type, serial no. and error.
      * @param regState the current registration state of the modem.
      *
      * Valid errors returned:
      *   RadioError:NONE
+     *   RadioError:REQUEST_NOT_SUPPORTED
      *   RadioError:RADIO_NOT_AVAILABLE
      *   RadioError:MODEM_ERR
      *   RadioError:INVALID_ARGUMENTS
@@ -591,10 +591,14 @@ oneway interface IRadioNetworkResponse {
     void setEmergencyModeResponse(in RadioResponseInfo info, in EmergencyRegResult regState);
 
     /**
-     * @param info Response info struct containing response type, serial no. and error
+     * Response of triggerEmergencyNetworkScan.
+     * This is an optional API.
+     *
+     * @param info Response info struct containing response type, serial no. and error.
      *
      * Valid errors returned:
      *   RadioError:NONE
+     *   RadioError:REQUEST_NOT_SUPPORTED
      *   RadioError:RADIO_NOT_AVAILABLE
      *   RadioError:MODEM_ERR
      *   RadioError:INVALID_ARGUMENTS
@@ -602,34 +606,30 @@ oneway interface IRadioNetworkResponse {
     void triggerEmergencyNetworkScanResponse(in RadioResponseInfo info);
 
     /**
-     * @param info Response info struct containing response type, serial no. and error
+     * Response of exitEmergencyMode.
+     * This is an optional API.
+     *
+     * @param info Response info struct containing response type, serial no. and error.
      *
      * Valid errors returned:
      *   RadioError:NONE
+     *   RadioError:REQUEST_NOT_SUPPORTED
      *   RadioError:RADIO_NOT_AVAILABLE
      *   RadioError:MODEM_ERR
      */
     void exitEmergencyModeResponse(in RadioResponseInfo info);
 
     /**
-     * @param info Response info struct containing response type, serial no. and error
+     * Response of cancelEmergencyNetworkScan.
+     * This is an optional API.
+     *
+     * @param info Response info struct containing response type, serial no. and error.
      *
      * Valid errors returned:
      *   RadioError:NONE
+     *   RadioError:REQUEST_NOT_SUPPORTED
      *   RadioError:RADIO_NOT_AVAILABLE
      *   RadioError:MODEM_ERR
      */
     void cancelEmergencyNetworkScanResponse(in RadioResponseInfo info);
-
-    /**
-     * @param info Response info struct containing response type, serial no. and error
-     * @param regResponse Current registration response as defined by RegStateResult
-     *
-     * Valid errors returned:
-     *   RadioError:NONE
-     *   RadioError:RADIO_NOT_AVAILABLE
-     *   RadioError:INTERNAL_ERR
-     *   RadioError:NOT_PROVISIONED
-     */
-    void getRegistrationStateResponse(in RadioResponseInfo info, in RegStateResult regResponse);
 }

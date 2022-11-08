@@ -40,9 +40,6 @@ interface IRadioNetwork {
   oneway void getBarringInfo(in int serial);
   oneway void getCdmaRoamingPreference(in int serial);
   oneway void getCellInfoList(in int serial);
-  /**
-   * @deprecated use getRegistrationState()
-   */
   oneway void getDataRegistrationState(in int serial);
   oneway void getImsRegistrationState(in int serial);
   oneway void getNetworkSelectionMode(in int serial);
@@ -50,9 +47,6 @@ interface IRadioNetwork {
   oneway void getSignalStrength(in int serial);
   oneway void getSystemSelectionChannels(in int serial);
   oneway void getVoiceRadioTechnology(in int serial);
-  /**
-   * @deprecated use getRegistrationState()
-   */
   oneway void getVoiceRegistrationState(in int serial);
   oneway void isNrDualConnectivityEnabled(in int serial);
   oneway void responseAcknowledgement();
@@ -78,7 +72,6 @@ interface IRadioNetwork {
   oneway void getUsageSetting(in int serial);
   oneway void setEmergencyMode(int serial, in android.hardware.radio.network.EmergencyMode emcModeType);
   oneway void triggerEmergencyNetworkScan(int serial, in android.hardware.radio.network.EmergencyNetworkScanTrigger request);
-  oneway void cancelEmergencyNetworkScan(in int serial);
+  oneway void cancelEmergencyNetworkScan(int serial, boolean resetScan);
   oneway void exitEmergencyMode(in int serial);
-  oneway void getRegistrationState(in int serial, in android.hardware.radio.RadioTechnologyFamily ratFamily, in android.hardware.radio.network.Domain domain);
 }

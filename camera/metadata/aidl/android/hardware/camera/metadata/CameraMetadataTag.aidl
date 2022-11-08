@@ -450,6 +450,20 @@ enum CameraMetadataTag {
      */
     ANDROID_CONTROL_AVAILABLE_HIGH_SPEED_VIDEO_CONFIGURATIONS_MAXIMUM_RESOLUTION,
     /**
+     * android.control.settingsOverride [dynamic, enum, public]
+     *
+     * <p>The desired CaptureRequest settings override with which certain keys are
+     * applied earlier so that they can take effect sooner.</p>
+     */
+    ANDROID_CONTROL_SETTINGS_OVERRIDE = 65588,
+    /**
+     * android.control.availableSettingsOverrides [static, int32[], public]
+     *
+     * <p>List of available settings overrides supported by the camera device that can
+     * be used to speed up certain controls.</p>
+     */
+    ANDROID_CONTROL_AVAILABLE_SETTINGS_OVERRIDES,
+    /**
      * android.demosaic.mode [controls, enum, system]
      *
      * <p>Controls the quality of the demosaicing
@@ -1029,6 +1043,12 @@ enum CameraMetadataTag {
      * <p>Recommended 10-bit dynamic range profile.</p>
      */
     ANDROID_REQUEST_RECOMMENDED_TEN_BIT_DYNAMIC_RANGE_PROFILE,
+    /**
+     * android.request.availableColorSpaceProfilesMap [static, enum[], ndk_public]
+     *
+     * <p>A list of all possible color space profiles supported by a camera device.</p>
+     */
+    ANDROID_REQUEST_AVAILABLE_COLOR_SPACE_PROFILES_MAP,
     /**
      * android.scaler.cropRegion [dynamic, int32[], public]
      *
