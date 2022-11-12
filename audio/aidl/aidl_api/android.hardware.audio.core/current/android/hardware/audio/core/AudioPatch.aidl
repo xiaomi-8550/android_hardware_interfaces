@@ -37,4 +37,6 @@ parcelable AudioPatch {
   int id;
   int[] sourcePortConfigIds;
   int[] sinkPortConfigIds;
+  int minimumStreamBufferSizeFrames;
+  int[] latenciesMs;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 The Android Open Source Project
+ * Copyright 2022 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +14,23 @@
  * limitations under the License.
  */
 
-package {
-    default_applicable_licenses: ["Android-Apache-2.0"],
-}
+package android.hardware.tv.input;
 
-cc_library_headers {
-    name: "VehicleHalDefaultConfig",
-    vendor: true,
-    local_include_dirs: ["include"],
-    export_include_dirs: ["include"],
-    defaults: ["VehicleHalDefaults"],
-    static_libs: ["VehicleHalUtils"],
-    header_libs: ["VehicleHalTestUtilHeaders"],
-    export_static_lib_headers: ["VehicleHalUtils"],
-    export_header_lib_headers: ["VehicleHalTestUtilHeaders"],
+import android.hardware.tv.input.CableConnectionStatus;
+import android.hardware.tv.input.TvInputType;
+import android.media.audio.common.AudioDevice;
+
+@VintfStability
+parcelable TvInputDeviceInfo {
+    int deviceId;
+    TvInputType type;
+
+    /* HDMI port ID number. e.g. 2 for HDMI 2. */
+    int portId;
+
+    /* Cable connection status. */
+    CableConnectionStatus cableConnectionStatus;
+
+    /* Audio device info. */
+    AudioDevice audioDevice;
 }
