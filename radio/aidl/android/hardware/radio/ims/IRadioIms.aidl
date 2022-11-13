@@ -18,14 +18,14 @@ package android.hardware.radio.ims;
 
 import android.hardware.radio.AccessNetwork;
 import android.hardware.radio.ims.EpsFallbackReason;
-import android.hardware.radio.ims.ImsRegistration;
-import android.hardware.radio.ims.ImsStreamDirection;
-import android.hardware.radio.ims.ImsTrafficType;
 import android.hardware.radio.ims.IRadioImsIndication;
 import android.hardware.radio.ims.IRadioImsResponse;
-import android.hardware.radio.ims.SrvccCall;
+import android.hardware.radio.ims.ImsCall;
+import android.hardware.radio.ims.ImsRegistration;
 import android.hardware.radio.ims.ImsStreamDirection;
 import android.hardware.radio.ims.ImsStreamType;
+import android.hardware.radio.ims.ImsTrafficType;
+import android.hardware.radio.ims.SrvccCall;
 
 /**
  * This interface is used by IMS telephony layer to talk to cellular radio.
@@ -74,22 +74,25 @@ oneway interface IRadioIms {
      * shall be prioritized to the subscription which handles higher priority service.
      * When both subscriptions are handling the same type of service then RF shall be
      * prioritized to the voice preferred sub.
-     *  3. To evaluate the overall access barring in the case of ACB, ACB-Skp/SCM,
-     * SSAC and UAC. If the specific failure including network access, modem
-     * internal and RF resource prioritization from the modem happen,
-     * {@link IRadioImsResponse#startImsTrafficResponse()} or
-     * {@link IRadioImsIndication#onConnectionSetupFailure()} shall be invoked with the
-     * failure reason.
+     *  3. To evaluate the overall access barring in the case of ACB, ACB-Skp/SCM and UAC.
+     * The response {@link IRadioImsResponse#startImsTrafficResponse()} with success shall
+     * be sent by modem upon access class is allowed and RF resource is allotted. Otherwise
+     * the same API shall be invoked with appropriate {@link ConnectionFailureInfo}. Further
+     * if RRC connection setup fails then {@link IRadioImsIndication#onConnectionSetupFailure()}
+     * shall be invoked by modem with appropriate {@link ConnectionFailureInfo}.
      *
      * @param serial Serial number of request
      * @param token A nonce to identify the request
      * @param imsTrafficType IMS traffic type like registration, voice, and video
      * @param accessNetworkType The type of the radio access network used
+     * @param trafficDirection Indicates whether traffic is originated by mobile originated or
+     *        mobile terminated use case eg. MO/MT call/SMS etc
      *
      * Response function is IRadioImsResponse.startImsTrafficResponse()
      */
-    void startImsTraffic(int serial, in String token,
-            ImsTrafficType imsTrafficType, AccessNetwork accessNetworkType);
+    void startImsTraffic(int serial, int token,
+            ImsTrafficType imsTrafficType, AccessNetwork accessNetworkType,
+            ImsCall.Direction trafficDirection);
 
     /**
      * Indicates IMS traffic has been stopped.
@@ -101,7 +104,7 @@ oneway interface IRadioIms {
      *
      * Response function is IRadioImsResponse.stopImsTrafficResponse()
      */
-    void stopImsTraffic(int serial, in String token);
+    void stopImsTraffic(int serial, int token);
 
     /**
      * Triggers the UE initiated EPS fallback when a MO voice call failed to establish on 5G NR
@@ -136,4 +139,14 @@ oneway interface IRadioIms {
      * Response function is IRadioImsResponse.sendAnbrQueryResponse()
      */
     void sendAnbrQuery(int serial, ImsStreamType mediaType, ImsStreamDirection direction, int bitsPerSecond);
+
+    /**
+     * Provides a list of IMS call information to radio.
+     *
+     * @param serial Serial number of request
+     * @param imsCalls The list of IMS calls
+     *
+     * Response function is IRadioImsResponse.updateImsCallStatusResponse()
+     */
+    void updateImsCallStatus(int serial, in ImsCall[] imsCalls);
 }

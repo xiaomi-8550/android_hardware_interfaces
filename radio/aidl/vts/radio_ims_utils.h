@@ -52,6 +52,8 @@ class RadioImsResponse : public BnRadioImsResponse {
     virtual ndk::ScopedAStatus triggerEpsFallbackResponse(const RadioResponseInfo& info) override;
 
     virtual ndk::ScopedAStatus sendAnbrQueryResponse(const RadioResponseInfo& info) override;
+
+    virtual ndk::ScopedAStatus updateImsCallStatusResponse(const RadioResponseInfo& info) override;
 };
 
 /* Callback class for radio ims indication */
@@ -64,7 +66,7 @@ class RadioImsIndication : public BnRadioImsIndication {
     virtual ~RadioImsIndication() = default;
 
     virtual ndk::ScopedAStatus onConnectionSetupFailure(RadioIndicationType type,
-            const std::string& token, const ConnectionFailureInfo& info) override;
+            int32_t token, const ConnectionFailureInfo& info) override;
 
     virtual ndk::ScopedAStatus notifyAnbr(RadioIndicationType type, ImsStreamType mediaType,
             ImsStreamDirection direction, int bitsPerSecond) override;
