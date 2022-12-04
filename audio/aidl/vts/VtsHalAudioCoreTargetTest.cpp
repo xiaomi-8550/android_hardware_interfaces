@@ -15,6 +15,7 @@
  */
 
 #include <algorithm>
+#include <cmath>
 #include <limits>
 #include <memory>
 #include <optional>
@@ -29,8 +30,8 @@
 #include <Utils.h>
 #include <aidl/Gtest.h>
 #include <aidl/Vintf.h>
-#include <aidl/android/hardware/audio/core/IConfig.h>
 #include <aidl/android/hardware/audio/core/IModule.h>
+#include <aidl/android/hardware/audio/core/ITelephony.h>
 #include <aidl/android/media/audio/common/AudioIoFlags.h>
 #include <aidl/android/media/audio/common/AudioOutputFlags.h>
 #include <android-base/chrono_utils.h>
@@ -46,11 +47,13 @@ using aidl::android::hardware::audio::common::PlaybackTrackMetadata;
 using aidl::android::hardware::audio::common::RecordTrackMetadata;
 using aidl::android::hardware::audio::common::SinkMetadata;
 using aidl::android::hardware::audio::common::SourceMetadata;
+using aidl::android::hardware::audio::core::AudioMode;
 using aidl::android::hardware::audio::core::AudioPatch;
 using aidl::android::hardware::audio::core::AudioRoute;
 using aidl::android::hardware::audio::core::IModule;
 using aidl::android::hardware::audio::core::IStreamIn;
 using aidl::android::hardware::audio::core::IStreamOut;
+using aidl::android::hardware::audio::core::ITelephony;
 using aidl::android::hardware::audio::core::ModuleDebug;
 using aidl::android::hardware::audio::core::StreamDescriptor;
 using aidl::android::hardware::common::fmq::SynchronizedReadWrite;
@@ -67,6 +70,7 @@ using aidl::android::media::audio::common::AudioPortDeviceExt;
 using aidl::android::media::audio::common::AudioPortExt;
 using aidl::android::media::audio::common::AudioSource;
 using aidl::android::media::audio::common::AudioUsage;
+using aidl::android::media::audio::common::Void;
 using android::hardware::audio::common::isBitPositionFlagSet;
 using android::hardware::audio::common::StreamLogic;
 using android::hardware::audio::common::StreamWorker;
@@ -172,6 +176,29 @@ class WithAudioPortConfig {
     IModule* mModule = nullptr;
     AudioPortConfig mConfig;
 };
+
+template <typename PropType, class Instance, typename Getter, typename Setter>
+void TestAccessors(Instance* inst, Getter getter, Setter setter,
+                   const std::vector<PropType>& validValues,
+                   const std::vector<PropType>& invalidValues, bool* isSupported) {
+    PropType initialValue{};
+    ScopedAStatus status = (inst->*getter)(&initialValue);
+    if (status.getExceptionCode() == EX_UNSUPPORTED_OPERATION) {
+        *isSupported = false;
+        return;
+    }
+    *isSupported = true;
+    for (const auto v : validValues) {
+        EXPECT_IS_OK((inst->*setter)(v)) << "for valid value: " << v;
+        PropType currentValue{};
+        EXPECT_IS_OK((inst->*getter)(&currentValue));
+        EXPECT_EQ(v, currentValue);
+    }
+    for (const auto v : invalidValues) {
+        EXPECT_STATUS(EX_ILLEGAL_ARGUMENT, (inst->*setter)(v)) << "for invalid value: " << v;
+    }
+    EXPECT_IS_OK((inst->*setter)(initialValue)) << "Failed to restore the initial value";
+}
 
 // Can be used as a base for any test here, does not depend on the fixture GTest parameters.
 class AudioCoreModuleBase {
@@ -429,7 +456,9 @@ class StreamReaderLogic : public StreamCommonLogic {
             LOG(ERROR) << __func__ << ": received error status: " << statusToString(reply.status);
             return Status::ABORT;
         }
-        if (reply.fmqByteCount < 0 || reply.fmqByteCount > command.fmqByteCount) {
+        if (reply.fmqByteCount < 0 ||
+            (command.getTag() == StreamDescriptor::Command::Tag::burst &&
+             reply.fmqByteCount > command.get<StreamDescriptor::Command::Tag::burst>())) {
             LOG(ERROR) << __func__
                        << ": received invalid byte count in the reply: " << reply.fmqByteCount;
             return Status::ABORT;
@@ -506,7 +535,9 @@ class StreamWriterLogic : public StreamCommonLogic {
             LOG(ERROR) << __func__ << ": received error status: " << statusToString(reply.status);
             return Status::ABORT;
         }
-        if (reply.fmqByteCount < 0 || reply.fmqByteCount > command.fmqByteCount) {
+        if (reply.fmqByteCount < 0 ||
+            (command.getTag() == StreamDescriptor::Command::Tag::burst &&
+             reply.fmqByteCount > command.get<StreamDescriptor::Command::Tag::burst>())) {
             LOG(ERROR) << __func__
                        << ": received invalid byte count in the reply: " << reply.fmqByteCount;
             return Status::ABORT;
@@ -1242,6 +1273,112 @@ TEST_P(AudioCoreModule, ExternalDevicePortRoutes) {
     }
 }
 
+TEST_P(AudioCoreModule, MasterMute) {
+    bool isSupported = false;
+    EXPECT_NO_FATAL_FAILURE(TestAccessors<bool>(module.get(), &IModule::getMasterMute,
+                                                &IModule::setMasterMute, {false, true}, {},
+                                                &isSupported));
+    if (!isSupported) {
+        GTEST_SKIP() << "Master mute is not supported";
+    }
+    // TODO: Test that master mute actually mutes output.
+}
+
+TEST_P(AudioCoreModule, MasterVolume) {
+    bool isSupported = false;
+    EXPECT_NO_FATAL_FAILURE(TestAccessors<float>(
+            module.get(), &IModule::getMasterVolume, &IModule::setMasterVolume, {0.0f, 0.5f, 1.0f},
+            {-0.1, 1.1, NAN, INFINITY, -INFINITY, 1 + std::numeric_limits<float>::epsilon()},
+            &isSupported));
+    if (!isSupported) {
+        GTEST_SKIP() << "Master volume is not supported";
+    }
+    // TODO: Test that master volume actually attenuates output.
+}
+
+TEST_P(AudioCoreModule, MicMute) {
+    bool isSupported = false;
+    EXPECT_NO_FATAL_FAILURE(TestAccessors<bool>(module.get(), &IModule::getMicMute,
+                                                &IModule::setMicMute, {false, true}, {},
+                                                &isSupported));
+    if (!isSupported) {
+        GTEST_SKIP() << "Mic mute is not supported";
+    }
+    // TODO: Test that mic mute actually mutes input.
+}
+
+TEST_P(AudioCoreModule, UpdateAudioMode) {
+    for (const auto mode : ::ndk::enum_range<AudioMode>()) {
+        EXPECT_IS_OK(module->updateAudioMode(mode)) << toString(mode);
+    }
+    EXPECT_IS_OK(module->updateAudioMode(AudioMode::NORMAL));
+}
+
+TEST_P(AudioCoreModule, UpdateScreenRotation) {
+    for (const auto rotation : ::ndk::enum_range<IModule::ScreenRotation>()) {
+        EXPECT_IS_OK(module->updateScreenRotation(rotation)) << toString(rotation);
+    }
+    EXPECT_IS_OK(module->updateScreenRotation(IModule::ScreenRotation::DEG_0));
+}
+
+TEST_P(AudioCoreModule, UpdateScreenState) {
+    EXPECT_IS_OK(module->updateScreenState(false));
+    EXPECT_IS_OK(module->updateScreenState(true));
+}
+
+class AudioCoreTelephony : public AudioCoreModuleBase, public testing::TestWithParam<std::string> {
+  public:
+    void SetUp() override {
+        ASSERT_NO_FATAL_FAILURE(SetUpImpl(GetParam()));
+        ASSERT_IS_OK(module->getTelephony(&telephony));
+    }
+
+    void TearDown() override { ASSERT_NO_FATAL_FAILURE(TearDownImpl()); }
+
+    std::shared_ptr<ITelephony> telephony;
+};
+
+TEST_P(AudioCoreTelephony, GetSupportedAudioModes) {
+    if (telephony == nullptr) {
+        GTEST_SKIP() << "Telephony is not supported";
+    }
+    std::vector<AudioMode> modes1;
+    ASSERT_IS_OK(telephony->getSupportedAudioModes(&modes1));
+    const std::vector<AudioMode> kMandatoryModes = {AudioMode::NORMAL, AudioMode::RINGTONE,
+                                                    AudioMode::IN_CALL,
+                                                    AudioMode::IN_COMMUNICATION};
+    for (const auto mode : kMandatoryModes) {
+        EXPECT_NE(modes1.end(), std::find(modes1.begin(), modes1.end(), mode))
+                << "Mandatory mode not supported: " << toString(mode);
+    }
+    std::vector<AudioMode> modes2;
+    ASSERT_IS_OK(telephony->getSupportedAudioModes(&modes2));
+    ASSERT_EQ(modes1.size(), modes2.size())
+            << "Sizes of audio mode arrays do not match across consequent calls to "
+            << "getSupportedAudioModes";
+    std::sort(modes1.begin(), modes1.end());
+    std::sort(modes2.begin(), modes2.end());
+    EXPECT_EQ(modes1, modes2);
+};
+
+TEST_P(AudioCoreTelephony, SwitchAudioMode) {
+    if (telephony == nullptr) {
+        GTEST_SKIP() << "Telephony is not supported";
+    }
+    std::vector<AudioMode> supportedModes;
+    ASSERT_IS_OK(telephony->getSupportedAudioModes(&supportedModes));
+    std::set<AudioMode> unsupportedModes = {
+            // Start with all, remove supported ones
+            ::ndk::enum_range<AudioMode>().begin(), ::ndk::enum_range<AudioMode>().end()};
+    for (const auto mode : supportedModes) {
+        EXPECT_IS_OK(telephony->switchAudioMode(mode)) << toString(mode);
+        unsupportedModes.erase(mode);
+    }
+    for (const auto mode : unsupportedModes) {
+        EXPECT_STATUS(EX_UNSUPPORTED_OPERATION, telephony->switchAudioMode(mode)) << toString(mode);
+    }
+}
+
 class StreamLogicDriverInvalidCommand : public StreamLogicDriver {
   public:
     StreamLogicDriverInvalidCommand(const std::vector<StreamDescriptor::Command>& commands)
@@ -1419,18 +1556,15 @@ class AudioStream : public AudioCoreModule {
     }
 
     void SendInvalidCommandImpl(const AudioPortConfig& portConfig) {
-        std::vector<StreamDescriptor::Command> commands(6);
-        commands[0].code = StreamDescriptor::CommandCode(-1);
-        commands[1].code = StreamDescriptor::CommandCode(
-                static_cast<int32_t>(StreamDescriptor::CommandCode::START) - 1);
-        commands[2].code = StreamDescriptor::CommandCode(std::numeric_limits<int32_t>::min());
-        commands[3].code = StreamDescriptor::CommandCode(std::numeric_limits<int32_t>::max());
-        // TODO: For proper testing of input streams, need to put the stream into
-        // a state which accepts BURST commands.
-        commands[4].code = StreamDescriptor::CommandCode::BURST;
-        commands[4].fmqByteCount = -1;
-        commands[5].code = StreamDescriptor::CommandCode::BURST;
-        commands[5].fmqByteCount = std::numeric_limits<int32_t>::min();
+        std::vector<StreamDescriptor::Command> commands = {
+                StreamDescriptor::Command::make<StreamDescriptor::Command::Tag::hal_reserved_exit>(
+                        0),
+                // TODO: For proper testing of input streams, need to put the stream into
+                // a state which accepts BURST commands.
+                StreamDescriptor::Command::make<StreamDescriptor::Command::Tag::burst>(-1),
+                StreamDescriptor::Command::make<StreamDescriptor::Command::Tag::burst>(
+                        std::numeric_limits<int32_t>::min()),
+        };
         WithStream<Stream> stream(portConfig);
         ASSERT_NO_FATAL_FAILURE(stream.SetUp(module.get(), kDefaultBufferSizeFrames));
         StreamLogicDriverInvalidCommand driver(commands);
@@ -1496,7 +1630,7 @@ TEST_P(AudioStreamOut, RequireOffloadInfo) {
             << "when no offload info is provided for a compressed offload mix port";
 }
 
-using CommandAndState = std::pair<StreamDescriptor::CommandCode, StreamDescriptor::State>;
+using CommandAndState = std::pair<StreamDescriptor::Command, StreamDescriptor::State>;
 
 class StreamLogicDefaultDriver : public StreamLogicDriver {
   public:
@@ -1511,15 +1645,17 @@ class StreamLogicDefaultDriver : public StreamLogicDriver {
 
     bool done() override { return mNextCommand >= mCommands.size(); }
     StreamDescriptor::Command getNextCommand(int maxDataSize, int* actualSize) override {
-        StreamDescriptor::Command command{};
-        command.code = mCommands[mNextCommand++].first;
-        const int dataSize = command.code == StreamDescriptor::CommandCode::BURST ? maxDataSize : 0;
-        command.fmqByteCount = dataSize;
-        if (actualSize != nullptr) {
-            // In the output scenario, reduce slightly the fmqByteCount to verify
-            // that the HAL module always consumes all data from the MQ.
-            if (command.fmqByteCount > 1) command.fmqByteCount--;
-            *actualSize = dataSize;
+        auto command = mCommands[mNextCommand++].first;
+        if (command.getTag() == StreamDescriptor::Command::Tag::burst) {
+            if (actualSize != nullptr) {
+                // In the output scenario, reduce slightly the fmqByteCount to verify
+                // that the HAL module always consumes all data from the MQ.
+                if (maxDataSize > 1) maxDataSize--;
+                *actualSize = maxDataSize;
+            }
+            command.set<StreamDescriptor::Command::Tag::burst>(maxDataSize);
+        } else {
+            if (actualSize != nullptr) *actualSize = 0;
         }
         return command;
     }
@@ -1541,7 +1677,7 @@ class StreamLogicDefaultDriver : public StreamLogicDriver {
                                     .append(" to ")
                                     .append(toString(reply.state))
                                     .append(" caused by the command ")
-                                    .append(toString(lastCommandState.first));
+                                    .append(lastCommandState.first.toString());
             LOG(ERROR) << __func__ << ": " << s;
             mUnexpectedTransition = std::move(s);
             return false;
@@ -1825,6 +1961,9 @@ TEST_P(AudioModulePatch, ResetInvalidPatchId) {
 INSTANTIATE_TEST_SUITE_P(AudioCoreModuleTest, AudioCoreModule,
                          testing::ValuesIn(android::getAidlHalInstanceNames(IModule::descriptor)),
                          android::PrintInstanceNameToString);
+INSTANTIATE_TEST_SUITE_P(AudioCoreTelephonyTest, AudioCoreTelephony,
+                         testing::ValuesIn(android::getAidlHalInstanceNames(IModule::descriptor)),
+                         android::PrintInstanceNameToString);
 GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(AudioCoreModule);
 INSTANTIATE_TEST_SUITE_P(AudioStreamInTest, AudioStreamIn,
                          testing::ValuesIn(android::getAidlHalInstanceNames(IModule::descriptor)),
@@ -1835,112 +1974,90 @@ INSTANTIATE_TEST_SUITE_P(AudioStreamOutTest, AudioStreamOut,
                          android::PrintInstanceNameToString);
 GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(AudioStreamOut);
 
-static const NamedCommandSequence kReadOrWriteSeq = std::make_pair(
-        std::string("ReadOrWrite"),
-        std::vector<CommandAndState>{
-                std::make_pair(StreamDescriptor::CommandCode::START, StreamDescriptor::State::IDLE),
-                std::make_pair(StreamDescriptor::CommandCode::BURST,
-                               StreamDescriptor::State::ACTIVE),
-                std::make_pair(StreamDescriptor::CommandCode::BURST,
-                               StreamDescriptor::State::ACTIVE),
-                std::make_pair(StreamDescriptor::CommandCode::BURST,
-                               StreamDescriptor::State::ACTIVE)});
-static const NamedCommandSequence kDrainInSeq = std::make_pair(
-        std::string("Drain"),
-        std::vector<CommandAndState>{
-                std::make_pair(StreamDescriptor::CommandCode::START, StreamDescriptor::State::IDLE),
-                std::make_pair(StreamDescriptor::CommandCode::BURST,
-                               StreamDescriptor::State::ACTIVE),
-                std::make_pair(StreamDescriptor::CommandCode::DRAIN,
-                               StreamDescriptor::State::DRAINING),
-                std::make_pair(StreamDescriptor::CommandCode::START,
-                               StreamDescriptor::State::ACTIVE),
-                std::make_pair(StreamDescriptor::CommandCode::DRAIN,
-                               StreamDescriptor::State::DRAINING),
-                // TODO: This will need to be changed once DRAIN starts taking time.
-                std::make_pair(StreamDescriptor::CommandCode::BURST,
-                               StreamDescriptor::State::STANDBY)});
-static const NamedCommandSequence kDrainOutSeq = std::make_pair(
-        std::string("Drain"),
-        std::vector<CommandAndState>{
-                std::make_pair(StreamDescriptor::CommandCode::START, StreamDescriptor::State::IDLE),
-                std::make_pair(StreamDescriptor::CommandCode::BURST,
-                               StreamDescriptor::State::ACTIVE),
-                // TODO: This will need to be changed once DRAIN starts taking time.
-                std::make_pair(StreamDescriptor::CommandCode::DRAIN,
-                               StreamDescriptor::State::IDLE)});
+static const StreamDescriptor::Command kStartCommand =
+        StreamDescriptor::Command::make<StreamDescriptor::Command::Tag::start>(Void{});
+static const StreamDescriptor::Command kBurstCommand =
+        StreamDescriptor::Command::make<StreamDescriptor::Command::Tag::burst>(0);
+static const StreamDescriptor::Command kDrainCommand =
+        StreamDescriptor::Command::make<StreamDescriptor::Command::Tag::drain>(Void{});
+static const StreamDescriptor::Command kStandbyCommand =
+        StreamDescriptor::Command::make<StreamDescriptor::Command::Tag::standby>(Void{});
+static const StreamDescriptor::Command kPauseCommand =
+        StreamDescriptor::Command::make<StreamDescriptor::Command::Tag::pause>(Void{});
+static const StreamDescriptor::Command kFlushCommand =
+        StreamDescriptor::Command::make<StreamDescriptor::Command::Tag::flush>(Void{});
+static const NamedCommandSequence kReadOrWriteSeq =
+        std::make_pair(std::string("ReadOrWrite"),
+                       std::vector<CommandAndState>{
+                               std::make_pair(kStartCommand, StreamDescriptor::State::IDLE),
+                               std::make_pair(kBurstCommand, StreamDescriptor::State::ACTIVE),
+                               std::make_pair(kBurstCommand, StreamDescriptor::State::ACTIVE),
+                               std::make_pair(kBurstCommand, StreamDescriptor::State::ACTIVE)});
+static const NamedCommandSequence kDrainInSeq =
+        std::make_pair(std::string("Drain"),
+                       std::vector<CommandAndState>{
+                               std::make_pair(kStartCommand, StreamDescriptor::State::IDLE),
+                               std::make_pair(kBurstCommand, StreamDescriptor::State::ACTIVE),
+                               std::make_pair(kDrainCommand, StreamDescriptor::State::DRAINING),
+                               std::make_pair(kStartCommand, StreamDescriptor::State::ACTIVE),
+                               std::make_pair(kDrainCommand, StreamDescriptor::State::DRAINING),
+                               // TODO: This will need to be changed once DRAIN starts taking time.
+                               std::make_pair(kBurstCommand, StreamDescriptor::State::STANDBY)});
+static const NamedCommandSequence kDrainOutSeq =
+        std::make_pair(std::string("Drain"),
+                       std::vector<CommandAndState>{
+                               std::make_pair(kStartCommand, StreamDescriptor::State::IDLE),
+                               std::make_pair(kBurstCommand, StreamDescriptor::State::ACTIVE),
+                               // TODO: This will need to be changed once DRAIN starts taking time.
+                               std::make_pair(kDrainCommand, StreamDescriptor::State::IDLE)});
 // TODO: This will need to be changed once DRAIN starts taking time so we can pause it.
 static const NamedCommandSequence kDrainPauseOutSeq = std::make_pair(
         std::string("DrainPause"),
-        std::vector<CommandAndState>{
-                std::make_pair(StreamDescriptor::CommandCode::START, StreamDescriptor::State::IDLE),
-                std::make_pair(StreamDescriptor::CommandCode::BURST,
-                               StreamDescriptor::State::ACTIVE),
-                std::make_pair(StreamDescriptor::CommandCode::DRAIN,
-                               StreamDescriptor::State::IDLE)});
-static const NamedCommandSequence kStandbySeq = std::make_pair(
-        std::string("Standby"),
-        std::vector<CommandAndState>{
-                std::make_pair(StreamDescriptor::CommandCode::START, StreamDescriptor::State::IDLE),
-                std::make_pair(StreamDescriptor::CommandCode::STANDBY,
-                               StreamDescriptor::State::STANDBY),
-                // Perform a read or write in order to advance observable position
-                // (this is verified by tests).
-                std::make_pair(StreamDescriptor::CommandCode::START, StreamDescriptor::State::IDLE),
-                std::make_pair(StreamDescriptor::CommandCode::BURST,
-                               StreamDescriptor::State::ACTIVE)});
-static const NamedCommandSequence kPauseInSeq = std::make_pair(
-        std::string("Pause"),
-        std::vector<CommandAndState>{
-                std::make_pair(StreamDescriptor::CommandCode::START, StreamDescriptor::State::IDLE),
-                std::make_pair(StreamDescriptor::CommandCode::BURST,
-                               StreamDescriptor::State::ACTIVE),
-                std::make_pair(StreamDescriptor::CommandCode::PAUSE,
-                               StreamDescriptor::State::PAUSED),
-                std::make_pair(StreamDescriptor::CommandCode::BURST,
-                               StreamDescriptor::State::ACTIVE),
-                std::make_pair(StreamDescriptor::CommandCode::PAUSE,
-                               StreamDescriptor::State::PAUSED),
-                std::make_pair(StreamDescriptor::CommandCode::FLUSH,
-                               StreamDescriptor::State::STANDBY)});
-static const NamedCommandSequence kPauseOutSeq = std::make_pair(
-        std::string("Pause"),
-        std::vector<CommandAndState>{
-                std::make_pair(StreamDescriptor::CommandCode::START, StreamDescriptor::State::IDLE),
-                std::make_pair(StreamDescriptor::CommandCode::BURST,
-                               StreamDescriptor::State::ACTIVE),
-                std::make_pair(StreamDescriptor::CommandCode::PAUSE,
-                               StreamDescriptor::State::PAUSED),
-                std::make_pair(StreamDescriptor::CommandCode::START,
-                               StreamDescriptor::State::ACTIVE),
-                std::make_pair(StreamDescriptor::CommandCode::PAUSE,
-                               StreamDescriptor::State::PAUSED),
-                std::make_pair(StreamDescriptor::CommandCode::BURST,
-                               StreamDescriptor::State::PAUSED),
-                std::make_pair(StreamDescriptor::CommandCode::START,
-                               StreamDescriptor::State::ACTIVE),
-                std::make_pair(StreamDescriptor::CommandCode::PAUSE,
-                               StreamDescriptor::State::PAUSED)});
-static const NamedCommandSequence kFlushInSeq = std::make_pair(
-        std::string("Flush"),
-        std::vector<CommandAndState>{
-                std::make_pair(StreamDescriptor::CommandCode::START, StreamDescriptor::State::IDLE),
-                std::make_pair(StreamDescriptor::CommandCode::BURST,
-                               StreamDescriptor::State::ACTIVE),
-                std::make_pair(StreamDescriptor::CommandCode::PAUSE,
-                               StreamDescriptor::State::PAUSED),
-                std::make_pair(StreamDescriptor::CommandCode::FLUSH,
-                               StreamDescriptor::State::STANDBY)});
+        std::vector<CommandAndState>{std::make_pair(kStartCommand, StreamDescriptor::State::IDLE),
+                                     std::make_pair(kBurstCommand, StreamDescriptor::State::ACTIVE),
+                                     std::make_pair(kDrainCommand, StreamDescriptor::State::IDLE)});
+static const NamedCommandSequence kStandbySeq =
+        std::make_pair(std::string("Standby"),
+                       std::vector<CommandAndState>{
+                               std::make_pair(kStartCommand, StreamDescriptor::State::IDLE),
+                               std::make_pair(kStandbyCommand, StreamDescriptor::State::STANDBY),
+                               // Perform a read or write in order to advance observable position
+                               // (this is verified by tests).
+                               std::make_pair(kStartCommand, StreamDescriptor::State::IDLE),
+                               std::make_pair(kBurstCommand, StreamDescriptor::State::ACTIVE)});
+static const NamedCommandSequence kPauseInSeq =
+        std::make_pair(std::string("Pause"),
+                       std::vector<CommandAndState>{
+                               std::make_pair(kStartCommand, StreamDescriptor::State::IDLE),
+                               std::make_pair(kBurstCommand, StreamDescriptor::State::ACTIVE),
+                               std::make_pair(kPauseCommand, StreamDescriptor::State::PAUSED),
+                               std::make_pair(kBurstCommand, StreamDescriptor::State::ACTIVE),
+                               std::make_pair(kPauseCommand, StreamDescriptor::State::PAUSED),
+                               std::make_pair(kFlushCommand, StreamDescriptor::State::STANDBY)});
+static const NamedCommandSequence kPauseOutSeq =
+        std::make_pair(std::string("Pause"),
+                       std::vector<CommandAndState>{
+                               std::make_pair(kStartCommand, StreamDescriptor::State::IDLE),
+                               std::make_pair(kBurstCommand, StreamDescriptor::State::ACTIVE),
+                               std::make_pair(kPauseCommand, StreamDescriptor::State::PAUSED),
+                               std::make_pair(kStartCommand, StreamDescriptor::State::ACTIVE),
+                               std::make_pair(kPauseCommand, StreamDescriptor::State::PAUSED),
+                               std::make_pair(kBurstCommand, StreamDescriptor::State::PAUSED),
+                               std::make_pair(kStartCommand, StreamDescriptor::State::ACTIVE),
+                               std::make_pair(kPauseCommand, StreamDescriptor::State::PAUSED)});
+static const NamedCommandSequence kFlushInSeq =
+        std::make_pair(std::string("Flush"),
+                       std::vector<CommandAndState>{
+                               std::make_pair(kStartCommand, StreamDescriptor::State::IDLE),
+                               std::make_pair(kBurstCommand, StreamDescriptor::State::ACTIVE),
+                               std::make_pair(kPauseCommand, StreamDescriptor::State::PAUSED),
+                               std::make_pair(kFlushCommand, StreamDescriptor::State::STANDBY)});
 static const NamedCommandSequence kFlushOutSeq = std::make_pair(
         std::string("Flush"),
-        std::vector<CommandAndState>{
-                std::make_pair(StreamDescriptor::CommandCode::START, StreamDescriptor::State::IDLE),
-                std::make_pair(StreamDescriptor::CommandCode::BURST,
-                               StreamDescriptor::State::ACTIVE),
-                std::make_pair(StreamDescriptor::CommandCode::PAUSE,
-                               StreamDescriptor::State::PAUSED),
-                std::make_pair(StreamDescriptor::CommandCode::FLUSH,
-                               StreamDescriptor::State::IDLE)});
+        std::vector<CommandAndState>{std::make_pair(kStartCommand, StreamDescriptor::State::IDLE),
+                                     std::make_pair(kBurstCommand, StreamDescriptor::State::ACTIVE),
+                                     std::make_pair(kPauseCommand, StreamDescriptor::State::PAUSED),
+                                     std::make_pair(kFlushCommand, StreamDescriptor::State::IDLE)});
 std::string GetStreamIoTestName(const testing::TestParamInfo<StreamIoTestParameters>& info) {
     return android::PrintInstanceNameToString(
                    testing::TestParamInfo<std::string>{std::get<PARAM_MODULE_NAME>(info.param),

@@ -1929,6 +1929,22 @@
             ]
         },
         {
+            "property": "VehicleProperty::DOOR_CHILD_LOCK_ENABLED",
+            "defaultValue": {
+                "int32Values": [
+                    0
+                ]
+            },
+            "areas": [
+                {
+                    "areaId": "Constants::DOOR_2_LEFT"
+                },
+                {
+                    "areaId": "Constants::DOOR_2_RIGHT"
+                }
+            ]
+        },
+        {
             "property": "VehicleProperty::DOOR_POS",
             "defaultValue": {
                 "int32Values": [
@@ -2189,6 +2205,36 @@
                     "areaId": "Constants::WINDOW_ROOF_TOP_1",
                     "minInt32Value": -1,
                     "maxInt32Value": 1
+                }
+            ]
+        },
+        {
+            "property": "VehicleProperty::STEERING_WHEEL_DEPTH_POS",
+            "defaultValue": {
+                "int32Values": [
+                    0
+                ]
+            },
+            "areas": [
+                {
+                    "areaId": 0,
+                    "minInt32Value": 0,
+                    "maxInt32Value": 10
+                }
+            ]
+        },
+        {
+            "property": "VehicleProperty::STEERING_WHEEL_DEPTH_MOVE",
+            "defaultValue": {
+                "int32Values": [
+                    0
+                ]
+            },
+            "areas": [
+                {
+                    "areaId": 0,
+                    "minInt32Value": -2,
+                    "maxInt32Value": 2
                 }
             ]
         },

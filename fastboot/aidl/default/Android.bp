@@ -22,16 +22,20 @@ package {
     default_applicable_licenses: ["hardware_interfaces_license"],
 }
 
-cc_library {
-    name: "android.hardware.fastboot-impl-mock",
-    recovery: true,
+cc_binary {
+    name: "android.hardware.fastboot-service.example_recovery",
+    init_rc: ["android.hardware.fastboot-service.example_recovery.rc"],
+    vintf_fragments: ["android.hardware.fastboot-service.example.xml"],
+    recovery_available: true,
     srcs: [
         "Fastboot.cpp",
+        "main.cpp",
     ],
     relative_install_path: "hw",
     shared_libs: [
         "libbase",
         "libbinder_ndk",
+        "liblog",
         "libutils",
         "libcutils",
         "android.hardware.fastboot-V1-ndk",
