@@ -16,6 +16,8 @@
 
 package android.hardware.automotive.vehicle;
 
+import android.hardware.automotive.vehicle.VehicleArea;
+import android.hardware.automotive.vehicle.VehiclePropertyGroup;
 import android.hardware.automotive.vehicle.VehiclePropertyType;
 /**
  * Declares all vehicle properties. VehicleProperty has a bitwise structure.
@@ -1318,6 +1320,18 @@ enum VehicleProperty {
     DOOR_LOCK = 0x0B02 + 0x10000000 + 0x06000000
             + 0x00200000, // VehiclePropertyGroup:SYSTEM,VehicleArea:DOOR,VehiclePropertyType:BOOLEAN
     /**
+     * Door child lock feature enabled
+     *
+     * Returns true if the door child lock feature is enabled and false if it is disabled.
+     *
+     * If enabled, the door is unable to be opened from the inside.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ_WRITE
+     */
+    DOOR_CHILD_LOCK_ENABLED =
+            0x0B03 + VehiclePropertyGroup.SYSTEM + VehicleArea.DOOR + VehiclePropertyType.BOOLEAN,
+    /**
      * Mirror Z Position
      *
      * Positive value indicates tilt upwards, negative value is downwards
@@ -1747,6 +1761,44 @@ enum VehicleProperty {
      */
     WINDOW_LOCK = 0x0BC4 + 0x10000000 + 0x03000000
             + 0x00200000, // VehiclePropertyGroup:SYSTEM,VehicleArea:WINDOW,VehiclePropertyType:BOOLEAN
+    /**
+     * Steering wheel depth position
+     *
+     * All steering wheel properties' unique ids start from 0x0BE0.
+     *
+     * The maxInt32Value and minInt32Value in VehicleAreaConfig must be defined. All values between
+     * minInt32Value and maxInt32Value must be supported.
+     *
+     * The maxInt32Value in default area's VehicleAreaConfig indicates the steering wheel position
+     * closest to the driver. The minInt32Value in default area's VehicleAreaConfig indicates the
+     * steering wheel position furthest to the driver.
+     *
+     * This value is not in any particular unit but in a specified range of steps.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ_WRITE
+     */
+    STEERING_WHEEL_DEPTH_POS =
+            0x0BE0 + VehiclePropertyGroup.SYSTEM + VehicleArea.GLOBAL + VehiclePropertyType.INT32,
+    /**
+     * Steering wheel depth movement
+     *
+     * The maxInt32Value and minInt32Value in VehicleAreaConfig must be defined. All values between
+     * minInt32Value and maxInt32Value must be supported.
+     *
+     * The maxInt32Value in default area's VehicleAreaConfig indicates the steering wheel moving
+     * towards the driver. The minInt32Value in default area's VehicleAreaConfig indicates the
+     * steering wheel moving away from the driver. Larger integers, either positive or negative,
+     * indicate a faster movement speed. Once the steering wheel reaches the positional limit, the
+     * value resets to 0.
+     *
+     * This value is not in any particular unit but in a specified range of steps.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ_WRITE
+     */
+    STEERING_WHEEL_DEPTH_MOVE =
+            0x0BE1 + VehiclePropertyGroup.SYSTEM + VehicleArea.GLOBAL + VehiclePropertyType.INT32,
     /**
      * Vehicle Maps Service (VMS) message
      *
@@ -2889,5 +2941,4 @@ enum VehicleProperty {
      */
     SUPPORTED_PROPERTY_IDS = 0x0F48 + 0x10000000 + 0x01000000
             + 0x00410000, // VehiclePropertyGroup:SYSTEM,VehicleArea:GLOBAL,VehiclePropertyType:INT32_VEC
-
 }
