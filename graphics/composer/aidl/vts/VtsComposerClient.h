@@ -35,6 +35,7 @@
 #include <string>
 #include <thread>
 #include <unordered_map>
+#include <unordered_set>
 #include "GraphicsComposerCallback.h"
 
 using aidl::android::hardware::graphics::common::Dataspace;
@@ -171,6 +172,8 @@ class VtsComposerClient {
     int64_t getInvalidDisplayId();
 
     std::pair<ScopedAStatus, std::vector<VtsDisplay>> getDisplays();
+
+    std::pair<ScopedAStatus, OverlayProperties> getOverlaySupport();
 
   private:
     ScopedAStatus updateDisplayProperties(VtsDisplay* vtsDisplay, int32_t config);

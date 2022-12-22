@@ -33,7 +33,7 @@ aidl_interface {
         "android/hardware/audio/common/SourceMetadata.aidl",
     ],
     imports: [
-        "android.media.audio.common.types",
+        "android.media.audio.common.types-V2",
     ],
     stability: "vintf",
     backend: {
@@ -59,7 +59,7 @@ aidl_interface {
     versions_with_info: [
         {
             version: "1",
-            imports: ["android.media.audio.common.types-V1"],
+            imports: ["android.media.audio.common.types-V2"],
         },
         // IMPORTANT: Update latest_android_hardware_audio_common every time you
         // add the latest frozen version to versions_with_info
@@ -68,11 +68,18 @@ aidl_interface {
 }
 
 // Note: This should always be one version ahead of the last frozen version
-latest_android_hardware_audio_common = "android.hardware.audio.common-V2"
+latest_android_hardware_audio_common = "android.hardware.audio.common-V1"
 
 // Modules that depend on android.hardware.audio.common directly can include
 // the following cc_defaults to avoid explicitly managing dependency versions
 // across many scattered files.
+cc_defaults {
+    name: "latest_android_hardware_audio_common_cpp_static",
+    static_libs: [
+        latest_android_hardware_audio_common + "-cpp",
+    ],
+}
+
 cc_defaults {
     name: "latest_android_hardware_audio_common_ndk_static",
     static_libs: [
@@ -84,21 +91,24 @@ aidl_interface {
     name: "android.hardware.audio.core",
     vendor_available: true,
     srcs: [
+        "android/hardware/audio/core/AudioMode.aidl",
         "android/hardware/audio/core/AudioPatch.aidl",
         "android/hardware/audio/core/AudioRoute.aidl",
         "android/hardware/audio/core/IConfig.aidl",
         "android/hardware/audio/core/IModule.aidl",
         "android/hardware/audio/core/IStreamIn.aidl",
         "android/hardware/audio/core/IStreamOut.aidl",
+        "android/hardware/audio/core/ITelephony.aidl",
         "android/hardware/audio/core/MmapBufferDescriptor.aidl",
         "android/hardware/audio/core/ModuleDebug.aidl",
         "android/hardware/audio/core/StreamDescriptor.aidl",
+        "android/hardware/audio/core/SurroundSoundConfig.aidl",
     ],
     imports: [
         "android.hardware.common-V2",
         "android.hardware.common.fmq-V1",
-        "android.hardware.audio.common",
-        "android.media.audio.common.types",
+        "android.hardware.audio.common-V1",
+        "android.media.audio.common.types-V2",
     ],
     stability: "vintf",
     backend: {
@@ -140,12 +150,32 @@ aidl_interface {
     name: "android.hardware.audio.effect",
     vendor_available: true,
     srcs: [
+        "android/hardware/audio/effect/BassBoost.aidl",
+        "android/hardware/audio/effect/Capability.aidl",
+        "android/hardware/audio/effect/CommandId.aidl",
         "android/hardware/audio/effect/Descriptor.aidl",
+        "android/hardware/audio/effect/Downmix.aidl",
+        "android/hardware/audio/effect/DynamicsProcessing.aidl",
+        "android/hardware/audio/effect/Equalizer.aidl",
+        "android/hardware/audio/effect/Flags.aidl",
+        "android/hardware/audio/effect/HapticGenerator.aidl",
+        "android/hardware/audio/effect/IEffect.aidl",
         "android/hardware/audio/effect/IFactory.aidl",
+        "android/hardware/audio/effect/LoudnessEnhancer.aidl",
+        "android/hardware/audio/effect/Parameter.aidl",
+        "android/hardware/audio/effect/Processing.aidl",
+        "android/hardware/audio/effect/Reverb.aidl",
+        "android/hardware/audio/effect/State.aidl",
+        "android/hardware/audio/effect/VendorExtension.aidl",
+        "android/hardware/audio/effect/Virtualizer.aidl",
+        "android/hardware/audio/effect/Visualizer.aidl",
+        "android/hardware/audio/effect/Volume.aidl",
     ],
     imports: [
+        "android.hardware.common-V2",
+        "android.hardware.common.fmq-V1",
         "android.hardware.audio.common-V1",
-        "android.media.audio.common.types-V1",
+        "android.media.audio.common.types-V2",
     ],
     stability: "vintf",
     backend: {
@@ -157,4 +187,20 @@ aidl_interface {
             sdk_version: "module_current",
         },
     },
+}
+
+latest_android_hardware_audio_effect = "android.hardware.audio.effect-V1"
+
+cc_defaults {
+    name: "latest_android_hardware_audio_effect_ndk_shared",
+    shared_libs: [
+        latest_android_hardware_audio_effect + "-ndk",
+    ],
+}
+
+cc_defaults {
+    name: "latest_android_hardware_audio_effect_ndk_static",
+    static_libs: [
+        latest_android_hardware_audio_effect + "-ndk",
+    ],
 }

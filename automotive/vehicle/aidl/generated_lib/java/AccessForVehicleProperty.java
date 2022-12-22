@@ -111,6 +111,7 @@ public final class AccessForVehicleProperty {
         Map.entry(VehicleProperty.DOOR_POS, VehiclePropertyAccess.READ_WRITE),
         Map.entry(VehicleProperty.DOOR_MOVE, VehiclePropertyAccess.READ_WRITE),
         Map.entry(VehicleProperty.DOOR_LOCK, VehiclePropertyAccess.READ_WRITE),
+        Map.entry(VehicleProperty.DOOR_CHILD_LOCK_ENABLED, VehiclePropertyAccess.READ_WRITE),
         Map.entry(VehicleProperty.MIRROR_Z_POS, VehiclePropertyAccess.READ_WRITE),
         Map.entry(VehicleProperty.MIRROR_Z_MOVE, VehiclePropertyAccess.READ_WRITE),
         Map.entry(VehicleProperty.MIRROR_Y_POS, VehiclePropertyAccess.READ_WRITE),
@@ -148,6 +149,8 @@ public final class AccessForVehicleProperty {
         Map.entry(VehicleProperty.WINDOW_POS, VehiclePropertyAccess.READ_WRITE),
         Map.entry(VehicleProperty.WINDOW_MOVE, VehiclePropertyAccess.READ_WRITE),
         Map.entry(VehicleProperty.WINDOW_LOCK, VehiclePropertyAccess.READ_WRITE),
+        Map.entry(VehicleProperty.STEERING_WHEEL_DEPTH_POS, VehiclePropertyAccess.READ_WRITE),
+        Map.entry(VehicleProperty.STEERING_WHEEL_DEPTH_MOVE, VehiclePropertyAccess.READ_WRITE),
         Map.entry(VehicleProperty.VEHICLE_MAP_SERVICE, VehiclePropertyAccess.READ_WRITE),
         Map.entry(VehicleProperty.OBD2_LIVE_FRAME, VehiclePropertyAccess.READ),
         Map.entry(VehicleProperty.OBD2_FREEZE_FRAME, VehiclePropertyAccess.READ),
@@ -198,7 +201,8 @@ public final class AccessForVehicleProperty {
         Map.entry(VehicleProperty.EV_REGENERATIVE_BRAKING_STATE, VehiclePropertyAccess.READ),
         Map.entry(VehicleProperty.TRAILER_PRESENT, VehiclePropertyAccess.READ),
         Map.entry(VehicleProperty.VEHICLE_CURB_WEIGHT, VehiclePropertyAccess.READ),
-        Map.entry(VehicleProperty.GENERAL_SAFETY_REGULATION_COMPLIANCE_REQUIREMENT, VehiclePropertyAccess.READ)
+        Map.entry(VehicleProperty.GENERAL_SAFETY_REGULATION_COMPLIANCE_REQUIREMENT, VehiclePropertyAccess.READ),
+        Map.entry(VehicleProperty.SUPPORTED_PROPERTY_IDS, VehiclePropertyAccess.READ)
     );
 
 }

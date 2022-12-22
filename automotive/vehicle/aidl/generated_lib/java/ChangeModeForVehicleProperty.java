@@ -111,6 +111,7 @@ public final class ChangeModeForVehicleProperty {
         Map.entry(VehicleProperty.DOOR_POS, VehiclePropertyChangeMode.ON_CHANGE),
         Map.entry(VehicleProperty.DOOR_MOVE, VehiclePropertyChangeMode.ON_CHANGE),
         Map.entry(VehicleProperty.DOOR_LOCK, VehiclePropertyChangeMode.ON_CHANGE),
+        Map.entry(VehicleProperty.DOOR_CHILD_LOCK_ENABLED, VehiclePropertyChangeMode.ON_CHANGE),
         Map.entry(VehicleProperty.MIRROR_Z_POS, VehiclePropertyChangeMode.ON_CHANGE),
         Map.entry(VehicleProperty.MIRROR_Z_MOVE, VehiclePropertyChangeMode.ON_CHANGE),
         Map.entry(VehicleProperty.MIRROR_Y_POS, VehiclePropertyChangeMode.ON_CHANGE),
@@ -148,6 +149,8 @@ public final class ChangeModeForVehicleProperty {
         Map.entry(VehicleProperty.WINDOW_POS, VehiclePropertyChangeMode.ON_CHANGE),
         Map.entry(VehicleProperty.WINDOW_MOVE, VehiclePropertyChangeMode.ON_CHANGE),
         Map.entry(VehicleProperty.WINDOW_LOCK, VehiclePropertyChangeMode.ON_CHANGE),
+        Map.entry(VehicleProperty.STEERING_WHEEL_DEPTH_POS, VehiclePropertyChangeMode.ON_CHANGE),
+        Map.entry(VehicleProperty.STEERING_WHEEL_DEPTH_MOVE, VehiclePropertyChangeMode.ON_CHANGE),
         Map.entry(VehicleProperty.VEHICLE_MAP_SERVICE, VehiclePropertyChangeMode.ON_CHANGE),
         Map.entry(VehicleProperty.OBD2_LIVE_FRAME, VehiclePropertyChangeMode.ON_CHANGE),
         Map.entry(VehicleProperty.OBD2_FREEZE_FRAME, VehiclePropertyChangeMode.ON_CHANGE),
@@ -198,7 +201,8 @@ public final class ChangeModeForVehicleProperty {
         Map.entry(VehicleProperty.EV_REGENERATIVE_BRAKING_STATE, VehiclePropertyChangeMode.ON_CHANGE),
         Map.entry(VehicleProperty.TRAILER_PRESENT, VehiclePropertyChangeMode.ON_CHANGE),
         Map.entry(VehicleProperty.VEHICLE_CURB_WEIGHT, VehiclePropertyChangeMode.STATIC),
-        Map.entry(VehicleProperty.GENERAL_SAFETY_REGULATION_COMPLIANCE_REQUIREMENT, VehiclePropertyChangeMode.STATIC)
+        Map.entry(VehicleProperty.GENERAL_SAFETY_REGULATION_COMPLIANCE_REQUIREMENT, VehiclePropertyChangeMode.STATIC),
+        Map.entry(VehicleProperty.SUPPORTED_PROPERTY_IDS, VehiclePropertyChangeMode.STATIC)
     );
 
 }

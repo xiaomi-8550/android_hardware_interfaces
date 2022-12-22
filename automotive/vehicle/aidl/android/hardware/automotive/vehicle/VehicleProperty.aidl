@@ -16,6 +16,8 @@
 
 package android.hardware.automotive.vehicle;
 
+import android.hardware.automotive.vehicle.VehicleArea;
+import android.hardware.automotive.vehicle.VehiclePropertyGroup;
 import android.hardware.automotive.vehicle.VehiclePropertyType;
 /**
  * Declares all vehicle properties. VehicleProperty has a bitwise structure.
@@ -457,6 +459,9 @@ enum VehicleProperty {
     /**
      * Parking brake state.
      *
+     * This property is true indicates that the car's parking brake is currently engaged. False
+     * implies that the car's parking brake is currently disengaged.
+     *
      * @change_mode VehiclePropertyChangeMode.ON_CHANGE
      * @access VehiclePropertyAccess.READ
      */
@@ -464,6 +469,15 @@ enum VehicleProperty {
             + 0x00200000, // VehiclePropertyGroup:SYSTEM,VehicleArea:GLOBAL,VehiclePropertyType:BOOLEAN
     /**
      * Auto-apply parking brake.
+     *
+     * This property is true indicates that the car's automatic parking brake feature is currently
+     * enabled. False indicates that the car's automatic parking brake feature is currently
+     * disabled.
+     *
+     * This property is often confused with PARKING_BRAKE_ON. The difference is that
+     * PARKING_BRAKE_ON describes whether the actual parking brake is currently on/off, whereas
+     * PARKING_BRAKE_AUTO_APPLY describes whether the feature of automatic parking brake is enabled/
+     * disabled, and does not describe the current state of the actual parking brake.
      *
      * @change_mode VehiclePropertyChangeMode.ON_CHANGE
      * @access VehiclePropertyAccess.READ
@@ -1306,6 +1320,18 @@ enum VehicleProperty {
     DOOR_LOCK = 0x0B02 + 0x10000000 + 0x06000000
             + 0x00200000, // VehiclePropertyGroup:SYSTEM,VehicleArea:DOOR,VehiclePropertyType:BOOLEAN
     /**
+     * Door child lock feature enabled
+     *
+     * Returns true if the door child lock feature is enabled and false if it is disabled.
+     *
+     * If enabled, the door is unable to be opened from the inside.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ_WRITE
+     */
+    DOOR_CHILD_LOCK_ENABLED =
+            0x0B03 + VehiclePropertyGroup.SYSTEM + VehicleArea.DOOR + VehiclePropertyType.BOOLEAN,
+    /**
      * Mirror Z Position
      *
      * Positive value indicates tilt upwards, negative value is downwards
@@ -1735,6 +1761,44 @@ enum VehicleProperty {
      */
     WINDOW_LOCK = 0x0BC4 + 0x10000000 + 0x03000000
             + 0x00200000, // VehiclePropertyGroup:SYSTEM,VehicleArea:WINDOW,VehiclePropertyType:BOOLEAN
+    /**
+     * Steering wheel depth position
+     *
+     * All steering wheel properties' unique ids start from 0x0BE0.
+     *
+     * The maxInt32Value and minInt32Value in VehicleAreaConfig must be defined. All values between
+     * minInt32Value and maxInt32Value must be supported.
+     *
+     * The maxInt32Value in default area's VehicleAreaConfig indicates the steering wheel position
+     * closest to the driver. The minInt32Value in default area's VehicleAreaConfig indicates the
+     * steering wheel position furthest to the driver.
+     *
+     * This value is not in any particular unit but in a specified range of steps.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ_WRITE
+     */
+    STEERING_WHEEL_DEPTH_POS =
+            0x0BE0 + VehiclePropertyGroup.SYSTEM + VehicleArea.GLOBAL + VehiclePropertyType.INT32,
+    /**
+     * Steering wheel depth movement
+     *
+     * The maxInt32Value and minInt32Value in VehicleAreaConfig must be defined. All values between
+     * minInt32Value and maxInt32Value must be supported.
+     *
+     * The maxInt32Value in default area's VehicleAreaConfig indicates the steering wheel moving
+     * towards the driver. The minInt32Value in default area's VehicleAreaConfig indicates the
+     * steering wheel moving away from the driver. Larger integers, either positive or negative,
+     * indicate a faster movement speed. Once the steering wheel reaches the positional limit, the
+     * value resets to 0.
+     *
+     * This value is not in any particular unit but in a specified range of steps.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ_WRITE
+     */
+    STEERING_WHEEL_DEPTH_MOVE =
+            0x0BE1 + VehiclePropertyGroup.SYSTEM + VehicleArea.GLOBAL + VehiclePropertyType.INT32,
     /**
      * Vehicle Maps Service (VMS) message
      *
@@ -2468,8 +2532,9 @@ enum VehicleProperty {
      * VHAL sets this property to change car power policy. Car power policy service subscribes to
      * this property and actually changes the power policy.
      * The request is made by setting the VehiclePropValue with the ID of a power policy which is
-     * defined at /vendor/etc/power_policy.xml. If the given ID is not defined, car power policy
-     * service ignores the request and the current power policy is maintained.
+     * defined at /vendor/etc/automotive/power_policy.xml.
+     * If the given ID is not defined, car power policy service ignores the request
+     * and the current power policy is maintained.
      *
      *   string: "sample_policy_id" // power policy ID
      *
@@ -2853,4 +2918,27 @@ enum VehicleProperty {
     GENERAL_SAFETY_REGULATION_COMPLIANCE_REQUIREMENT = 0x0F47 + 0x10000000 + 0x01000000
             + 0x00400000, // VehiclePropertyGroup:SYSTEM,VehicleArea:GLOBAL,VehiclePropertyType:INT32
 
+    /**
+     * (Deprecated) List of all supported property IDs.
+     *
+     * A list of all supported property IDs (including this property). This property is required for
+     * HIDL VHAL to work with large amount of vehicle prop configs where the getAllPropConfigs
+     * payload exceeds the binder limitation. This issue is fixed in AIDL version using
+     * LargeParcelable in getAllPropConfigs, so this property is deprecated.
+     *
+     * In HIDL VHAL implementation, if the amount of data returned in getAllPropConfigs exceeds the
+     * binder limitation, vendor must support this property and return all the supported property
+     * IDs. Car service will divide this list into smaller sub lists and use getPropConfigs([ids])
+     * to query the sub lists. The results will be merged together in Car Service.
+     *
+     * The config array for this property must contain one int element which is the number of
+     * configs per getPropConfigs request by Car Service. This number must be small enough so that
+     * each getPropConfigs payload will not exceed binder limitation, however, a smaller number will
+     * cause more requests, which increase overhead to fetch all the configs.
+     *
+     * @change_mode VehiclePropertyChangeMode.STATIC
+     * @access VehiclePropertyAccess.READ
+     */
+    SUPPORTED_PROPERTY_IDS = 0x0F48 + 0x10000000 + 0x01000000
+            + 0x00410000, // VehiclePropertyGroup:SYSTEM,VehicleArea:GLOBAL,VehiclePropertyType:INT32_VEC
 }

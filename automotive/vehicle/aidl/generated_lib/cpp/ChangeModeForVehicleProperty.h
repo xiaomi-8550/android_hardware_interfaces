@@ -119,6 +119,7 @@ std::unordered_map<VehicleProperty, VehiclePropertyChangeMode> ChangeModeForVehi
         {VehicleProperty::DOOR_POS, VehiclePropertyChangeMode::ON_CHANGE},
         {VehicleProperty::DOOR_MOVE, VehiclePropertyChangeMode::ON_CHANGE},
         {VehicleProperty::DOOR_LOCK, VehiclePropertyChangeMode::ON_CHANGE},
+        {VehicleProperty::DOOR_CHILD_LOCK_ENABLED, VehiclePropertyChangeMode::ON_CHANGE},
         {VehicleProperty::MIRROR_Z_POS, VehiclePropertyChangeMode::ON_CHANGE},
         {VehicleProperty::MIRROR_Z_MOVE, VehiclePropertyChangeMode::ON_CHANGE},
         {VehicleProperty::MIRROR_Y_POS, VehiclePropertyChangeMode::ON_CHANGE},
@@ -156,6 +157,8 @@ std::unordered_map<VehicleProperty, VehiclePropertyChangeMode> ChangeModeForVehi
         {VehicleProperty::WINDOW_POS, VehiclePropertyChangeMode::ON_CHANGE},
         {VehicleProperty::WINDOW_MOVE, VehiclePropertyChangeMode::ON_CHANGE},
         {VehicleProperty::WINDOW_LOCK, VehiclePropertyChangeMode::ON_CHANGE},
+        {VehicleProperty::STEERING_WHEEL_DEPTH_POS, VehiclePropertyChangeMode::ON_CHANGE},
+        {VehicleProperty::STEERING_WHEEL_DEPTH_MOVE, VehiclePropertyChangeMode::ON_CHANGE},
         {VehicleProperty::VEHICLE_MAP_SERVICE, VehiclePropertyChangeMode::ON_CHANGE},
         {VehicleProperty::OBD2_LIVE_FRAME, VehiclePropertyChangeMode::ON_CHANGE},
         {VehicleProperty::OBD2_FREEZE_FRAME, VehiclePropertyChangeMode::ON_CHANGE},
@@ -207,6 +210,7 @@ std::unordered_map<VehicleProperty, VehiclePropertyChangeMode> ChangeModeForVehi
         {VehicleProperty::TRAILER_PRESENT, VehiclePropertyChangeMode::ON_CHANGE},
         {VehicleProperty::VEHICLE_CURB_WEIGHT, VehiclePropertyChangeMode::STATIC},
         {VehicleProperty::GENERAL_SAFETY_REGULATION_COMPLIANCE_REQUIREMENT, VehiclePropertyChangeMode::STATIC},
+        {VehicleProperty::SUPPORTED_PROPERTY_IDS, VehiclePropertyChangeMode::STATIC},
 };
 
 }  // namespace vehicle

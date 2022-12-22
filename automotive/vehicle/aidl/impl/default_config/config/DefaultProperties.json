@@ -59,6 +59,12 @@
             }
         },
         {
+            "property": "VehicleProperty::INFO_VIN",
+            "defaultValue": {
+                "stringValue": "1GCARVIN123456789"
+            }
+        },
+        {
             "property": "VehicleProperty::INFO_MAKE",
             "defaultValue": {
                 "stringValue": "Toy Vehicle"
@@ -104,6 +110,16 @@
             "minSampleRate": 1.0
         },
         {
+            "property": "VehicleProperty::PERF_VEHICLE_SPEED_DISPLAY",
+            "defaultValue": {
+                "floatValues": [
+                    0.0
+                ]
+            },
+            "maxSampleRate": 10.0,
+            "minSampleRate": 1.0
+        },
+        {
             "property": "VehicleProperty::VEHICLE_SPEED_DISPLAY_UNITS",
             "defaultValue": {
                 "int32Values": [
@@ -127,6 +143,66 @@
                 "VehicleUnit::WATT_HOUR",
                 "VehicleUnit::AMPERE_HOURS",
                 "VehicleUnit::KILOWATT_HOUR"
+            ]
+        },
+        {
+            "property": "VehicleProperty::SEAT_MEMORY_SELECT",
+            "defaultValue": {
+                "int32Values": [
+                    1
+                ]
+            },
+            "areas": [
+                {
+                    "areaId": "Constants::SEAT_1_LEFT",
+                    "minInt32Value": 0,
+                    "maxInt32Value": 3
+                },
+                {
+                    "areaId": "Constants::SEAT_1_RIGHT",
+                    "minInt32Value": 0,
+                    "maxInt32Value": 3
+                },
+                {
+                    "areaId": "Constants::SEAT_2_LEFT",
+                    "minInt32Value": 0,
+                    "maxInt32Value": 3
+                },
+                {
+                    "areaId": "Constants::SEAT_2_RIGHT",
+                    "minInt32Value": 0,
+                    "maxInt32Value": 3
+                }
+            ]
+        },
+        {
+            "property": "VehicleProperty::SEAT_MEMORY_SET",
+            "defaultValue": {
+                "int32Values": [
+                    1
+                ]
+            },
+            "areas": [
+                {
+                    "areaId": "Constants::SEAT_1_LEFT",
+                    "minInt32Value": 0,
+                    "maxInt32Value": 3
+                },
+                {
+                    "areaId": "Constants::SEAT_1_RIGHT",
+                    "minInt32Value": 0,
+                    "maxInt32Value": 3
+                },
+                {
+                    "areaId": "Constants::SEAT_2_LEFT",
+                    "minInt32Value": 0,
+                    "maxInt32Value": 3
+                },
+                {
+                    "areaId": "Constants::SEAT_2_RIGHT",
+                    "minInt32Value": 0,
+                    "maxInt32Value": 3
+                }
             ]
         },
         {
@@ -1853,6 +1929,22 @@
             ]
         },
         {
+            "property": "VehicleProperty::DOOR_CHILD_LOCK_ENABLED",
+            "defaultValue": {
+                "int32Values": [
+                    0
+                ]
+            },
+            "areas": [
+                {
+                    "areaId": "Constants::DOOR_2_LEFT"
+                },
+                {
+                    "areaId": "Constants::DOOR_2_RIGHT"
+                }
+            ]
+        },
+        {
             "property": "VehicleProperty::DOOR_POS",
             "defaultValue": {
                 "int32Values": [
@@ -1883,6 +1975,36 @@
                 {
                     "areaId": "Constants::DOOR_REAR",
                     "minInt32Value": 0,
+                    "maxInt32Value": 1
+                }
+            ]
+        },
+        {
+            "property": "VehicleProperty::DOOR_MOVE",
+            "defaultValue": {
+                "int32Values": [
+                    0
+                ]
+            },
+            "areas": [
+                {
+                    "areaId": "Constants::DOOR_1_LEFT",
+                    "minInt32Value": -1,
+                    "maxInt32Value": 1
+                },
+                {
+                    "areaId": "Constants::DOOR_1_RIGHT",
+                    "minInt32Value": -1,
+                    "maxInt32Value": 1
+                },
+                {
+                    "areaId": "Constants::DOOR_2_LEFT",
+                    "minInt32Value": -1,
+                    "maxInt32Value": 1
+                },
+                {
+                    "areaId": "Constants::DOOR_2_RIGHT",
+                    "minInt32Value": -1,
                     "maxInt32Value": 1
                 }
             ]
@@ -2048,6 +2170,71 @@
                     "areaId": "Constants::WINDOW_ROOF_TOP_1",
                     "minInt32Value": -10,
                     "maxInt32Value": 10
+                }
+            ]
+        },
+        {
+            "property": "VehicleProperty::WINDOW_MOVE",
+            "defaultValue": {
+                "int32Values": [
+                    0
+                ]
+            },
+            "areas": [
+                {
+                    "areaId": "Constants::WINDOW_1_LEFT",
+                    "minInt32Value": -1,
+                    "maxInt32Value": 1
+                },
+                {
+                    "areaId": "Constants::WINDOW_1_RIGHT",
+                    "minInt32Value": -1,
+                    "maxInt32Value": 1
+                },
+                {
+                    "areaId": "Constants::WINDOW_2_LEFT",
+                    "minInt32Value": -1,
+                    "maxInt32Value": 1
+                },
+                {
+                    "areaId": "Constants::WINDOW_2_RIGHT",
+                    "minInt32Value": -1,
+                    "maxInt32Value": 1
+                },
+                {
+                    "areaId": "Constants::WINDOW_ROOF_TOP_1",
+                    "minInt32Value": -1,
+                    "maxInt32Value": 1
+                }
+            ]
+        },
+        {
+            "property": "VehicleProperty::STEERING_WHEEL_DEPTH_POS",
+            "defaultValue": {
+                "int32Values": [
+                    0
+                ]
+            },
+            "areas": [
+                {
+                    "areaId": 0,
+                    "minInt32Value": 0,
+                    "maxInt32Value": 10
+                }
+            ]
+        },
+        {
+            "property": "VehicleProperty::STEERING_WHEEL_DEPTH_MOVE",
+            "defaultValue": {
+                "int32Values": [
+                    0
+                ]
+            },
+            "areas": [
+                {
+                    "areaId": 0,
+                    "minInt32Value": -2,
+                    "maxInt32Value": 2
                 }
             ]
         },
@@ -2253,6 +2440,39 @@
                     "Constants::LIGHT_SWITCH_AUTO"
                 ]
             }
+        },
+        {
+            "property": "VehicleProperty::CABIN_LIGHTS_SWITCH",
+            "defaultValue": {
+                "int32Values": [
+                    "Constants::LIGHT_SWITCH_OFF"
+                ]
+            }
+        },
+        {
+            "property": "VehicleProperty::READING_LIGHTS_SWITCH",
+            "defaultValue": {
+                "int32Values": [
+                    "Constants::LIGHT_SWITCH_OFF"
+                ]
+            },
+            "areas": [
+                {
+                    "areaId": "Constants::SEAT_1_LEFT"
+                },
+                {
+                    "areaId": "Constants::SEAT_1_RIGHT"
+                },
+                {
+                    "areaId": "Constants::SEAT_2_LEFT"
+                },
+                {
+                    "areaId": "Constants::SEAT_2_RIGHT"
+                },
+                {
+                    "areaId": "Constants::SEAT_2_CENTER"
+                }
+            ]
         },
         {
             "property": "VehicleProperty::EVS_SERVICE_REQUEST",

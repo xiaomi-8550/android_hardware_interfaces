@@ -1077,6 +1077,7 @@ TEST_P(GnssHalTest, TestAGnssExtension) {
  * 2. Sets AGnssRilCallback.
  * 3. Update network state to connected and then disconnected.
  * 4. Sets reference location.
+ * 5. Injects empty NI message data and verifies that it returns an error.
  */
 TEST_P(GnssHalTest, TestAGnssRilExtension) {
     if (aidl_gnss_hal_->getInterfaceVersion() <= 1) {
@@ -1120,6 +1121,9 @@ TEST_P(GnssHalTest, TestAGnssRilExtension) {
 
     status = iAGnssRil->setRefLocation(agnssReflocation);
     ASSERT_TRUE(status.isOk());
+
+    status = iAGnssRil->injectNiSuplMessageData(std::vector<uint8_t>(), 0);
+    ASSERT_FALSE(status.isOk());
 }
 
 /*
@@ -1493,4 +1497,34 @@ TEST_P(GnssHalTest, TestGnssMeasurementIntervals_LocationOnAfterMeasurement) {
 
         assertMeanAndStdev(locationIntervalMs, deltas);
     }
+}
+
+TEST_P(GnssHalTest, TestGnssMeasurementSetCallback) {
+    if (aidl_gnss_hal_->getInterfaceVersion() <= 2) {
+        return;
+    }
+
+    sp<IGnssMeasurementInterface> iGnssMeasurement;
+    auto status = aidl_gnss_hal_->getExtensionGnssMeasurement(&iGnssMeasurement);
+    ASSERT_TRUE(status.isOk());
+    ASSERT_TRUE(iGnssMeasurement != nullptr);
+
+    ALOGD("TestGnssMeasurementSetCallback");
+    auto callback = sp<GnssMeasurementCallbackAidl>::make();
+    std::vector<int> deltas;
+
+    // setCallback at 20s interval and wait for 1 measurement
+    startMeasurementWithInterval(20000, iGnssMeasurement, callback);
+    collectMeasurementIntervals(callback, /* numEvents= */ 1, /* timeoutSeconds= */ 10, deltas);
+
+    // setCallback at 1s interval and wait for 5 measurements
+    callback->gnss_data_cbq_.reset();
+    startMeasurementWithInterval(1000, iGnssMeasurement, callback);
+    collectMeasurementIntervals(callback, /* numEvents= */ 5, /* timeoutSeconds= */ 10, deltas);
+
+    // verify the measurements were received at 1Hz
+    assertMeanAndStdev(1000, deltas);
+
+    status = iGnssMeasurement->close();
+    ASSERT_TRUE(status.isOk());
 }

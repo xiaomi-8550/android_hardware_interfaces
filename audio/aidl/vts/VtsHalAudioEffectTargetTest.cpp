@@ -14,9 +14,13 @@
  * limitations under the License.
  */
 
-#include <string>
+#define LOG_TAG "VtsHalAudioEffectTargetTest"
 
-#define LOG_TAG "VtsHalAudioEffect"
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 #include <aidl/Gtest.h>
 #include <aidl/Vintf.h>
@@ -26,101 +30,329 @@
 #include <android/binder_manager.h>
 #include <android/binder_process.h>
 
+#include <Utils.h>
+#include <aidl/android/hardware/audio/effect/IEffect.h>
 #include <aidl/android/hardware/audio/effect/IFactory.h>
+#include <aidl/android/media/audio/common/AudioDeviceType.h>
 
 #include "AudioHalBinderServiceUtil.h"
+#include "EffectHelper.h"
+#include "TestUtils.h"
 
 using namespace android;
 
 using ndk::ScopedAStatus;
 
+using aidl::android::hardware::audio::effect::CommandId;
 using aidl::android::hardware::audio::effect::Descriptor;
+using aidl::android::hardware::audio::effect::IEffect;
 using aidl::android::hardware::audio::effect::IFactory;
-using aidl::android::media::audio::common::AudioUuid;
+using aidl::android::hardware::audio::effect::Parameter;
+using aidl::android::hardware::audio::effect::State;
+using aidl::android::media::audio::common::AudioDeviceType;
 
-namespace ndk {
-std::ostream& operator<<(std::ostream& str, const ScopedAStatus& status) {
-    str << status.getDescription();
-    return str;
-}
-}  // namespace ndk
-
-class EffectFactory : public testing::TestWithParam<std::string> {
+class AudioEffectTest : public testing::TestWithParam<std::string>, public EffectHelper {
   public:
-    void SetUp() override { ASSERT_NO_FATAL_FAILURE(ConnectToService()); }
+    AudioEffectTest() : EffectHelper(GetParam()) {}
 
-    void TearDown() override {}
-
-    void ConnectToService() {
-        serviceName = GetParam();
-        factory = IFactory::fromBinder(binderUtil.connectToService(serviceName));
-        ASSERT_NE(factory, nullptr);
+    void SetUp() override {
+        CreateEffects();
+        initParamCommonFormat();
+        initParamCommon();
     }
 
-    void RestartService() {
-        ASSERT_NE(factory, nullptr);
-        factory = IFactory::fromBinder(binderUtil.restartService());
-        ASSERT_NE(factory, nullptr);
+    void TearDown() override {
+        CloseEffects();
+        DestroyEffects();
     }
-
-    std::shared_ptr<IFactory> factory;
-    std::string serviceName;
-    AudioHalBinderServiceUtil binderUtil;
-    // TODO: these UUID can get from config file
-    // ec7178ec-e5e1-4432-a3f4-4657e6795210
-    const AudioUuid nullUuid = {static_cast<int32_t>(0xec7178ec),
-                                0xe5e1,
-                                0x4432,
-                                0xa3f4,
-                                {0x46, 0x57, 0xe6, 0x79, 0x52, 0x10}};
-    const AudioUuid zeroUuid = {
-            static_cast<int32_t>(0x0), 0x0, 0x0, 0x0, {0x0, 0x0, 0x0, 0x0, 0x0, 0x0}};
 };
 
-TEST_P(EffectFactory, SetupAndTearDown) {
-    // Intentionally empty test body.
+TEST_P(AudioEffectTest, OpenEffectTest) {
+    OpenEffects();
 }
 
-TEST_P(EffectFactory, CanBeRestarted) {
-    ASSERT_NO_FATAL_FAILURE(RestartService());
+TEST_P(AudioEffectTest, OpenAndCloseEffect) {
+    OpenEffects();
+    CloseEffects();
 }
 
-TEST_P(EffectFactory, QueriedDescriptorList) {
-    std::vector<Descriptor::Identity> descriptors;
-    ScopedAStatus status = factory->queryEffects(std::nullopt, std::nullopt, &descriptors);
-    EXPECT_EQ(EX_NONE, status.getExceptionCode());
-    EXPECT_NE(static_cast<int>(descriptors.size()), 0);
+TEST_P(AudioEffectTest, CloseUnopenedEffectTest) {
+    CloseEffects();
 }
 
-TEST_P(EffectFactory, DescriptorUUIDNotNull) {
-    std::vector<Descriptor::Identity> descriptors;
-    ScopedAStatus status = factory->queryEffects(std::nullopt, std::nullopt, &descriptors);
-    EXPECT_EQ(EX_NONE, status.getExceptionCode());
-    // TODO: Factory eventually need to return the full list of MUST supported AOSP effects.
-    for (auto& desc : descriptors) {
-        EXPECT_NE(desc.type, zeroUuid);
-        EXPECT_NE(desc.uuid, zeroUuid);
+TEST_P(AudioEffectTest, DoubleOpenCloseEffects) {
+    OpenEffects();
+    CloseEffects();
+    OpenEffects();
+    CloseEffects();
+
+    OpenEffects();
+    OpenEffects();
+    CloseEffects();
+
+    OpenEffects();
+    CloseEffects();
+    CloseEffects();
+}
+
+TEST_P(AudioEffectTest, GetDescriptors) {
+    GetEffectDescriptors();
+}
+
+TEST_P(AudioEffectTest, DescriptorIdExistAndUnique) {
+    auto checker = [&](const std::shared_ptr<IEffect>& effect) {
+        Descriptor desc;
+        std::vector<Descriptor::Identity> idList;
+        EXPECT_IS_OK(effect->getDescriptor(&desc));
+        QueryEffects(desc.common.id.type, desc.common.id.uuid, desc.common.id.proxy, &idList);
+        // Must have at least one instance.
+        EXPECT_NE(idList.size(), 0UL);
+    };
+    ForEachEffect(checker);
+
+    // Check unique with a set
+    auto stringHash = [](const Descriptor::Identity& id) {
+        return std::hash<std::string>()(id.toString());
+    };
+    auto vec = GetCompleteEffectIdList();
+    std::unordered_set<Descriptor::Identity, decltype(stringHash)> idSet(0, stringHash);
+    for (auto it : vec) {
+        EXPECT_EQ(idSet.count(it), 0UL) << it.toString();
+        idSet.insert(it);
     }
 }
 
-TEST_P(EffectFactory, QueriedDescriptorNotExistType) {
-    std::vector<Descriptor::Identity> descriptors;
-    ScopedAStatus status = factory->queryEffects(nullUuid, std::nullopt, &descriptors);
-    EXPECT_EQ(EX_NONE, status.getExceptionCode());
-    EXPECT_EQ(static_cast<int>(descriptors.size()), 0);
+/// State testing.
+// An effect instance is in INIT state by default after it was created.
+TEST_P(AudioEffectTest, InitStateAfterCreation) {
+    ExpectState(State::INIT);
 }
 
-TEST_P(EffectFactory, QueriedDescriptorNotExistInstance) {
-    std::vector<Descriptor::Identity> descriptors;
-    ScopedAStatus status = factory->queryEffects(std::nullopt, nullUuid, &descriptors);
-    EXPECT_EQ(EX_NONE, status.getExceptionCode());
-    EXPECT_EQ(static_cast<int>(descriptors.size()), 0);
+// An effect instance transfer to INIT state after it was open successfully with IEffect.open().
+TEST_P(AudioEffectTest, IdleStateAfterOpen) {
+    OpenEffects();
+    ExpectState(State::IDLE);
+    CloseEffects();
 }
 
-INSTANTIATE_TEST_SUITE_P(EffectFactoryTest, EffectFactory,
+// An effect instance is in PROCESSING state after it receive an START command.
+TEST_P(AudioEffectTest, ProcessingStateAfterStart) {
+    OpenEffects();
+    CommandEffects(CommandId::START);
+    ExpectState(State::PROCESSING);
+    CommandEffects(CommandId::STOP);
+    CloseEffects();
+}
+
+// An effect instance transfer to IDLE state after Command.Id.STOP in PROCESSING state.
+TEST_P(AudioEffectTest, IdleStateAfterStop) {
+    OpenEffects();
+    CommandEffects(CommandId::START);
+    ExpectState(State::PROCESSING);
+    CommandEffects(CommandId::STOP);
+    ExpectState(State::IDLE);
+    CloseEffects();
+}
+
+// An effect instance transfer to IDLE state after Command.Id.RESET in PROCESSING state.
+TEST_P(AudioEffectTest, IdleStateAfterReset) {
+    OpenEffects();
+    CommandEffects(CommandId::START);
+    ExpectState(State::PROCESSING);
+    CommandEffects(CommandId::RESET);
+    ExpectState(State::IDLE);
+    CloseEffects();
+}
+
+// An effect instance transfer to INIT if instance receive a close() call.
+TEST_P(AudioEffectTest, InitStateAfterClose) {
+    OpenEffects();
+    CommandEffects(CommandId::START);
+    ExpectState(State::PROCESSING);
+    CommandEffects(CommandId::STOP);
+    ExpectState(State::IDLE);
+    CloseEffects();
+    ExpectState(State::INIT);
+}
+
+// An effect instance shouldn't accept any command before open.
+TEST_P(AudioEffectTest, NoCommandAcceptedBeforeOpen) {
+    ExpectState(State::INIT);
+    CommandEffectsExpectStatus(CommandId::START, EX_ILLEGAL_STATE);
+    CommandEffectsExpectStatus(CommandId::STOP, EX_ILLEGAL_STATE);
+    CommandEffectsExpectStatus(CommandId::RESET, EX_ILLEGAL_STATE);
+    ExpectState(State::INIT);
+}
+
+// No-op when receive STOP command in IDLE state.
+TEST_P(AudioEffectTest, StopCommandInIdleStateNoOp) {
+    ExpectState(State::INIT);
+    OpenEffects();
+    ExpectState(State::IDLE);
+    CommandEffects(CommandId::STOP);
+    ExpectState(State::IDLE);
+    CloseEffects();
+}
+
+// No-op when receive STOP command in IDLE state.
+TEST_P(AudioEffectTest, ResetCommandInIdleStateNoOp) {
+    ExpectState(State::INIT);
+    OpenEffects();
+    ExpectState(State::IDLE);
+    CommandEffects(CommandId::RESET);
+    ExpectState(State::IDLE);
+    CloseEffects();
+}
+
+// Repeat START and STOP command.
+TEST_P(AudioEffectTest, RepeatStartAndStop) {
+    OpenEffects();
+    CommandEffects(CommandId::START);
+    ExpectState(State::PROCESSING);
+    CommandEffects(CommandId::STOP);
+    ExpectState(State::IDLE);
+    CommandEffects(CommandId::START);
+    ExpectState(State::PROCESSING);
+    CommandEffects(CommandId::STOP);
+    ExpectState(State::IDLE);
+    CloseEffects();
+}
+
+// Repeat START and RESET command.
+TEST_P(AudioEffectTest, RepeatStartAndReset) {
+    OpenEffects();
+    CommandEffects(CommandId::START);
+    ExpectState(State::PROCESSING);
+    CommandEffects(CommandId::RESET);
+    ExpectState(State::IDLE);
+    CommandEffects(CommandId::START);
+    ExpectState(State::PROCESSING);
+    CommandEffects(CommandId::RESET);
+    ExpectState(State::IDLE);
+    CloseEffects();
+}
+
+// Repeat START and STOP command, try to close at PROCESSING state.
+TEST_P(AudioEffectTest, CloseProcessingStateEffects) {
+    OpenEffects();
+    CommandEffects(CommandId::START);
+    ExpectState(State::PROCESSING);
+    CommandEffects(CommandId::STOP);
+    ExpectState(State::IDLE);
+    CommandEffects(CommandId::START);
+    ExpectState(State::PROCESSING);
+    CloseEffects(EX_ILLEGAL_STATE);
+    // cleanup
+    CommandEffects(CommandId::STOP);
+    ExpectState(State::IDLE);
+}
+
+// Expect EX_ILLEGAL_STATE if the effect instance is not in a proper state to be destroyed.
+TEST_P(AudioEffectTest, DestroyOpenEffects) {
+    // cleanup all effects.
+    CloseEffects();
+    DestroyEffects();
+
+    // open effects, destroy without close, expect to get EX_ILLEGAL_STATE status.
+    CreateEffects();
+    OpenEffects();
+    auto vec = GetCompleteEffectIdList();
+    DestroyEffects(EX_ILLEGAL_STATE, vec.size());
+    CloseEffects();
+}
+
+/// Parameter testing.
+// Verify parameters pass in open can be successfully get.
+TEST_P(AudioEffectTest, VerifyParametersAfterOpen) {
+    OpenEffects();
+    VerifyParameters();
+    CloseEffects();
+}
+
+// Verify parameters pass in set can be successfully get.
+TEST_P(AudioEffectTest, SetAndGetParameter) {
+    OpenEffects();
+    VerifyParameters();
+    initParamCommon(1 /* session */, 1 /* ioHandle */, 44100 /* iSampleRate */,
+                    44100 /* oSampleRate */);
+    SetParameter();
+    VerifyParameters();
+    CloseEffects();
+}
+
+// Verify parameters pass in set can be successfully get.
+TEST_P(AudioEffectTest, SetAndGetParameterInProcessing) {
+    OpenEffects();
+    VerifyParameters();
+    CommandEffects(CommandId::START);
+    ExpectState(State::PROCESSING);
+    initParamCommon(1 /* session */, 1 /* ioHandle */, 44100 /* iSampleRate */,
+                    44100 /* oSampleRate */);
+    SetParameter();
+    VerifyParameters();
+    CommandEffects(CommandId::STOP);
+    ExpectState(State::IDLE);
+    CloseEffects();
+}
+
+// Parameters kept after reset.
+TEST_P(AudioEffectTest, ResetAndVerifyParameter) {
+    OpenEffects();
+    VerifyParameters();
+    CommandEffects(CommandId::START);
+    ExpectState(State::PROCESSING);
+    initParamCommon(1 /* session */, 1 /* ioHandle */, 44100 /* iSampleRate */,
+                    44100 /* oSampleRate */);
+    SetParameter();
+    VerifyParameters();
+    CommandEffects(CommandId::RESET);
+    ExpectState(State::IDLE);
+    VerifyParameters();
+    CloseEffects();
+}
+
+// TODO: need a way to support setting different sessionId to different effect instances
+#if 0
+// Multiple instances of same implementation running.
+TEST_P(AudioEffectTest, MultipleInstancesRunningWithDiffSessionId) {
+    CreateEffects();
+    ExpectState(State::INIT);
+    OpenEffects();
+    ExpectState(State::IDLE);
+    CommandEffects(CommandId::START);
+    ExpectState(State::PROCESSING);
+    initParamCommon(1 /* session */, 1 /* ioHandle */, 44100 /* iSampleRate */,
+                    44100 /* oSampleRate */);
+    SetParameter();
+    VerifyParameters();
+    CommandEffects(CommandId::STOP);
+    ExpectState(State::IDLE);
+    VerifyParameters();
+    CloseEffects();
+}
+#endif
+
+// Send data to effects and expect it to consume by check statusMQ.
+TEST_P(AudioEffectTest, ExpectEffectsToConsumeDataInMQ) {
+    OpenEffects();
+    PrepareInputData(mWriteMQBytes);
+
+    CommandEffects(CommandId::START);
+    writeToFmq(mWriteMQBytes);
+    readFromFmq(mWriteMQBytes);
+
+    ExpectState(State::PROCESSING);
+    CommandEffects(CommandId::STOP);
+    // cleanup
+    CommandEffects(CommandId::STOP);
+    ExpectState(State::IDLE);
+    CloseEffects();
+}
+
+INSTANTIATE_TEST_SUITE_P(AudioEffectTestTest, AudioEffectTest,
                          testing::ValuesIn(android::getAidlHalInstanceNames(IFactory::descriptor)),
                          android::PrintInstanceNameToString);
-GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(EffectFactory);
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(AudioEffectTest);
 
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);

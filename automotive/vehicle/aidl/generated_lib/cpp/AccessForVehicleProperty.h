@@ -119,6 +119,7 @@ std::unordered_map<VehicleProperty, VehiclePropertyAccess> AccessForVehiclePrope
         {VehicleProperty::DOOR_POS, VehiclePropertyAccess::READ_WRITE},
         {VehicleProperty::DOOR_MOVE, VehiclePropertyAccess::READ_WRITE},
         {VehicleProperty::DOOR_LOCK, VehiclePropertyAccess::READ_WRITE},
+        {VehicleProperty::DOOR_CHILD_LOCK_ENABLED, VehiclePropertyAccess::READ_WRITE},
         {VehicleProperty::MIRROR_Z_POS, VehiclePropertyAccess::READ_WRITE},
         {VehicleProperty::MIRROR_Z_MOVE, VehiclePropertyAccess::READ_WRITE},
         {VehicleProperty::MIRROR_Y_POS, VehiclePropertyAccess::READ_WRITE},
@@ -156,6 +157,8 @@ std::unordered_map<VehicleProperty, VehiclePropertyAccess> AccessForVehiclePrope
         {VehicleProperty::WINDOW_POS, VehiclePropertyAccess::READ_WRITE},
         {VehicleProperty::WINDOW_MOVE, VehiclePropertyAccess::READ_WRITE},
         {VehicleProperty::WINDOW_LOCK, VehiclePropertyAccess::READ_WRITE},
+        {VehicleProperty::STEERING_WHEEL_DEPTH_POS, VehiclePropertyAccess::READ_WRITE},
+        {VehicleProperty::STEERING_WHEEL_DEPTH_MOVE, VehiclePropertyAccess::READ_WRITE},
         {VehicleProperty::VEHICLE_MAP_SERVICE, VehiclePropertyAccess::READ_WRITE},
         {VehicleProperty::OBD2_LIVE_FRAME, VehiclePropertyAccess::READ},
         {VehicleProperty::OBD2_FREEZE_FRAME, VehiclePropertyAccess::READ},
@@ -207,6 +210,7 @@ std::unordered_map<VehicleProperty, VehiclePropertyAccess> AccessForVehiclePrope
         {VehicleProperty::TRAILER_PRESENT, VehiclePropertyAccess::READ},
         {VehicleProperty::VEHICLE_CURB_WEIGHT, VehiclePropertyAccess::READ},
         {VehicleProperty::GENERAL_SAFETY_REGULATION_COMPLIANCE_REQUIREMENT, VehiclePropertyAccess::READ},
+        {VehicleProperty::SUPPORTED_PROPERTY_IDS, VehiclePropertyAccess::READ},
 };
 
 }  // namespace vehicle
