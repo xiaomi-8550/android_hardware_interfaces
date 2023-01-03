@@ -53,6 +53,7 @@ public final class ChangeModeForVehicleProperty {
         Map.entry(VehicleProperty.FUEL_LEVEL, VehiclePropertyChangeMode.CONTINUOUS),
         Map.entry(VehicleProperty.FUEL_DOOR_OPEN, VehiclePropertyChangeMode.ON_CHANGE),
         Map.entry(VehicleProperty.EV_BATTERY_LEVEL, VehiclePropertyChangeMode.CONTINUOUS),
+        Map.entry(VehicleProperty.EV_CURRENT_BATTERY_CAPACITY, VehiclePropertyChangeMode.ON_CHANGE),
         Map.entry(VehicleProperty.EV_CHARGE_PORT_OPEN, VehiclePropertyChangeMode.ON_CHANGE),
         Map.entry(VehicleProperty.EV_CHARGE_PORT_CONNECTED, VehiclePropertyChangeMode.ON_CHANGE),
         Map.entry(VehicleProperty.EV_BATTERY_INSTANTANEOUS_CHARGE_RATE, VehiclePropertyChangeMode.CONTINUOUS),
@@ -63,6 +64,7 @@ public final class ChangeModeForVehicleProperty {
         Map.entry(VehicleProperty.CURRENT_GEAR, VehiclePropertyChangeMode.ON_CHANGE),
         Map.entry(VehicleProperty.PARKING_BRAKE_ON, VehiclePropertyChangeMode.ON_CHANGE),
         Map.entry(VehicleProperty.PARKING_BRAKE_AUTO_APPLY, VehiclePropertyChangeMode.ON_CHANGE),
+        Map.entry(VehicleProperty.EV_BRAKE_REGENERATION_LEVEL, VehiclePropertyChangeMode.ON_CHANGE),
         Map.entry(VehicleProperty.FUEL_LEVEL_LOW, VehiclePropertyChangeMode.ON_CHANGE),
         Map.entry(VehicleProperty.NIGHT_MODE, VehiclePropertyChangeMode.ON_CHANGE),
         Map.entry(VehicleProperty.TURN_SIGNAL_STATE, VehiclePropertyChangeMode.ON_CHANGE),
@@ -106,6 +108,8 @@ public final class ChangeModeForVehicleProperty {
         Map.entry(VehicleProperty.AP_POWER_BOOTUP_REASON, VehiclePropertyChangeMode.STATIC),
         Map.entry(VehicleProperty.DISPLAY_BRIGHTNESS, VehiclePropertyChangeMode.ON_CHANGE),
         Map.entry(VehicleProperty.HW_KEY_INPUT, VehiclePropertyChangeMode.ON_CHANGE),
+        Map.entry(VehicleProperty.HW_KEY_INPUT_V2, VehiclePropertyChangeMode.ON_CHANGE),
+        Map.entry(VehicleProperty.HW_MOTION_INPUT, VehiclePropertyChangeMode.ON_CHANGE),
         Map.entry(VehicleProperty.HW_ROTARY_INPUT, VehiclePropertyChangeMode.ON_CHANGE),
         Map.entry(VehicleProperty.HW_CUSTOM_INPUT, VehiclePropertyChangeMode.ON_CHANGE),
         Map.entry(VehicleProperty.DOOR_POS, VehiclePropertyChangeMode.ON_CHANGE),
@@ -148,6 +152,7 @@ public final class ChangeModeForVehicleProperty {
         Map.entry(VehicleProperty.SEAT_HEADREST_FORE_AFT_POS, VehiclePropertyChangeMode.ON_CHANGE),
         Map.entry(VehicleProperty.SEAT_HEADREST_FORE_AFT_MOVE, VehiclePropertyChangeMode.ON_CHANGE),
         Map.entry(VehicleProperty.SEAT_EASY_ACCESS_ENABLED, VehiclePropertyChangeMode.ON_CHANGE),
+        Map.entry(VehicleProperty.SEAT_AIRBAG_ENABLED, VehiclePropertyChangeMode.ON_CHANGE),
         Map.entry(VehicleProperty.SEAT_CUSHION_SIDE_SUPPORT_POS, VehiclePropertyChangeMode.ON_CHANGE),
         Map.entry(VehicleProperty.SEAT_CUSHION_SIDE_SUPPORT_MOVE, VehiclePropertyChangeMode.ON_CHANGE),
         Map.entry(VehicleProperty.SEAT_LUMBAR_VERTICAL_POS, VehiclePropertyChangeMode.ON_CHANGE),
@@ -214,7 +219,8 @@ public final class ChangeModeForVehicleProperty {
         Map.entry(VehicleProperty.TRAILER_PRESENT, VehiclePropertyChangeMode.ON_CHANGE),
         Map.entry(VehicleProperty.VEHICLE_CURB_WEIGHT, VehiclePropertyChangeMode.STATIC),
         Map.entry(VehicleProperty.GENERAL_SAFETY_REGULATION_COMPLIANCE_REQUIREMENT, VehiclePropertyChangeMode.STATIC),
-        Map.entry(VehicleProperty.SUPPORTED_PROPERTY_IDS, VehiclePropertyChangeMode.STATIC)
+        Map.entry(VehicleProperty.SUPPORTED_PROPERTY_IDS, VehiclePropertyChangeMode.STATIC),
+        Map.entry(VehicleProperty.SHUTDOWN_REQUEST, VehiclePropertyChangeMode.ON_CHANGE)
     );
 
 }

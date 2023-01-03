@@ -21,9 +21,11 @@ import android.hardware.audio.common.SourceMetadata;
 import android.hardware.audio.core.AudioMode;
 import android.hardware.audio.core.AudioPatch;
 import android.hardware.audio.core.AudioRoute;
+import android.hardware.audio.core.IStreamCallback;
 import android.hardware.audio.core.IStreamIn;
 import android.hardware.audio.core.IStreamOut;
 import android.hardware.audio.core.ITelephony;
+import android.hardware.audio.core.MicrophoneInfo;
 import android.hardware.audio.core.ModuleDebug;
 import android.hardware.audio.core.StreamDescriptor;
 import android.media.audio.common.AudioOffloadInfo;
@@ -53,9 +55,13 @@ interface IModule {
      * the HAL module behavior that would otherwise require human intervention.
      *
      * The HAL module must throw an error if there is an attempt to change
-     * the debug behavior for the aspect which is currently in use.
+     * the debug behavior for the aspect which is currently in use, or when
+     * the value of any of the debug flags is invalid. See 'ModuleDebug' for
+     * the full list of constraints.
      *
      * @param debug The debug options.
+     * @throws EX_ILLEGAL_ARGUMENT If some of the configuration parameters are
+     *                             invalid.
      * @throws EX_ILLEGAL_STATE If the flag(s) being changed affect functionality
      *                          which is currently in use.
      */
@@ -316,9 +322,13 @@ interface IModule {
      * 'setAudioPortConfig' method. Existence of an audio patch involving this
      * port configuration is not required for successful opening of a stream.
      *
-     * If the port configuration has 'COMPRESS_OFFLOAD' output flag set,
-     * the framework must provide additional information about the encoded
-     * audio stream in 'offloadInfo' argument.
+     * If the port configuration has the 'COMPRESS_OFFLOAD' output flag set,
+     * the client must provide additional information about the encoded
+     * audio stream in the 'offloadInfo' argument.
+     *
+     * If the port configuration has the 'NON_BLOCKING' output flag set,
+     * the client must provide a callback for asynchronous notifications
+     * in the 'callback' argument.
      *
      * The requested buffer size is expressed in frames, thus the actual size
      * in bytes depends on the audio port configuration. Also, the HAL module
@@ -354,6 +364,8 @@ interface IModule {
      *                             - If the offload info is not provided for an offload
      *                               port configuration.
      *                             - If a buffer of the requested size can not be provided.
+     *                             - If the callback is not provided for a non-blocking
+     *                               port configuration.
      * @throws EX_ILLEGAL_STATE In the following cases:
      *                          - If the port config already has a stream opened on it.
      *                          - If the limit on the open stream count for the port has
@@ -372,6 +384,8 @@ interface IModule {
         @nullable AudioOffloadInfo offloadInfo;
         /** Requested audio I/O buffer minimum size, in frames. */
         long bufferSizeFrames;
+        /** Client callback interface for the non-blocking output mode. */
+        @nullable IStreamCallback callback;
     }
     @VintfStability
     parcelable OpenOutputStreamReturn {
@@ -590,6 +604,22 @@ interface IModule {
      *                                  the module.
      */
     void setMicMute(boolean mute);
+
+    /**
+     * Provide information describing built-in microphones of the HAL module.
+     *
+     * If there are no built-in microphones in the HAL module, it must return an
+     * empty vector. If there are microphones, but the HAL module does not
+     * possess the required information about them, EX_UNSUPPORTED_OPERATION
+     * must be thrown.
+     *
+     * If this method is supported by the HAL module, it must also support
+     * 'IStreamIn.getActiveMicrophones' method.
+     *
+     * @return The vector with information about each microphone.
+     * @throws EX_UNSUPPORTED_OPERATION If the information is unavailable.
+     */
+    MicrophoneInfo[] getMicrophones();
 
     /**
      * Notify the HAL module on the change of the current audio mode.

@@ -97,8 +97,12 @@ enum VehicleProperty {
     INFO_FUEL_TYPE = 0x0105 + 0x10000000 + 0x01000000
             + 0x00410000, // VehiclePropertyGroup:SYSTEM,VehicleArea:GLOBAL,VehiclePropertyType:INT32_VEC
     /**
-     * Battery capacity of the vehicle, if EV or hybrid.  This is the nominal
-     * battery capacity when the vehicle is new.
+     * Nominal battery capacity for EV or hybrid vehicle
+     *
+     * Returns the nominal battery capacity, if EV or hybrid. This is the battery capacity when the
+     * vehicle is new. This value might be different from EV_CURRENT_BATTERY_CAPACITY because
+     * EV_CURRENT_BATTERY_CAPACITY returns the real-time battery capacity taking into account
+     * factors such as battery aging and temperature dependency.
      *
      * @change_mode VehiclePropertyChangeMode.STATIC
      * @access VehiclePropertyAccess.READ
@@ -327,9 +331,11 @@ enum VehicleProperty {
     FUEL_DOOR_OPEN = 0x0308 + 0x10000000 + 0x01000000
             + 0x00200000, // VehiclePropertyGroup:SYSTEM,VehicleArea:GLOBAL,VehiclePropertyType:BOOLEAN
     /**
-     * EV battery level in WH, if EV or hybrid
+     * Battery level for EV or hybrid vehicle
      *
-     * Value may not exceed INFO_EV_BATTERY_CAPACITY
+     * Returns the current battery level, if EV or hybrid. This value will not exceed
+     * EV_CURRENT_BATTERY_CAPACITY. To calculate the battery percentage, use:
+     * (EV_BATTERY_LEVEL/EV_CURRENT_BATTERY_CAPACITY)*100.
      *
      * @change_mode VehiclePropertyChangeMode.CONTINUOUS
      * @access VehiclePropertyAccess.READ
@@ -337,6 +343,20 @@ enum VehicleProperty {
      */
     EV_BATTERY_LEVEL = 0x0309 + 0x10000000 + 0x01000000
             + 0x00600000, // VehiclePropertyGroup:SYSTEM,VehicleArea:GLOBAL,VehiclePropertyType:FLOAT
+    /**
+     * Current battery capacity for EV or hybrid vehicle
+     *
+     * Returns the actual value of battery capacity, if EV or hybrid. This property captures the
+     * real-time battery capacity taking into account factors such as battery aging and temperature
+     * dependency. Therefore, this value might be different from INFO_EV_BATTERY_CAPACITY because
+     * INFO_EV_BATTERY_CAPACITY returns the nominal battery capacity from when the vehicle was new.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ
+     * @unit VehicleUnit:WH
+     */
+    EV_CURRENT_BATTERY_CAPACITY =
+            0x030D + VehiclePropertyGroup.SYSTEM + VehicleArea.GLOBAL + VehiclePropertyType.FLOAT,
     /**
      * EV charge port open
      *
@@ -484,6 +504,21 @@ enum VehicleProperty {
      */
     PARKING_BRAKE_AUTO_APPLY = 0x0403 + 0x10000000 + 0x01000000
             + 0x00200000, // VehiclePropertyGroup:SYSTEM,VehicleArea:GLOBAL,VehiclePropertyType:BOOLEAN
+    /**
+     * Regenerative braking level of a electronic vehicle
+     *
+     * The maxInt32Value and minInt32Value in VehicleAreaConfig must be defined. All values between
+     * minInt32Value and maxInt32Value must be supported. The minInt32Value must be 0.
+     *
+     * The maxInt32Value in default area's VehicleAreaConfig indicates the maximum amount of energy
+     * regenerated from braking. The minInt32Value in default area's VehicleAreaConfig indicates no
+     * regenerative braking.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ_WRITE
+     */
+    EV_BRAKE_REGENERATION_LEVEL =
+            0x040C + VehiclePropertyGroup.SYSTEM + VehicleArea.GLOBAL + VehiclePropertyType.INT32,
     /**
      * Warning for fuel low level.
      *
@@ -1150,7 +1185,7 @@ enum VehicleProperty {
      * It is assumed that AP's power state is controlled by a separate power
      * controller.
      *
-     * For configuration information, VehiclePropConfig.configArray can have bit flag combining
+     * For configuration information, VehiclePropConfig.configArray must have bit flag combining
      * values in VehicleApPowerStateConfigFlag.
      *
      *   int32Values[0] : VehicleApPowerStateReq enum value
@@ -1223,6 +1258,62 @@ enum VehicleProperty {
      */
     HW_KEY_INPUT = 0x0A10 + 0x10000000 + 0x01000000
             + 0x00410000, // VehiclePropertyGroup:SYSTEM,VehicleArea:GLOBAL,VehiclePropertyType:INT32_VEC
+    /**
+     * Property to feed H/W input events to android
+     *
+     * int32array[0]: target display defined by VehicleDisplay like VehicleDisplay::MAIN,
+     *                VehicleDisplay::INSTRUMENT_CLUSTER, VehicleDisplay::AUX
+     * int32array[1]: key code, must use standard android key code like KEYCODE_HOME, KEYCODE_BACK
+     * int32array[2]: action defined in VehicleHwKeyInputAction like
+     *                VehicleHwKeyInputAction::ACTION_UP, VehicleHwKeyInputAction::ACTION_UP
+     * int32array[3]: repeat count of the event. For key down events, this is the repeat count
+     *                with the first down starting at 0 and counting up from there. For key up
+     *                events, this is always equal to 0
+     *
+     * int64array[0]: down time, elapsed nanoseconds since boot. Denotes the time of the most
+     *                recent key down event. For the down event, it will be the event time of the
+     *                down event itself
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ
+     * @config_flags
+     */
+    HW_KEY_INPUT_V2 =
+            0x0A11 + VehiclePropertyGroup.SYSTEM + VehicleArea.SEAT + VehiclePropertyType.MIXED,
+    /**
+     * Property to feed H/W input events to android
+     *
+     * int32array[0]: target display defined by VehicleDisplay like VehicleDisplay::MAIN,
+     *                VehicleDisplay::INSTRUMENT_CLUSTER, VehicleDisplay::AUX
+     * int32array[1]: input type defined in VehicleHwMotionInputSource like
+     *                VehicleHwMotionInputSource::SOURCE_KEYBOARD,
+     *                VehicleHwMotionInputSource::SOURCE_DPAD
+     * int32array[2]: action code defined in VehicleHwMotionInputAction like
+     *                VehicleHwMotionInputAction::ACTION_UP, VehicleHwMotionInputAction::ACTION_DOWN
+     * int32array[3]: button state flag defined in VehicleHwMotionButtonStateFlag like
+     *                VehicleHwMotionButtonStateFlag::BUTTON_PRIMARY,
+     *                VehicleHwMotionButtonStateFlag::BUTTON_SECONDARY
+     * int32array[4]: pointer events count, N. N must be a positive integer
+     * int32array[5:5+N-1]: pointer id, length N
+     * int32array[5+N:5+2*N-1] : tool type, length N. As defined in VehicleHwMotionToolType like
+     *                           VehicleHwMotionToolType::TOOL_TYPE_FINGER,
+     *                           VehicleHwMotionToolType::TOOL_TYPE_STYLUS
+     *
+     * floatArray[0:N-1] : x data, length N
+     * floatArray[N:2*N-1] : y data, length N
+     * floatArray[2*N:3*N-1] : pressure data, length N
+     * floatArray[3*N:4*N-1] : size data, length N
+     *
+     * int64array[0]: down time, elapsed nanoseconds since boot. Denotes the time when the user
+     *                originally pressed down to start a stream of position events. For the down
+     *                event, it will be the event time of the down event itself
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ
+     * @config_flags
+     */
+    HW_MOTION_INPUT =
+            0x0A12 + VehiclePropertyGroup.SYSTEM + VehicleArea.SEAT + VehiclePropertyType.MIXED,
     /**
      * Property to feed H/W rotary events to android
      *
@@ -1732,6 +1823,22 @@ enum VehicleProperty {
      */
     SEAT_EASY_ACCESS_ENABLED =
             0x0B9D + VehiclePropertyGroup.SYSTEM + VehicleArea.SEAT + VehiclePropertyType.BOOLEAN,
+    /**
+     * Represents feature to enable/disable a seat's ability to deploy airbag(s) when triggered
+     * (e.g. by a crash).
+     *
+     * If true, it means the seat's airbags are enabled, and if triggered (e.g. by a crash), they
+     * will deploy. If false, it means the seat's airbags are disabled, and they will not deploy
+     * under any circumstance. This property does not indicate if the airbags are deployed or not.
+     *
+     * This property can be set to VehiclePropertyAccess.READ read only for the sake of regulation
+     * or safety concerns.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ_WRITE
+     */
+    SEAT_AIRBAG_ENABLED =
+            0x0B9E + VehiclePropertyGroup.SYSTEM + VehicleArea.SEAT + VehiclePropertyType.BOOLEAN,
     /**
      * Represents property for seat’s hipside (bottom cushion’s side) support position.
      *
@@ -3120,4 +3227,41 @@ enum VehicleProperty {
      */
     SUPPORTED_PROPERTY_IDS = 0x0F48 + 0x10000000 + 0x01000000
             + 0x00410000, // VehiclePropertyGroup:SYSTEM,VehicleArea:GLOBAL,VehiclePropertyType:INT32_VEC
+
+    /**
+     * Request the head unit to be shutdown.
+     *
+     * <p>This usually involves telling a separate system outside the head unit (e.g. a power
+     * controller) to prepare shutting down the head unit.
+     *
+     * <p>This does not mean the head unit will shutdown immediately.
+     *
+     * <p>This means that another system will start sending a shutdown signal to the head unit,
+     * which will cause VHAL to send SHUTDOWN_PREPARE message to Android. Android will then start
+     * the shut down process by handling the message.
+     *
+     * <p>This property is only for issuing a request and only supports writing. Every time this
+     * property value is set, the request to shutdown will be issued no matter what the current
+     * property value is. The current property value is meaningless.
+     *
+     * <p>Since this property is write-only, subscribing is not allowed and no property change
+     * event will be generated.
+     *
+     * <p>The value to set indicates the shutdown option, it must be one of
+     * {@code VehicleApPowerStateShutdownParam}, e.g.,
+     * VehicleApPowerStateShutdownParam.SLEEP_IMMEDIATELY. This shutdown option might not be honored
+     * if the system doesn't support such option. In such case, an error will not be returned.
+     *
+     * <p>For configuration information, VehiclePropConfig.configArray must have bit flag combining
+     * values in {@code VehicleApPowerStateConfigFlag} to indicate which shutdown options are
+     * supported.
+     *
+     * <p>Returns error if failed to send the shutdown request to the other system.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.WRITE
+     * @data_enum VehicleApPowerStateShutdownParam
+     */
+    SHUTDOWN_REQUEST =
+            0x0F49 + VehiclePropertyGroup.SYSTEM + VehicleArea.GLOBAL + VehiclePropertyType.INT32,
 }
