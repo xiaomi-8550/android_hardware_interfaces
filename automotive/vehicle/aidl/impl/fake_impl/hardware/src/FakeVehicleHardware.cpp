@@ -320,7 +320,11 @@ VhalResult<void> FakeVehicleHardware::setUserHalProp(const VehiclePropValue& val
     if (updatedValue != nullptr) {
         ALOGI("onSetProperty(): updating property returned by HAL: %s",
               updatedValue->toString().c_str());
-        if (auto writeResult = mServerSidePropStore->writeValue(std::move(result.value()));
+        // Update timestamp otherwise writeValue might fail because the timestamp is outdated.
+        updatedValue->timestamp = elapsedRealtimeNano();
+        if (auto writeResult = mServerSidePropStore->writeValue(
+                    std::move(result.value()),
+                    /*updateStatus=*/true, VehiclePropertyStore::EventMode::ALWAYS);
             !writeResult.ok()) {
             return StatusError(getErrorCode(writeResult))
                    << "failed to write value into property store, error: "
@@ -623,11 +627,7 @@ DumpResult FakeVehicleHardware::dump(const std::vector<std::string>& options) {
     } else if (EqualsIgnoreCase(option, "--inject-event")) {
         result.buffer = dumpInjectEvent(options);
     } else if (EqualsIgnoreCase(option, kUserHalDumpOption)) {
-        if (options.size() == 1) {
-            result.buffer = mFakeUserHal->showDumpHelp();
-        } else {
-            result.buffer = mFakeUserHal->dump(options[1]);
-        }
+        result.buffer = mFakeUserHal->dump();
     } else if (EqualsIgnoreCase(option, "--genfakedata")) {
         result.buffer = genFakeDataCommand(options);
     } else {

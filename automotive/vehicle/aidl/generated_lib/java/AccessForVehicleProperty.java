@@ -53,6 +53,7 @@ public final class AccessForVehicleProperty {
         Map.entry(VehicleProperty.FUEL_LEVEL, VehiclePropertyAccess.READ),
         Map.entry(VehicleProperty.FUEL_DOOR_OPEN, VehiclePropertyAccess.READ_WRITE),
         Map.entry(VehicleProperty.EV_BATTERY_LEVEL, VehiclePropertyAccess.READ),
+        Map.entry(VehicleProperty.EV_CURRENT_BATTERY_CAPACITY, VehiclePropertyAccess.READ),
         Map.entry(VehicleProperty.EV_CHARGE_PORT_OPEN, VehiclePropertyAccess.READ_WRITE),
         Map.entry(VehicleProperty.EV_CHARGE_PORT_CONNECTED, VehiclePropertyAccess.READ),
         Map.entry(VehicleProperty.EV_BATTERY_INSTANTANEOUS_CHARGE_RATE, VehiclePropertyAccess.READ),
@@ -63,6 +64,7 @@ public final class AccessForVehicleProperty {
         Map.entry(VehicleProperty.CURRENT_GEAR, VehiclePropertyAccess.READ),
         Map.entry(VehicleProperty.PARKING_BRAKE_ON, VehiclePropertyAccess.READ),
         Map.entry(VehicleProperty.PARKING_BRAKE_AUTO_APPLY, VehiclePropertyAccess.READ),
+        Map.entry(VehicleProperty.EV_BRAKE_REGENERATION_LEVEL, VehiclePropertyAccess.READ_WRITE),
         Map.entry(VehicleProperty.FUEL_LEVEL_LOW, VehiclePropertyAccess.READ),
         Map.entry(VehicleProperty.NIGHT_MODE, VehiclePropertyAccess.READ),
         Map.entry(VehicleProperty.TURN_SIGNAL_STATE, VehiclePropertyAccess.READ),
@@ -106,6 +108,8 @@ public final class AccessForVehicleProperty {
         Map.entry(VehicleProperty.AP_POWER_BOOTUP_REASON, VehiclePropertyAccess.READ),
         Map.entry(VehicleProperty.DISPLAY_BRIGHTNESS, VehiclePropertyAccess.READ_WRITE),
         Map.entry(VehicleProperty.HW_KEY_INPUT, VehiclePropertyAccess.READ),
+        Map.entry(VehicleProperty.HW_KEY_INPUT_V2, VehiclePropertyAccess.READ),
+        Map.entry(VehicleProperty.HW_MOTION_INPUT, VehiclePropertyAccess.READ),
         Map.entry(VehicleProperty.HW_ROTARY_INPUT, VehiclePropertyAccess.READ),
         Map.entry(VehicleProperty.HW_CUSTOM_INPUT, VehiclePropertyAccess.READ),
         Map.entry(VehicleProperty.DOOR_POS, VehiclePropertyAccess.READ_WRITE),
@@ -148,6 +152,7 @@ public final class AccessForVehicleProperty {
         Map.entry(VehicleProperty.SEAT_HEADREST_FORE_AFT_POS, VehiclePropertyAccess.READ_WRITE),
         Map.entry(VehicleProperty.SEAT_HEADREST_FORE_AFT_MOVE, VehiclePropertyAccess.READ_WRITE),
         Map.entry(VehicleProperty.SEAT_EASY_ACCESS_ENABLED, VehiclePropertyAccess.READ_WRITE),
+        Map.entry(VehicleProperty.SEAT_AIRBAG_ENABLED, VehiclePropertyAccess.READ_WRITE),
         Map.entry(VehicleProperty.SEAT_CUSHION_SIDE_SUPPORT_POS, VehiclePropertyAccess.READ_WRITE),
         Map.entry(VehicleProperty.SEAT_CUSHION_SIDE_SUPPORT_MOVE, VehiclePropertyAccess.READ_WRITE),
         Map.entry(VehicleProperty.SEAT_LUMBAR_VERTICAL_POS, VehiclePropertyAccess.READ_WRITE),
@@ -214,7 +219,8 @@ public final class AccessForVehicleProperty {
         Map.entry(VehicleProperty.TRAILER_PRESENT, VehiclePropertyAccess.READ),
         Map.entry(VehicleProperty.VEHICLE_CURB_WEIGHT, VehiclePropertyAccess.READ),
         Map.entry(VehicleProperty.GENERAL_SAFETY_REGULATION_COMPLIANCE_REQUIREMENT, VehiclePropertyAccess.READ),
-        Map.entry(VehicleProperty.SUPPORTED_PROPERTY_IDS, VehiclePropertyAccess.READ)
+        Map.entry(VehicleProperty.SUPPORTED_PROPERTY_IDS, VehiclePropertyAccess.READ),
+        Map.entry(VehicleProperty.SHUTDOWN_REQUEST, VehiclePropertyAccess.WRITE)
     );
 
 }

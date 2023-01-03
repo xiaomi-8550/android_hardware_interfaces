@@ -56,6 +56,7 @@ interface IModule {
   void setMasterVolume(float volume);
   boolean getMicMute();
   void setMicMute(boolean mute);
+  android.hardware.audio.core.MicrophoneInfo[] getMicrophones();
   void updateAudioMode(android.hardware.audio.core.AudioMode mode);
   void updateScreenRotation(android.hardware.audio.core.IModule.ScreenRotation rotation);
   void updateScreenState(boolean isTurnedOn);
@@ -76,6 +77,7 @@ interface IModule {
     android.hardware.audio.common.SourceMetadata sourceMetadata;
     @nullable android.media.audio.common.AudioOffloadInfo offloadInfo;
     long bufferSizeFrames;
+    @nullable android.hardware.audio.core.IStreamCallback callback;
   }
   @VintfStability
   parcelable OpenOutputStreamReturn {
