@@ -1391,6 +1391,35 @@ enum VehicleProperty {
      */
     MIRROR_FOLD = 0x0B45 + 0x10000000 + 0x01000000
             + 0x00200000, // VehiclePropertyGroup:SYSTEM,VehicleArea:GLOBAL,VehiclePropertyType:BOOLEAN
+
+    /**
+     * Represents property for Mirror Auto Fold feature.
+     *
+     * This property is true when the feature for automatically folding the vehicle's side mirrors
+     * (for example, when the mirrors fold inward automatically when one exits and locks the
+     * vehicle) is enabled.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ_WRITE
+     */
+
+    MIRROR_AUTO_FOLD_ENABLED =
+            0x0B46 + VehiclePropertyGroup.SYSTEM + VehicleArea.MIRROR + VehiclePropertyType.BOOLEAN,
+
+    /**
+     * Represents property for Mirror Auto Tilt feature.
+     *
+     * This property is true when the feature for automatically tilting the vehicle's side mirrors
+     * (for example, when the mirrors tilt downward automatically when one reverses the vehicle) is
+     * enabled.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ_WRITE
+     */
+
+    MIRROR_AUTO_TILT_ENABLED =
+            0x0B47 + VehiclePropertyGroup.SYSTEM + VehicleArea.MIRROR + VehiclePropertyType.BOOLEAN,
+
     /**
      * Seat memory select
      *
@@ -1693,6 +1722,89 @@ enum VehicleProperty {
     SEAT_HEADREST_FORE_AFT_MOVE = 0x0B9A + 0x10000000 + 0x05000000
             + 0x00400000, // VehiclePropertyGroup:SYSTEM,VehicleArea:SEAT,VehiclePropertyType:INT32
     /**
+     * Represents property for Seat easy access feature.
+     *
+     * If true, the seat will automatically adjust to make it easier for the occupant to enter and
+     * exit the vehicle.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ_WRITE
+     */
+    SEAT_EASY_ACCESS_ENABLED =
+            0x0B9D + VehiclePropertyGroup.SYSTEM + VehicleArea.SEAT + VehiclePropertyType.BOOLEAN,
+    /**
+     * Represents property for seat’s hipside (bottom cushion’s side) support position.
+     *
+     * The maxInt32Value and minInt32Value in VehicleAreaConfig must be defined. All integers
+     * between minInt32Value and maxInt32Value are supported.
+     *
+     * maxInt32Value indicates the widest cushion side support setting (i.e. least support).
+     * minInt32Value indicates the thinnest cushion side support setting (i.e most support).
+     *
+     * This value is not in any particular unit but in a specified range of steps.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ_WRITE
+     */
+    SEAT_CUSHION_SIDE_SUPPORT_POS =
+            0x0B9F + VehiclePropertyGroup.SYSTEM + VehicleArea.SEAT + VehiclePropertyType.INT32,
+    /**
+     * Represents property for movement direction and speed of seat cushion side support.
+     *
+     * The maxInt32Value and minInt32Value in VehicleAreaConfig must be defined. All integers
+     * between minInt32Value and maxInt32Value must be supported.
+     *
+     * maxInt32Value in default area's VehicleAreaConfig represents the maximum movement speed of
+     * the seat cushion side support in the growing wider direction (i.e. less support).
+     * minInt32Value in default area's VehicleAreaConfig represents the maximum movement speed of
+     * the seat cushion side support in the growing thinner direction (i.e. more support).
+     *
+     * Larger absolute values, either positive or negative, indicate a faster movement speed. Once
+     * the seat cushion side support reaches the positional limit, the value resets to 0.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ_WRITE
+     */
+    SEAT_CUSHION_SIDE_SUPPORT_MOVE =
+            0x0BA0 + VehiclePropertyGroup.SYSTEM + VehicleArea.SEAT + VehiclePropertyType.INT32,
+    /**
+     * Represents property for seat’s lumbar support vertical position.
+     *
+     * The maxInt32Value and minInt32Value in VehicleAreaConfig must be defined. All integers
+     * between minInt32Value and maxInt32Value are supported.
+     *
+     * maxInt32Value indicates the highest position.
+     * minInt32Value indicates the lowest position.
+     *
+     * This value is not in any particular unit but in a specified range of steps.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ_WRITE
+     */
+    SEAT_LUMBAR_VERTICAL_POS =
+            0x0BA1 + VehiclePropertyGroup.SYSTEM + VehicleArea.SEAT + VehiclePropertyType.INT32,
+    /**
+     * Represents property for vertical movement direction and speed of seat lumbar support.
+     *
+     * The maxInt32Value and minInt32Value in VehicleAreaConfig must be defined. All integers
+     * between minInt32Value and maxInt32Value must be supported.
+     *
+     * maxInt32Value in default area's VehicleAreaConfig indicates the lumbar support is moving at
+     * the fastest upward speed.
+     * minInt32Value in default area's VehicleAreaConfig indicates the lumbar support is moving at
+     * the fastest downward speed.
+     *
+     * Larger absolute values, either positive or negative, indicate a faster movement speed. Once
+     * the seat cushion side support reaches the positional limit, the value resets to 0.
+     *
+     * This value is not in any particular unit but in a specified range of steps.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ_WRITE
+     */
+    SEAT_LUMBAR_VERTICAL_MOVE =
+            0x0BA2 + VehiclePropertyGroup.SYSTEM + VehicleArea.SEAT + VehiclePropertyType.INT32,
+    /**
      * Seat Occupancy
      *
      * Indicates whether a particular seat is occupied or not, to the best of the car's ability
@@ -1799,6 +1911,73 @@ enum VehicleProperty {
      */
     STEERING_WHEEL_DEPTH_MOVE =
             0x0BE1 + VehiclePropertyGroup.SYSTEM + VehicleArea.GLOBAL + VehiclePropertyType.INT32,
+    /**
+     * Steering wheel height position
+     *
+     * The maxInt32Value and minInt32Value in VehicleAreaConfig must be defined. All values between
+     * minInt32Value and maxInt32Value must be supported.
+     *
+     * The maxInt32Value in default area's VehicleAreaConfig indicates the steering wheel being in
+     * the highest position. The minInt32Value in default area's VehicleAreaConfig indicates the
+     * steering wheel being in the lowest position.
+     *
+     * This value is not in any particular unit but in a specified range of steps.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ_WRITE
+     */
+    STEERING_WHEEL_HEIGHT_POS =
+            0x0BE2 + VehiclePropertyGroup.SYSTEM + VehicleArea.GLOBAL + VehiclePropertyType.INT32,
+    /**
+     * Steering wheel height movement
+     *
+     * The maxInt32Value and minInt32Value in VehicleAreaConfig must be defined. All values between
+     * minInt32Value and maxInt32Value must be supported.
+     *
+     * The maxInt32Value in default area's VehicleAreaConfig indicates the steering wheel moving
+     * upwards. The minInt32Value in default area's VehicleAreaConfig indicates the steering wheel
+     * moving downwards. Larger integers, either positive or negative, indicate a faster movement
+     * speed. Once the steering wheel reaches the positional limit, the value resets to 0.
+     *
+     * This value is not in any particular unit but in a specified range of steps.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ_WRITE
+     */
+    STEERING_WHEEL_HEIGHT_MOVE =
+            0x0BE3 + VehiclePropertyGroup.SYSTEM + VehicleArea.GLOBAL + VehiclePropertyType.INT32,
+    /**
+     * Steering wheel theft lock feature enabled
+     *
+     * If true, the steering wheel will lock automatically to prevent theft in certain
+     * situations.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ_WRITE
+     */
+    STEERING_WHEEL_THEFT_LOCK_ENABLED =
+            0x0BE4 + VehiclePropertyGroup.SYSTEM + VehicleArea.GLOBAL + VehiclePropertyType.BOOLEAN,
+    /**
+     * Steering wheel locked
+     *
+     * If true, the steering wheel's position is locked and not changeable.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ_WRITE
+     */
+    STEERING_WHEEL_LOCKED =
+            0x0BE5 + VehiclePropertyGroup.SYSTEM + VehicleArea.GLOBAL + VehiclePropertyType.BOOLEAN,
+    /**
+     * Steering wheel easy access feature enabled
+     *
+     * If true, the driver’s steering wheel will automatically adjust to make it easier for the
+     * driver to enter and exit the vehicle.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ_WRITE
+     */
+    STEERING_WHEEL_EASY_ACCESS_ENABLED =
+            0x0BE6 + VehiclePropertyGroup.SYSTEM + VehicleArea.GLOBAL + VehiclePropertyType.BOOLEAN,
     /**
      * Vehicle Maps Service (VMS) message
      *

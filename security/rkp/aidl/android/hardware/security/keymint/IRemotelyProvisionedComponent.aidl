@@ -315,13 +315,12 @@ interface IRemotelyProvisionedComponent {
      *
      * @return the following CBOR Certificate Signing Request (Csr) serialized into a byte array:
      *
-     * Csr = AuthenticatedMessage<CsrPayload>
+     * Csr = AuthenticatedRequest<CsrPayload>
      *
      * CsrPayload = [                      ; CBOR Array defining the payload for Csr
-     *     version: 1,                     ; The CsrPayload CDDL Schema version.
+     *     version: 3,                     ; The CsrPayload CDDL Schema version.
      *     CertificateType,                ; The type of certificate being requested.
      *     DeviceInfo,                     ; Defined in DeviceInfo.aidl
-     *     challenge: bstr .size (32..64), ; Provided by the method parameters
      *     KeysToSign,                     ; Provided by the method parameters
      * ]
      *
@@ -335,28 +334,31 @@ interface IRemotelyProvisionedComponent {
      *
      * KeysToSign = [ * PublicKey ]   ; Please see MacedPublicKey.aidl for the PublicKey definition.
      *
-     * AuthenticatedMessage<T> = [
-     *    version: 3,              ; The AuthenticatedMessage CDDL Schema version.
-     *    UdsCerts,
-     *    DiceCertChain,
-     *    SignedData<T>,
+     * AuthenticatedRequest<T> = [
+     *     version: 1,              ; The AuthenticatedRequest CDDL Schema version.
+     *     UdsCerts,
+     *     DiceCertChain,
+     *     SignedData<[
+     *         challenge: bstr .size (32..64), ; Provided by the method parameters
+     *         bstr .cbor T,
+     *     ]>,
      * ]
      *
      * ; COSE_Sign1 (untagged)
-     * SignedData<T> = [
+     * SignedData<Data> = [
      *     protected: bstr .cbor { 1 : AlgorithmEdDSA / AlgorithmES256 },
      *     unprotected: {},
-     *     payload: bstr .cbor T / nil,
-     *     signature: bstr         ; PureEd25519(CDI_Leaf_Priv, bstr .cbor SignedDataSigStruct<T>) /
-     *                             ; ECDSA(CDI_Leaf_Priv, bstr .cbor SignedDataSigStruct<T>)
+     *     payload: bstr .cbor Data / nil,
+     *     signature: bstr      ; PureEd25519(CDI_Leaf_Priv, bstr .cbor SignedDataSigStruct<Data>) /
+     *                          ; ECDSA(CDI_Leaf_Priv, bstr .cbor SignedDataSigStruct<Data>)
      * ]
      *
      * ; Sig_structure for SignedData
-     * SignedDataSigStruct<T> = [
+     * SignedDataSigStruct<Data> = [
      *     context: "Signature1",
      *     protected: bstr .cbor { 1 : AlgorithmEdDSA / AlgorithmES256 },
      *     external_aad: bstr .size 0,
-     *     payload: bstr .cbor T
+     *     payload: bstr .cbor Data / nil,
      * ]
      *
      * ; UdsCerts allows the platform to provide additional certifications for the UDS_Pub. For

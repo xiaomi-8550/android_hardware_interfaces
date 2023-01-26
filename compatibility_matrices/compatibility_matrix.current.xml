@@ -109,19 +109,19 @@
         <name>android.hardware.automotive.vehicle</name>
         <interface>
             <name>IVehicle</name>
-            <regex-instance>.*</regex-instance>
+            <instance>default</instance>
         </interface>
     </hal>
      <hal format="aidl" optional="true">
         <name>android.hardware.automotive.remoteaccess</name>
         <interface>
             <name>IRemoteAccess</name>
-            <regex-instance>.*</regex-instance>
+            <instance>default</instance>
         </interface>
     </hal>
     <hal format="aidl" optional="true">
         <name>android.hardware.biometrics.face</name>
-        <version>2</version>
+        <version>3</version>
         <interface>
             <name>IFace</name>
             <instance>default</instance>
@@ -129,7 +129,7 @@
     </hal>
     <hal format="aidl" optional="true">
         <name>android.hardware.biometrics.fingerprint</name>
-        <version>2</version>
+        <version>3</version>
         <interface>
             <name>IFingerprint</name>
             <instance>default</instance>
@@ -173,7 +173,7 @@
             <regex-instance>.*</regex-instance>
         </interface>
     </hal>
-    <hal format="aidl" optional="true">
+    <hal format="aidl" optional="true" updatable-via-apex="true">
         <name>android.hardware.camera.provider</name>
         <version>1-2</version>
         <interface>
@@ -268,7 +268,7 @@
     </hal>
     <hal format="aidl" optional="true">
         <name>android.hardware.graphics.allocator</name>
-        <version>1</version>
+        <version>1-2</version>
         <interface>
             <name>IAllocator</name>
             <instance>default</instance>
@@ -282,7 +282,7 @@
             <instance>default</instance>
         </interface>
     </hal>
-    <hal format="hidl" optional="false">
+    <hal format="hidl" optional="true">
         <name>android.hardware.graphics.mapper</name>
         <!-- New, non-Go devices should use 4.0, tested in vts_treble_vintf_vendor_test -->
         <version>2.1</version>
@@ -392,19 +392,20 @@
         </interface>
     </hal>
     <hal format="aidl" optional="true">
+        <name>android.hardware.media.c2</name>
+        <version>1</version>
+        <interface>
+            <name>IComponentStore</name>
+            <regex-instance>default[0-9]*</regex-instance>
+            <regex-instance>vendor[0-9]*_software</regex-instance>
+        </interface>
+    </hal>
+    <hal format="aidl" optional="true">
         <name>android.hardware.memtrack</name>
         <version>1</version>
         <interface>
             <name>IMemtrack</name>
             <instance>default</instance>
-        </interface>
-    </hal>
-    <hal format="hidl" optional="true">
-        <name>android.hardware.neuralnetworks</name>
-        <version>1.0-3</version>
-        <interface>
-            <name>IDevice</name>
-            <regex-instance>.*</regex-instance>
         </interface>
     </hal>
     <hal format="aidl" optional="true">
@@ -447,7 +448,7 @@
     </hal>
     <hal format="aidl" optional="true">
         <name>android.hardware.radio.config</name>
-        <version>1</version>
+        <version>2</version>
         <interface>
             <name>IRadioConfig</name>
             <instance>default</instance>
@@ -455,7 +456,7 @@
     </hal>
     <hal format="aidl" optional="true">
         <name>android.hardware.radio.data</name>
-        <version>1</version>
+        <version>2</version>
         <interface>
             <name>IRadioData</name>
             <instance>slot1</instance>
@@ -465,7 +466,7 @@
     </hal>
     <hal format="aidl" optional="true">
         <name>android.hardware.radio.messaging</name>
-        <version>1</version>
+        <version>2</version>
         <interface>
             <name>IRadioMessaging</name>
             <instance>slot1</instance>
@@ -475,7 +476,7 @@
     </hal>
     <hal format="aidl" optional="true">
         <name>android.hardware.radio.modem</name>
-        <version>1</version>
+        <version>2</version>
         <interface>
             <name>IRadioModem</name>
             <instance>slot1</instance>
@@ -495,7 +496,7 @@
     </hal>
     <hal format="aidl" optional="true">
         <name>android.hardware.radio.sim</name>
-        <version>1</version>
+        <version>2</version>
         <interface>
             <name>IRadioSim</name>
             <instance>slot1</instance>
@@ -505,7 +506,7 @@
     </hal>
     <hal format="aidl" optional="true">
         <name>android.hardware.radio.voice</name>
-        <version>1</version>
+        <version>2</version>
         <interface>
             <name>IRadioVoice</name>
             <instance>slot1</instance>
@@ -731,6 +732,7 @@
     </hal>
     <hal format="aidl" optional="true">
         <name>android.hardware.wifi.supplicant</name>
+        <version>2</version>
         <interface>
             <name>ISupplicant</name>
             <instance>default</instance>

@@ -31,6 +31,7 @@ cc_binary {
         "libutils",
         "libgrpc++",
         "libprotobuf-cpp-full",
+        "//hardware/interfaces/automotive/remoteaccess/test_grpc_server/lib:ApPowerControlLib",
     ],
     whole_static_libs: [
         "wakeup_client_protos",

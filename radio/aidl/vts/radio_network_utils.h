@@ -158,6 +158,14 @@ class RadioNetworkResponse : public BnRadioNetworkResponse {
 
     virtual ndk::ScopedAStatus cancelEmergencyNetworkScanResponse(
             const RadioResponseInfo& info) override;
+
+    virtual ndk::ScopedAStatus setNullCipherAndIntegrityEnabledResponse(
+            const RadioResponseInfo& info) override;
+
+    virtual ndk::ScopedAStatus isN1ModeEnabledResponse(
+            const RadioResponseInfo& info, bool isEnabled) override;
+
+    virtual ndk::ScopedAStatus setN1ModeEnabledResponse(const RadioResponseInfo& info) override;
 };
 
 /* Callback class for radio network indication */
