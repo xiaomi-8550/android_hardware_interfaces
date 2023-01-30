@@ -31,6 +31,9 @@ class Module : public BnModule {
   public:
     // This value is used for all AudioPatches and reported by all streams.
     static constexpr int32_t kLatencyMs = 10;
+    enum Type : int { DEFAULT, R_SUBMIX };
+
+    explicit Module(Type type) : mType(type) {}
 
   private:
     ndk::ScopedAStatus setModuleDebug(
@@ -83,6 +86,12 @@ class Module : public BnModule {
     ndk::ScopedAStatus updateScreenRotation(
             ::aidl::android::hardware::audio::core::IModule::ScreenRotation in_rotation) override;
     ndk::ScopedAStatus updateScreenState(bool in_isTurnedOn) override;
+    ndk::ScopedAStatus getSoundDose(std::shared_ptr<ISoundDose>* _aidl_return) override;
+    ndk::ScopedAStatus generateHwAvSyncId(int32_t* _aidl_return) override;
+    ndk::ScopedAStatus getVendorParameters(const std::vector<std::string>& in_ids,
+                                           std::vector<VendorParameter>* _aidl_return) override;
+    ndk::ScopedAStatus setVendorParameters(const std::vector<VendorParameter>& in_parameters,
+                                           bool in_async) override;
 
     void cleanUpPatch(int32_t patchId);
     ndk::ScopedAStatus createStreamContext(
@@ -105,11 +114,13 @@ class Module : public BnModule {
     // The maximum stream buffer size is 1 GiB = 2 ** 30 bytes;
     static constexpr int32_t kMaximumStreamBufferSizeBytes = 1 << 30;
 
+    const Type mType;
     std::unique_ptr<internal::Configuration> mConfig;
     ModuleDebug mDebug;
     // Since it is required to return the same instance of the ITelephony, even
     // if the client has released it on its side, we need to hold it via a strong pointer.
     std::shared_ptr<ITelephony> mTelephony;
+    ndk::SpAIBinder mTelephonyBinder;
     // ids of ports created at runtime via 'connectExternalDevice'.
     std::set<int32_t> mConnectedDevicePorts;
     Streams mStreams;
@@ -119,6 +130,8 @@ class Module : public BnModule {
     bool mMasterMute = false;
     float mMasterVolume = 1.0f;
     bool mMicMute = false;
+    std::shared_ptr<ISoundDose> mSoundDose;
+    ndk::SpAIBinder mSoundDoseBinder;
 };
 
 }  // namespace aidl::android::hardware::audio::core

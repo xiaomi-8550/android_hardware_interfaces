@@ -17,6 +17,7 @@
 package android.hardware.audio.core;
 
 import android.hardware.audio.common.SourceMetadata;
+import android.hardware.audio.core.IStreamCommon;
 
 /**
  * This interface provides means for sending audio data to output devices.
@@ -24,19 +25,15 @@ import android.hardware.audio.common.SourceMetadata;
 @VintfStability
 interface IStreamOut {
     /**
-     * Close the stream.
+     * Return the interface for common stream operations.
      *
-     * Releases any resources allocated for this stream on the HAL module side.
-     * This includes the fast message queues and shared memories returned via
-     * the StreamDescriptor. Thus, the stream can not be operated anymore after
-     * it has been closed. The client needs to release the audio data I/O
-     * objects after the call to this method returns.
+     * This method must always succeed. The implementation must
+     * return the same instance object for all subsequent calls to
+     * this method.
      *
-     * Methods of this interface throw EX_ILLEGAL_STATE for a closed stream.
-     *
-     * @throws EX_ILLEGAL_STATE If the stream has already been closed.
+     * @return The interface for common operations.
      */
-    void close();
+    IStreamCommon getStreamCommon();
 
     /**
      * Update stream metadata.
@@ -47,4 +44,46 @@ interface IStreamOut {
      * @throws EX_ILLEGAL_STATE If the stream is closed.
      */
     void updateMetadata(in SourceMetadata sourceMetadata);
+
+    const int HW_VOLUME_MIN = 0;
+    const int HW_VOLUME_MAX = 1;
+    /**
+     * Retrieve current attenuation applied in hardware.
+     *
+     * Hardware attenuation can be used in cases when the client can not, or is
+     * not allowed to modify the audio stream, for example because the stream is
+     * encoded.
+     *
+     * The valid range for attenuation is [0.0f, 1.0f], where 1.0f corresponds
+     * to unity gain, 0.0f corresponds to full mute (see HW_VOLUME_*
+     * constants). The returned array specifies attenuation for each output
+     * channel of the stream.
+     *
+     * Support of hardware volume control is optional.
+     *
+     * @return Current attenuation values for each output channel.
+     * @throws EX_ILLEGAL_STATE If the stream is closed.
+     * @throws EX_UNSUPPORTED_OPERATION If hardware volume control is not supported.
+     */
+    float[] getHwVolume();
+    /**
+     * Set attenuation applied in hardware.
+     *
+     * Hardware attenuation can be used in cases when the client can not, or is
+     * not allowed to modify the audio stream, for example because the stream is
+     * encoded.
+     *
+     * The valid range for attenuation is [0.0f, 1.0f], where 1.0f corresponds
+     * to unity gain, 0.0f corresponds to full mute (see HW_VOLUME_* constants).
+     *
+     * Support of hardware volume control is optional.
+     *
+     * @param channelVolumes Attenuation values for each output channel.
+     * @throws EX_ILLEGAL_ARGUMENT If the number of elements in the provided
+     *                             array does not match the channel count, or
+     *                             attenuation values are out of range.
+     * @throws EX_ILLEGAL_STATE If the stream is closed.
+     * @throws EX_UNSUPPORTED_OPERATION If hardware volume control is not supported.
+     */
+    void setHwVolume(in float[] channelVolumes);
 }

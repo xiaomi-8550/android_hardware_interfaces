@@ -25,6 +25,7 @@
 
 #include "DynamicsProcessingSw.h"
 
+using aidl::android::hardware::audio::effect::Descriptor;
 using aidl::android::hardware::audio::effect::DynamicsProcessingSw;
 using aidl::android::hardware::audio::effect::IEffect;
 using aidl::android::hardware::audio::effect::kDynamicsProcessingSwImplUUID;
@@ -47,22 +48,30 @@ extern "C" binder_exception_t createEffect(const AudioUuid* in_impl_uuid,
     }
 }
 
-extern "C" binder_exception_t destroyEffect(const std::shared_ptr<IEffect>& instanceSp) {
-    if (!instanceSp) {
-        return EX_NONE;
+extern "C" binder_exception_t queryEffect(const AudioUuid* in_impl_uuid, Descriptor* _aidl_return) {
+    if (!in_impl_uuid || *in_impl_uuid != kDynamicsProcessingSwImplUUID) {
+        LOG(ERROR) << __func__ << "uuid not supported";
+        return EX_ILLEGAL_ARGUMENT;
     }
-    State state;
-    ndk::ScopedAStatus status = instanceSp->getState(&state);
-    if (!status.isOk() || State::INIT != state) {
-        LOG(ERROR) << __func__ << " instance " << instanceSp.get()
-                   << " in state: " << toString(state) << ", status: " << status.getDescription();
-        return EX_ILLEGAL_STATE;
-    }
-    LOG(DEBUG) << __func__ << " instance " << instanceSp.get() << " destroyed";
+    *_aidl_return = DynamicsProcessingSw::kDescriptor;
     return EX_NONE;
 }
 
 namespace aidl::android::hardware::audio::effect {
+
+const std::string DynamicsProcessingSw::kEffectName = "DynamicsProcessingSw";
+const DynamicsProcessing::Capability DynamicsProcessingSw::kCapability;
+const Descriptor DynamicsProcessingSw::kDescriptor = {
+        .common = {.id = {.type = kDynamicsProcessingTypeUUID,
+                          .uuid = kDynamicsProcessingSwImplUUID,
+                          .proxy = std::nullopt},
+                   .flags = {.type = Flags::Type::INSERT,
+                             .insert = Flags::Insert::FIRST,
+                             .volume = Flags::Volume::CTRL},
+                   .name = DynamicsProcessingSw::kEffectName,
+                   .implementor = "The Android Open Source Project"},
+        .capability = Capability::make<Capability::dynamicsProcessing>(
+                DynamicsProcessingSw::kCapability)};
 
 ndk::ScopedAStatus DynamicsProcessingSw::getDescriptor(Descriptor* _aidl_return) {
     LOG(DEBUG) << __func__ << kDescriptor.toString();
@@ -73,8 +82,6 @@ ndk::ScopedAStatus DynamicsProcessingSw::getDescriptor(Descriptor* _aidl_return)
 ndk::ScopedAStatus DynamicsProcessingSw::setParameterSpecific(const Parameter::Specific& specific) {
     RETURN_IF(Parameter::Specific::dynamicsProcessing != specific.getTag(), EX_ILLEGAL_ARGUMENT,
               "EffectNotSupported");
-    std::lock_guard lg(mMutex);
-    RETURN_IF(!mContext, EX_NULL_POINTER, "nullContext");
 
     mSpecificParam = specific.get<Parameter::Specific::dynamicsProcessing>();
     LOG(DEBUG) << __func__ << " success with: " << specific.toString();
@@ -93,9 +100,13 @@ std::shared_ptr<EffectContext> DynamicsProcessingSw::createContext(
         const Parameter::Common& common) {
     if (mContext) {
         LOG(DEBUG) << __func__ << " context already exist";
-        return mContext;
+    } else {
+        mContext = std::make_shared<DynamicsProcessingSwContext>(1 /* statusFmqDepth */, common);
     }
-    mContext = std::make_shared<DynamicsProcessingSwContext>(1 /* statusFmqDepth */, common);
+    return mContext;
+}
+
+std::shared_ptr<EffectContext> DynamicsProcessingSw::getContext() {
     return mContext;
 }
 
@@ -107,13 +118,13 @@ RetCode DynamicsProcessingSw::releaseContext() {
 }
 
 // Processing method running in EffectWorker thread.
-IEffect::Status DynamicsProcessingSw::effectProcessImpl(float* in, float* out, int process) {
+IEffect::Status DynamicsProcessingSw::effectProcessImpl(float* in, float* out, int samples) {
     // TODO: get data buffer and process.
-    LOG(DEBUG) << __func__ << " in " << in << " out " << out << " process " << process;
-    for (int i = 0; i < process; i++) {
+    LOG(DEBUG) << __func__ << " in " << in << " out " << out << " samples " << samples;
+    for (int i = 0; i < samples; i++) {
         *out++ = *in++;
     }
-    return {STATUS_OK, process, process};
+    return {STATUS_OK, samples, samples};
 }
 
 }  // namespace aidl::android::hardware::audio::effect

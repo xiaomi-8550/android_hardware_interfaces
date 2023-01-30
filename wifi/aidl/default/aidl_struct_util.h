@@ -89,6 +89,8 @@ bool convertLegacyGscanResultToAidl(const legacy_hal::wifi_scan_result& legacy_s
 bool convertLegacyVectorOfCachedGscanResultsToAidl(
         const std::vector<legacy_hal::wifi_cached_scan_results>& legacy_cached_scan_results,
         std::vector<StaScanData>* aidl_scan_datas);
+bool convertLegacyLinkLayerMlStatsToAidl(const legacy_hal::LinkLayerMlStats& legacy_ml_stats,
+                                         StaLinkLayerStats* aidl_stats);
 bool convertLegacyLinkLayerStatsToAidl(const legacy_hal::LinkLayerStats& legacy_stats,
                                        StaLinkLayerStats* aidl_stats);
 bool convertLegacyRoamingCapabilitiesToAidl(
@@ -161,6 +163,9 @@ bool convertLegacyRttCapabilitiesToAidl(
 bool convertLegacyVectorOfRttResultToAidl(
         const std::vector<const legacy_hal::wifi_rtt_result*>& legacy_results,
         std::vector<RttResult>* aidl_results);
+bool convertLegacyVectorOfRttResultV2ToAidl(
+        const std::vector<const legacy_hal::wifi_rtt_result_v2*>& legacy_results,
+        std::vector<RttResult>* aidl_results);
 uint32_t convertAidlWifiBandToLegacyMacBand(WifiBand band);
 uint32_t convertAidlWifiIfaceModeToLegacy(uint32_t aidl_iface_mask);
 uint32_t convertAidlUsableChannelFilterToLegacy(uint32_t aidl_filter_mask);
@@ -171,6 +176,9 @@ bool convertLegacyPeerInfoStatsToAidl(const legacy_hal::WifiPeerInfo& legacy_pee
                                       StaPeerInfo* aidl_peer_info_stats);
 bool convertLegacyWifiRateInfoToAidl(const legacy_hal::wifi_rate& legacy_rate,
                                      WifiRateInfo* aidl_rate);
+bool convertLegacyWifiChipCapabilitiesToAidl(
+        const legacy_hal::wifi_chip_capabilities& legacy_chip_capabilities,
+        WifiChipCapabilities& aidl_chip_capabilities);
 }  // namespace aidl_struct_util
 }  // namespace wifi
 }  // namespace hardware

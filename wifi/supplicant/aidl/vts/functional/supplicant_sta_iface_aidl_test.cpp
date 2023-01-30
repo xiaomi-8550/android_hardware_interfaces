@@ -206,11 +206,9 @@ class SupplicantStaIfaceCallback : public BnSupplicantStaIfaceCallback {
                                       QosPolicyData /* qosPolicyData */>&) override {
         return ndk::ScopedAStatus::ok();
     }
-    ::ndk::ScopedAStatus onStateChangedWithAkm(
-            ::aidl::android::hardware::wifi::supplicant::StaIfaceCallbackState /* newState */,
-            const std::vector<uint8_t>& /* bssid */, int32_t /* id */,
-            const std::vector<uint8_t>& /* ssid */, bool /* filsHlpSent */,
-            ::aidl::android::hardware::wifi::supplicant::KeyMgmtMask /* keyMgmtMask*/) override {
+    ::ndk::ScopedAStatus onSupplicantStateChanged(
+            const ::aidl::android::hardware::wifi::supplicant::
+                    SupplicantStateChangeData& /* stateChangeData */) override {
         return ndk::ScopedAStatus::ok();
     }
     ::ndk::ScopedAStatus onMloLinksInfoChanged(
@@ -225,6 +223,9 @@ class SupplicantStaIfaceCallback : public BnSupplicantStaIfaceCallback {
     }
     ::ndk::ScopedAStatus onDppConnectionStatusResultSent(
             ::aidl::android::hardware::wifi::supplicant::DppStatusErrorCode /* code */) override {
+        return ndk::ScopedAStatus::ok();
+    }
+    ::ndk::ScopedAStatus onBssFrequencyChanged(int32_t /* frequencyMhz */) override {
         return ndk::ScopedAStatus::ok();
     }
 };

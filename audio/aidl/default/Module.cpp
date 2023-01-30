@@ -19,12 +19,14 @@
 
 #define LOG_TAG "AHAL_Module"
 #include <android-base/logging.h>
+#include <android/binder_ibinder_platform.h>
 
 #include <Utils.h>
 #include <aidl/android/media/audio/common/AudioInputFlags.h>
 #include <aidl/android/media/audio/common/AudioOutputFlags.h>
 
 #include "core-impl/Module.h"
+#include "core-impl/SoundDose.h"
 #include "core-impl/Telephony.h"
 #include "core-impl/utils.h"
 
@@ -237,7 +239,14 @@ std::set<int32_t> Module::portIdsFromPortConfigIds(C portConfigIds) {
 
 internal::Configuration& Module::getConfig() {
     if (!mConfig) {
-        mConfig.reset(new internal::Configuration(internal::getNullPrimaryConfiguration()));
+        switch (mType) {
+            case Type::DEFAULT:
+                mConfig = std::move(internal::getPrimaryConfiguration());
+                break;
+            case Type::R_SUBMIX:
+                mConfig = std::move(internal::getRSubmixConfiguration());
+                break;
+        }
     }
     return *mConfig;
 }
@@ -307,6 +316,9 @@ ndk::ScopedAStatus Module::setModuleDebug(
 ndk::ScopedAStatus Module::getTelephony(std::shared_ptr<ITelephony>* _aidl_return) {
     if (mTelephony == nullptr) {
         mTelephony = ndk::SharedRefBase::make<Telephony>();
+        mTelephonyBinder = mTelephony->asBinder();
+        AIBinder_setMinSchedulerPolicy(mTelephonyBinder.get(), SCHED_NORMAL,
+                                       ANDROID_PRIORITY_AUDIO);
     }
     *_aidl_return = mTelephony;
     LOG(DEBUG) << __func__ << ": returning instance of ITelephony: " << _aidl_return->get();
@@ -520,12 +532,15 @@ ndk::ScopedAStatus Module::openInputStream(const OpenInputStreamArguments& in_ar
         return status;
     }
     context.fillDescriptor(&_aidl_return->desc);
-    auto stream = ndk::SharedRefBase::make<StreamIn>(in_args.sinkMetadata, std::move(context),
-                                                     mConfig->microphones);
-    if (auto status = stream->init(); !status.isOk()) {
+    std::shared_ptr<StreamIn> stream;
+    if (auto status = StreamIn::createInstance(in_args.sinkMetadata, std::move(context),
+                                               mConfig->microphones, &stream);
+        !status.isOk()) {
         return status;
     }
     StreamWrapper streamWrapper(stream);
+    AIBinder_setMinSchedulerPolicy(streamWrapper.getBinder().get(), SCHED_NORMAL,
+                                   ANDROID_PRIORITY_AUDIO);
     auto patchIt = mPatches.find(in_args.portConfigId);
     if (patchIt != mPatches.end()) {
         streamWrapper.setStreamIsConnected(findConnectedDevices(in_args.portConfigId));
@@ -570,12 +585,15 @@ ndk::ScopedAStatus Module::openOutputStream(const OpenOutputStreamArguments& in_
         return status;
     }
     context.fillDescriptor(&_aidl_return->desc);
-    auto stream = ndk::SharedRefBase::make<StreamOut>(in_args.sourceMetadata, std::move(context),
-                                                      in_args.offloadInfo);
-    if (auto status = stream->init(); !status.isOk()) {
+    std::shared_ptr<StreamOut> stream;
+    if (auto status = StreamOut::createInstance(in_args.sourceMetadata, std::move(context),
+                                                in_args.offloadInfo, &stream);
+        !status.isOk()) {
         return status;
     }
     StreamWrapper streamWrapper(stream);
+    AIBinder_setMinSchedulerPolicy(streamWrapper.getBinder().get(), SCHED_NORMAL,
+                                   ANDROID_PRIORITY_AUDIO);
     auto patchIt = mPatches.find(in_args.portConfigId);
     if (patchIt != mPatches.end()) {
         streamWrapper.setStreamIsConnected(findConnectedDevices(in_args.portConfigId));
@@ -917,6 +935,38 @@ ndk::ScopedAStatus Module::updateScreenRotation(ScreenRotation in_rotation) {
 ndk::ScopedAStatus Module::updateScreenState(bool in_isTurnedOn) {
     LOG(DEBUG) << __func__ << ": " << in_isTurnedOn;
     return ndk::ScopedAStatus::ok();
+}
+
+ndk::ScopedAStatus Module::getSoundDose(std::shared_ptr<ISoundDose>* _aidl_return) {
+    if (mSoundDose == nullptr) {
+        mSoundDose = ndk::SharedRefBase::make<SoundDose>();
+        mSoundDoseBinder = mSoundDose->asBinder();
+        AIBinder_setMinSchedulerPolicy(mSoundDoseBinder.get(), SCHED_NORMAL,
+                                       ANDROID_PRIORITY_AUDIO);
+    }
+    *_aidl_return = mSoundDose;
+    LOG(DEBUG) << __func__ << ": returning instance of ISoundDose: " << _aidl_return->get();
+    return ndk::ScopedAStatus::ok();
+}
+
+ndk::ScopedAStatus Module::generateHwAvSyncId(int32_t* _aidl_return) {
+    LOG(DEBUG) << __func__;
+    (void)_aidl_return;
+    return ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);
+}
+
+ndk::ScopedAStatus Module::getVendorParameters(const std::vector<std::string>& in_ids,
+                                               std::vector<VendorParameter>* _aidl_return) {
+    LOG(DEBUG) << __func__ << ": id count: " << in_ids.size();
+    (void)_aidl_return;
+    return ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);
+}
+
+ndk::ScopedAStatus Module::setVendorParameters(const std::vector<VendorParameter>& in_parameters,
+                                               bool in_async) {
+    LOG(DEBUG) << __func__ << ": parameter count " << in_parameters.size()
+               << ", async: " << in_async;
+    return ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);
 }
 
 }  // namespace aidl::android::hardware::audio::core
