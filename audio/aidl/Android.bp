@@ -41,6 +41,7 @@ aidl_interface {
         "android/hardware/audio/common/SinkMetadata.aidl",
         "android/hardware/audio/common/SourceMetadata.aidl",
     ],
+    frozen: true,
     imports: [
         "android.media.audio.common.types-V2",
     ],
@@ -113,7 +114,9 @@ aidl_interface {
         "android/hardware/audio/core/AudioRoute.aidl",
         "android/hardware/audio/core/IConfig.aidl",
         "android/hardware/audio/core/IModule.aidl",
+        "android/hardware/audio/core/ISoundDose.aidl",
         "android/hardware/audio/core/IStreamCallback.aidl",
+        "android/hardware/audio/core/IStreamCommon.aidl",
         "android/hardware/audio/core/IStreamIn.aidl",
         "android/hardware/audio/core/IStreamOut.aidl",
         "android/hardware/audio/core/ITelephony.aidl",
@@ -123,6 +126,7 @@ aidl_interface {
         "android/hardware/audio/core/ModuleDebug.aidl",
         "android/hardware/audio/core/StreamDescriptor.aidl",
         "android/hardware/audio/core/SurroundSoundConfig.aidl",
+        "android/hardware/audio/core/VendorParameter.aidl",
     ],
     imports: [
         "android.hardware.common-V2",
@@ -165,6 +169,53 @@ cc_defaults {
     ],
 }
 
+// Used for the standalone sounddose HAL
+aidl_interface {
+    name: "android.hardware.audio.core.sounddose",
+    defaults: [
+        "android.hardware.audio_defaults",
+    ],
+    srcs: [
+        "android/hardware/audio/core/ISoundDose.aidl",
+    ],
+    imports: [
+        "android.media.audio.common.types-V2",
+    ],
+    backend: {
+        // The C++ backend is disabled transitively due to use of FMQ by the core HAL.
+        cpp: {
+            enabled: false,
+        },
+        java: {
+            sdk_version: "module_current",
+        },
+    },
+    versions_with_info: [
+        // IMPORTANT: Update latest_android_hardware_audio_core_sounddose every time you
+        // add the latest frozen version to versions_with_info
+    ],
+}
+
+// Note: This should always be one version ahead of the last frozen version
+latest_android_hardware_audio_core_sounddose = "android.hardware.audio.core.sounddose-V1"
+
+// Modules that depend on android.hardware.audio.core.sounddose directly can include
+// the following cc_defaults to avoid explicitly managing dependency versions
+// across many scattered files.
+cc_defaults {
+    name: "latest_android_hardware_audio_core_sounddose_ndk_shared",
+    shared_libs: [
+        latest_android_hardware_audio_core_sounddose + "-ndk",
+    ],
+}
+
+cc_defaults {
+    name: "latest_android_hardware_audio_core_sounddose_ndk_static",
+    static_libs: [
+        latest_android_hardware_audio_core_sounddose + "-ndk",
+    ],
+}
+
 aidl_interface {
     name: "android.hardware.audio.effect",
     defaults: [
@@ -177,6 +228,7 @@ aidl_interface {
         "android/hardware/audio/effect/Descriptor.aidl",
         "android/hardware/audio/effect/Downmix.aidl",
         "android/hardware/audio/effect/DynamicsProcessing.aidl",
+        "android/hardware/audio/effect/EnvironmentalReverb.aidl",
         "android/hardware/audio/effect/Equalizer.aidl",
         "android/hardware/audio/effect/Flags.aidl",
         "android/hardware/audio/effect/HapticGenerator.aidl",
@@ -184,8 +236,8 @@ aidl_interface {
         "android/hardware/audio/effect/IFactory.aidl",
         "android/hardware/audio/effect/LoudnessEnhancer.aidl",
         "android/hardware/audio/effect/Parameter.aidl",
+        "android/hardware/audio/effect/PresetReverb.aidl",
         "android/hardware/audio/effect/Processing.aidl",
-        "android/hardware/audio/effect/Reverb.aidl",
         "android/hardware/audio/effect/State.aidl",
         "android/hardware/audio/effect/VendorExtension.aidl",
         "android/hardware/audio/effect/Virtualizer.aidl",

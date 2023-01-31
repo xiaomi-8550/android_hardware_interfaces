@@ -37,6 +37,9 @@ class DynamicsProcessingSwContext final : public EffectContext {
 
 class DynamicsProcessingSw final : public EffectImpl {
   public:
+    static const std::string kEffectName;
+    static const DynamicsProcessing::Capability kCapability;
+    static const Descriptor kDescriptor;
     DynamicsProcessingSw() { LOG(DEBUG) << __func__; }
     ~DynamicsProcessingSw() {
         cleanUp();
@@ -47,26 +50,16 @@ class DynamicsProcessingSw final : public EffectImpl {
     ndk::ScopedAStatus setParameterSpecific(const Parameter::Specific& specific) override;
     ndk::ScopedAStatus getParameterSpecific(const Parameter::Id& id,
                                             Parameter::Specific* specific) override;
-    IEffect::Status effectProcessImpl(float* in, float* out, int process) override;
+
     std::shared_ptr<EffectContext> createContext(const Parameter::Common& common) override;
+    std::shared_ptr<EffectContext> getContext() override;
     RetCode releaseContext() override;
+
+    IEffect::Status effectProcessImpl(float* in, float* out, int samples) override;
+    std::string getEffectName() override { return kEffectName; };
 
   private:
     std::shared_ptr<DynamicsProcessingSwContext> mContext;
-    /* capabilities */
-    const DynamicsProcessing::Capability kCapability;
-    /* Effect descriptor */
-    const Descriptor kDescriptor = {
-            .common = {.id = {.type = kDynamicsProcessingTypeUUID,
-                              .uuid = kDynamicsProcessingSwImplUUID,
-                              .proxy = std::nullopt},
-                       .flags = {.type = Flags::Type::INSERT,
-                                 .insert = Flags::Insert::FIRST,
-                                 .volume = Flags::Volume::CTRL},
-                       .name = "DynamicsProcessingSw",
-                       .implementor = "The Android Open Source Project"},
-            .capability = Capability::make<Capability::dynamicsProcessing>(kCapability)};
-
     /* parameters */
     DynamicsProcessing mSpecificParam;
 };

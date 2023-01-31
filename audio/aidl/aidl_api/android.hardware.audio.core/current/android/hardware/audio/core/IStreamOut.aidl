@@ -34,6 +34,10 @@
 package android.hardware.audio.core;
 @VintfStability
 interface IStreamOut {
-  void close();
+  android.hardware.audio.core.IStreamCommon getStreamCommon();
   void updateMetadata(in android.hardware.audio.common.SourceMetadata sourceMetadata);
+  float[] getHwVolume();
+  void setHwVolume(in float[] channelVolumes);
+  const int HW_VOLUME_MIN = 0;
+  const int HW_VOLUME_MAX = 1;
 }

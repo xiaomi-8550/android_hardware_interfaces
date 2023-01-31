@@ -232,6 +232,7 @@ using ::WIFI_CHAN_WIDTH_INVALID;
 using ::wifi_channel_info;
 using ::wifi_channel_stat;
 using ::wifi_channel_width;
+using ::wifi_chip_capabilities;
 using ::wifi_coex_restriction;
 using ::wifi_coex_unsafe_channel;
 using ::WIFI_DUAL_STA_NON_TRANSIENT_UNBIASED;
@@ -304,6 +305,7 @@ using ::WIFI_RTT_BW_320;
 using ::WIFI_RTT_BW_40;
 using ::WIFI_RTT_BW_5;
 using ::WIFI_RTT_BW_80;
+using ::WIFI_RTT_BW_UNSPECIFIED;
 using ::wifi_rtt_capabilities;
 using ::wifi_rtt_config;
 using ::wifi_rtt_preamble;
@@ -314,6 +316,7 @@ using ::WIFI_RTT_PREAMBLE_LEGACY;
 using ::WIFI_RTT_PREAMBLE_VHT;
 using ::wifi_rtt_responder;
 using ::wifi_rtt_result;
+using ::wifi_rtt_result_v2;
 using ::wifi_rtt_status;
 using ::wifi_rtt_type;
 using ::wifi_rx_packet_fate;
@@ -362,7 +365,21 @@ struct LinkLayerStats {
     wifi_iface_stat iface;
     std::vector<LinkLayerRadioStats> radios;
     std::vector<WifiPeerInfo> peers;
+    bool valid;
 };
+
+struct LinkStats {
+    wifi_link_stat stat;
+    std::vector<WifiPeerInfo> peers;
+};
+
+struct LinkLayerMlStats {
+    wifi_iface_ml_stat iface;
+    std::vector<LinkStats> links;
+    std::vector<LinkLayerRadioStats> radios;
+    bool valid;
+};
+
 #pragma GCC diagnostic pop
 
 // The |WLAN_DRIVER_WAKE_REASON_CNT.cmd_event_wake_cnt| and
@@ -419,6 +436,8 @@ using on_rssi_threshold_breached_callback =
 // the pointer.
 using on_rtt_results_callback =
         std::function<void(wifi_request_id, const std::vector<const wifi_rtt_result*>&)>;
+using on_rtt_results_callback_v2 =
+        std::function<void(wifi_request_id, const std::vector<const wifi_rtt_result_v2*>&)>;
 
 // Callback for ring buffer data.
 using on_ring_buffer_data_callback = std::function<void(
@@ -536,7 +555,9 @@ class WifiLegacyHal {
     // Link layer stats functions.
     wifi_error enableLinkLayerStats(const std::string& iface_name, bool debug);
     wifi_error disableLinkLayerStats(const std::string& iface_name);
-    std::pair<wifi_error, LinkLayerStats> getLinkLayerStats(const std::string& iface_name);
+    wifi_error getLinkLayerStats(const std::string& iface_name,
+                                 legacy_hal::LinkLayerStats& legacy_stats,
+                                 legacy_hal::LinkLayerMlStats& legacy_ml_stats);
     // RSSI monitor functions.
     wifi_error startRssiMonitoring(
             const std::string& iface_name, wifi_request_id id, int8_t max_rssi, int8_t min_rssi,
@@ -589,7 +610,8 @@ class WifiLegacyHal {
     // RTT functions.
     wifi_error startRttRangeRequest(const std::string& iface_name, wifi_request_id id,
                                     const std::vector<wifi_rtt_config>& rtt_configs,
-                                    const on_rtt_results_callback& on_results_callback);
+                                    const on_rtt_results_callback& on_results_callback,
+                                    const on_rtt_results_callback_v2& on_results_callback_v2);
     wifi_error cancelRttRangeRequest(const std::string& iface_name, wifi_request_id id,
                                      const std::vector<std::array<uint8_t, ETH_ALEN>>& mac_addrs);
     std::pair<wifi_error, wifi_rtt_capabilities> getRttCapabilities(const std::string& iface_name);
@@ -693,6 +715,7 @@ class WifiLegacyHal {
     wifi_error enableWifiTxPowerLimits(const std::string& iface_name, bool enable);
     wifi_error getWifiCachedScanResults(const std::string& iface_name,
                                         const CachedScanResultsCallbackHandlers& handler);
+    std::pair<wifi_error, wifi_chip_capabilities> getWifiChipCapabilities();
 
   private:
     // Retrieve interface handles for all the available interfaces.
@@ -708,6 +731,8 @@ class WifiLegacyHal {
     // Handles wifi (error) status of Virtual interface create/delete
     wifi_error handleVirtualInterfaceCreateOrDeleteStatus(const std::string& ifname,
                                                           wifi_error status);
+    wifi_link_stat* copyLinkStat(wifi_link_stat* stat_ptr, std::vector<LinkStats> stats);
+    wifi_peer_info* copyPeerInfo(wifi_peer_info* peer_ptr, std::vector<WifiPeerInfo> peers);
 
     // Global function table of legacy HAL.
     wifi_hal_fn global_func_table_;

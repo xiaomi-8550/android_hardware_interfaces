@@ -940,69 +940,160 @@ bool convertLegacyLinkLayerRadioStatsToAidl(
     return true;
 }
 
+bool convertLegacyLinkLayerMlStatsToAidl(const legacy_hal::LinkLayerMlStats& legacy_ml_stats,
+                                         StaLinkLayerStats* aidl_stats) {
+    if (!aidl_stats) {
+        return false;
+    }
+    *aidl_stats = {};
+    std::vector<StaLinkLayerLinkStats> links;
+    // Iterate over each links
+    for (const auto& link : legacy_ml_stats.links) {
+        StaLinkLayerLinkStats linkStats = {};
+        linkStats.linkId = link.stat.link_id;
+        linkStats.radioId = link.stat.radio;
+        linkStats.frequencyMhz = link.stat.frequency;
+        linkStats.beaconRx = link.stat.beacon_rx;
+        linkStats.avgRssiMgmt = link.stat.rssi_mgmt;
+        linkStats.wmeBePktStats.rxMpdu = link.stat.ac[legacy_hal::WIFI_AC_BE].rx_mpdu;
+        linkStats.wmeBePktStats.txMpdu = link.stat.ac[legacy_hal::WIFI_AC_BE].tx_mpdu;
+        linkStats.wmeBePktStats.lostMpdu = link.stat.ac[legacy_hal::WIFI_AC_BE].mpdu_lost;
+        linkStats.wmeBePktStats.retries = link.stat.ac[legacy_hal::WIFI_AC_BE].retries;
+        linkStats.wmeBeContentionTimeStats.contentionTimeMinInUsec =
+                link.stat.ac[legacy_hal::WIFI_AC_BE].contention_time_min;
+        linkStats.wmeBeContentionTimeStats.contentionTimeMaxInUsec =
+                link.stat.ac[legacy_hal::WIFI_AC_BE].contention_time_max;
+        linkStats.wmeBeContentionTimeStats.contentionTimeAvgInUsec =
+                link.stat.ac[legacy_hal::WIFI_AC_BE].contention_time_avg;
+        linkStats.wmeBeContentionTimeStats.contentionNumSamples =
+                link.stat.ac[legacy_hal::WIFI_AC_BE].contention_num_samples;
+        linkStats.wmeBkPktStats.rxMpdu = link.stat.ac[legacy_hal::WIFI_AC_BK].rx_mpdu;
+        linkStats.wmeBkPktStats.txMpdu = link.stat.ac[legacy_hal::WIFI_AC_BK].tx_mpdu;
+        linkStats.wmeBkPktStats.lostMpdu = link.stat.ac[legacy_hal::WIFI_AC_BK].mpdu_lost;
+        linkStats.wmeBkPktStats.retries = link.stat.ac[legacy_hal::WIFI_AC_BK].retries;
+        linkStats.wmeBkContentionTimeStats.contentionTimeMinInUsec =
+                link.stat.ac[legacy_hal::WIFI_AC_BK].contention_time_min;
+        linkStats.wmeBkContentionTimeStats.contentionTimeMaxInUsec =
+                link.stat.ac[legacy_hal::WIFI_AC_BK].contention_time_max;
+        linkStats.wmeBkContentionTimeStats.contentionTimeAvgInUsec =
+                link.stat.ac[legacy_hal::WIFI_AC_BK].contention_time_avg;
+        linkStats.wmeBkContentionTimeStats.contentionNumSamples =
+                link.stat.ac[legacy_hal::WIFI_AC_BK].contention_num_samples;
+        linkStats.wmeViPktStats.rxMpdu = link.stat.ac[legacy_hal::WIFI_AC_VI].rx_mpdu;
+        linkStats.wmeViPktStats.txMpdu = link.stat.ac[legacy_hal::WIFI_AC_VI].tx_mpdu;
+        linkStats.wmeViPktStats.lostMpdu = link.stat.ac[legacy_hal::WIFI_AC_VI].mpdu_lost;
+        linkStats.wmeViPktStats.retries = link.stat.ac[legacy_hal::WIFI_AC_VI].retries;
+        linkStats.wmeViContentionTimeStats.contentionTimeMinInUsec =
+                link.stat.ac[legacy_hal::WIFI_AC_VI].contention_time_min;
+        linkStats.wmeViContentionTimeStats.contentionTimeMaxInUsec =
+                link.stat.ac[legacy_hal::WIFI_AC_VI].contention_time_max;
+        linkStats.wmeViContentionTimeStats.contentionTimeAvgInUsec =
+                link.stat.ac[legacy_hal::WIFI_AC_VI].contention_time_avg;
+        linkStats.wmeViContentionTimeStats.contentionNumSamples =
+                link.stat.ac[legacy_hal::WIFI_AC_VI].contention_num_samples;
+        linkStats.wmeVoPktStats.rxMpdu = link.stat.ac[legacy_hal::WIFI_AC_VO].rx_mpdu;
+        linkStats.wmeVoPktStats.txMpdu = link.stat.ac[legacy_hal::WIFI_AC_VO].tx_mpdu;
+        linkStats.wmeVoPktStats.lostMpdu = link.stat.ac[legacy_hal::WIFI_AC_VO].mpdu_lost;
+        linkStats.wmeVoPktStats.retries = link.stat.ac[legacy_hal::WIFI_AC_VO].retries;
+        linkStats.wmeVoContentionTimeStats.contentionTimeMinInUsec =
+                link.stat.ac[legacy_hal::WIFI_AC_VO].contention_time_min;
+        linkStats.wmeVoContentionTimeStats.contentionTimeMaxInUsec =
+                link.stat.ac[legacy_hal::WIFI_AC_VO].contention_time_max;
+        linkStats.wmeVoContentionTimeStats.contentionTimeAvgInUsec =
+                link.stat.ac[legacy_hal::WIFI_AC_VO].contention_time_avg;
+        linkStats.wmeVoContentionTimeStats.contentionNumSamples =
+                link.stat.ac[legacy_hal::WIFI_AC_VO].contention_num_samples;
+        linkStats.timeSliceDutyCycleInPercent = link.stat.time_slicing_duty_cycle_percent;
+        // peer info legacy_stats conversion.
+        std::vector<StaPeerInfo> aidl_peers_info_stats;
+        for (const auto& legacy_peer_info_stats : link.peers) {
+            StaPeerInfo aidl_peer_info_stats;
+            if (!convertLegacyPeerInfoStatsToAidl(legacy_peer_info_stats, &aidl_peer_info_stats)) {
+                return false;
+            }
+            aidl_peers_info_stats.push_back(aidl_peer_info_stats);
+        }
+        linkStats.peers = aidl_peers_info_stats;
+        // Push link stats to aidl stats.
+        links.push_back(linkStats);
+    }
+    aidl_stats->iface.links = links;
+    // radio legacy_stats conversion.
+    std::vector<StaLinkLayerRadioStats> aidl_radios_stats;
+    for (const auto& legacy_radio_stats : legacy_ml_stats.radios) {
+        StaLinkLayerRadioStats aidl_radio_stats;
+        if (!convertLegacyLinkLayerRadioStatsToAidl(legacy_radio_stats, &aidl_radio_stats)) {
+            return false;
+        }
+        aidl_radios_stats.push_back(aidl_radio_stats);
+    }
+    aidl_stats->radios = aidl_radios_stats;
+    aidl_stats->timeStampInMs = ::android::uptimeMillis();
+
+    return true;
+}
+
 bool convertLegacyLinkLayerStatsToAidl(const legacy_hal::LinkLayerStats& legacy_stats,
                                        StaLinkLayerStats* aidl_stats) {
     if (!aidl_stats) {
         return false;
     }
     *aidl_stats = {};
+    std::vector<StaLinkLayerLinkStats> links;
+    StaLinkLayerLinkStats linkStats = {};
     // iface legacy_stats conversion.
-    aidl_stats->iface.beaconRx = legacy_stats.iface.beacon_rx;
-    aidl_stats->iface.avgRssiMgmt = legacy_stats.iface.rssi_mgmt;
-    aidl_stats->iface.wmeBePktStats.rxMpdu = legacy_stats.iface.ac[legacy_hal::WIFI_AC_BE].rx_mpdu;
-    aidl_stats->iface.wmeBePktStats.txMpdu = legacy_stats.iface.ac[legacy_hal::WIFI_AC_BE].tx_mpdu;
-    aidl_stats->iface.wmeBePktStats.lostMpdu =
-            legacy_stats.iface.ac[legacy_hal::WIFI_AC_BE].mpdu_lost;
-    aidl_stats->iface.wmeBePktStats.retries = legacy_stats.iface.ac[legacy_hal::WIFI_AC_BE].retries;
-    aidl_stats->iface.wmeBeContentionTimeStats.contentionTimeMinInUsec =
+    linkStats.linkId = 0;
+    linkStats.beaconRx = legacy_stats.iface.beacon_rx;
+    linkStats.avgRssiMgmt = legacy_stats.iface.rssi_mgmt;
+    linkStats.wmeBePktStats.rxMpdu = legacy_stats.iface.ac[legacy_hal::WIFI_AC_BE].rx_mpdu;
+    linkStats.wmeBePktStats.txMpdu = legacy_stats.iface.ac[legacy_hal::WIFI_AC_BE].tx_mpdu;
+    linkStats.wmeBePktStats.lostMpdu = legacy_stats.iface.ac[legacy_hal::WIFI_AC_BE].mpdu_lost;
+    linkStats.wmeBePktStats.retries = legacy_stats.iface.ac[legacy_hal::WIFI_AC_BE].retries;
+    linkStats.wmeBeContentionTimeStats.contentionTimeMinInUsec =
             legacy_stats.iface.ac[legacy_hal::WIFI_AC_BE].contention_time_min;
-    aidl_stats->iface.wmeBeContentionTimeStats.contentionTimeMaxInUsec =
+    linkStats.wmeBeContentionTimeStats.contentionTimeMaxInUsec =
             legacy_stats.iface.ac[legacy_hal::WIFI_AC_BE].contention_time_max;
-    aidl_stats->iface.wmeBeContentionTimeStats.contentionTimeAvgInUsec =
+    linkStats.wmeBeContentionTimeStats.contentionTimeAvgInUsec =
             legacy_stats.iface.ac[legacy_hal::WIFI_AC_BE].contention_time_avg;
-    aidl_stats->iface.wmeBeContentionTimeStats.contentionNumSamples =
+    linkStats.wmeBeContentionTimeStats.contentionNumSamples =
             legacy_stats.iface.ac[legacy_hal::WIFI_AC_BE].contention_num_samples;
-    aidl_stats->iface.wmeBkPktStats.rxMpdu = legacy_stats.iface.ac[legacy_hal::WIFI_AC_BK].rx_mpdu;
-    aidl_stats->iface.wmeBkPktStats.txMpdu = legacy_stats.iface.ac[legacy_hal::WIFI_AC_BK].tx_mpdu;
-    aidl_stats->iface.wmeBkPktStats.lostMpdu =
-            legacy_stats.iface.ac[legacy_hal::WIFI_AC_BK].mpdu_lost;
-    aidl_stats->iface.wmeBkPktStats.retries = legacy_stats.iface.ac[legacy_hal::WIFI_AC_BK].retries;
-    aidl_stats->iface.wmeBkContentionTimeStats.contentionTimeMinInUsec =
+    linkStats.wmeBkPktStats.rxMpdu = legacy_stats.iface.ac[legacy_hal::WIFI_AC_BK].rx_mpdu;
+    linkStats.wmeBkPktStats.txMpdu = legacy_stats.iface.ac[legacy_hal::WIFI_AC_BK].tx_mpdu;
+    linkStats.wmeBkPktStats.lostMpdu = legacy_stats.iface.ac[legacy_hal::WIFI_AC_BK].mpdu_lost;
+    linkStats.wmeBkPktStats.retries = legacy_stats.iface.ac[legacy_hal::WIFI_AC_BK].retries;
+    linkStats.wmeBkContentionTimeStats.contentionTimeMinInUsec =
             legacy_stats.iface.ac[legacy_hal::WIFI_AC_BK].contention_time_min;
-    aidl_stats->iface.wmeBkContentionTimeStats.contentionTimeMaxInUsec =
+    linkStats.wmeBkContentionTimeStats.contentionTimeMaxInUsec =
             legacy_stats.iface.ac[legacy_hal::WIFI_AC_BK].contention_time_max;
-    aidl_stats->iface.wmeBkContentionTimeStats.contentionTimeAvgInUsec =
+    linkStats.wmeBkContentionTimeStats.contentionTimeAvgInUsec =
             legacy_stats.iface.ac[legacy_hal::WIFI_AC_BK].contention_time_avg;
-    aidl_stats->iface.wmeBkContentionTimeStats.contentionNumSamples =
+    linkStats.wmeBkContentionTimeStats.contentionNumSamples =
             legacy_stats.iface.ac[legacy_hal::WIFI_AC_BK].contention_num_samples;
-    aidl_stats->iface.wmeViPktStats.rxMpdu = legacy_stats.iface.ac[legacy_hal::WIFI_AC_VI].rx_mpdu;
-    aidl_stats->iface.wmeViPktStats.txMpdu = legacy_stats.iface.ac[legacy_hal::WIFI_AC_VI].tx_mpdu;
-    aidl_stats->iface.wmeViPktStats.lostMpdu =
-            legacy_stats.iface.ac[legacy_hal::WIFI_AC_VI].mpdu_lost;
-    aidl_stats->iface.wmeViPktStats.retries = legacy_stats.iface.ac[legacy_hal::WIFI_AC_VI].retries;
-    aidl_stats->iface.wmeViContentionTimeStats.contentionTimeMinInUsec =
+    linkStats.wmeViPktStats.rxMpdu = legacy_stats.iface.ac[legacy_hal::WIFI_AC_VI].rx_mpdu;
+    linkStats.wmeViPktStats.txMpdu = legacy_stats.iface.ac[legacy_hal::WIFI_AC_VI].tx_mpdu;
+    linkStats.wmeViPktStats.lostMpdu = legacy_stats.iface.ac[legacy_hal::WIFI_AC_VI].mpdu_lost;
+    linkStats.wmeViPktStats.retries = legacy_stats.iface.ac[legacy_hal::WIFI_AC_VI].retries;
+    linkStats.wmeViContentionTimeStats.contentionTimeMinInUsec =
             legacy_stats.iface.ac[legacy_hal::WIFI_AC_VI].contention_time_min;
-    aidl_stats->iface.wmeViContentionTimeStats.contentionTimeMaxInUsec =
+    linkStats.wmeViContentionTimeStats.contentionTimeMaxInUsec =
             legacy_stats.iface.ac[legacy_hal::WIFI_AC_VI].contention_time_max;
-    aidl_stats->iface.wmeViContentionTimeStats.contentionTimeAvgInUsec =
+    linkStats.wmeViContentionTimeStats.contentionTimeAvgInUsec =
             legacy_stats.iface.ac[legacy_hal::WIFI_AC_VI].contention_time_avg;
-    aidl_stats->iface.wmeViContentionTimeStats.contentionNumSamples =
+    linkStats.wmeViContentionTimeStats.contentionNumSamples =
             legacy_stats.iface.ac[legacy_hal::WIFI_AC_VI].contention_num_samples;
-    aidl_stats->iface.wmeVoPktStats.rxMpdu = legacy_stats.iface.ac[legacy_hal::WIFI_AC_VO].rx_mpdu;
-    aidl_stats->iface.wmeVoPktStats.txMpdu = legacy_stats.iface.ac[legacy_hal::WIFI_AC_VO].tx_mpdu;
-    aidl_stats->iface.wmeVoPktStats.lostMpdu =
-            legacy_stats.iface.ac[legacy_hal::WIFI_AC_VO].mpdu_lost;
-    aidl_stats->iface.wmeVoPktStats.retries = legacy_stats.iface.ac[legacy_hal::WIFI_AC_VO].retries;
-    aidl_stats->iface.wmeVoContentionTimeStats.contentionTimeMinInUsec =
+    linkStats.wmeVoPktStats.rxMpdu = legacy_stats.iface.ac[legacy_hal::WIFI_AC_VO].rx_mpdu;
+    linkStats.wmeVoPktStats.txMpdu = legacy_stats.iface.ac[legacy_hal::WIFI_AC_VO].tx_mpdu;
+    linkStats.wmeVoPktStats.lostMpdu = legacy_stats.iface.ac[legacy_hal::WIFI_AC_VO].mpdu_lost;
+    linkStats.wmeVoPktStats.retries = legacy_stats.iface.ac[legacy_hal::WIFI_AC_VO].retries;
+    linkStats.wmeVoContentionTimeStats.contentionTimeMinInUsec =
             legacy_stats.iface.ac[legacy_hal::WIFI_AC_VO].contention_time_min;
-    aidl_stats->iface.wmeVoContentionTimeStats.contentionTimeMaxInUsec =
+    linkStats.wmeVoContentionTimeStats.contentionTimeMaxInUsec =
             legacy_stats.iface.ac[legacy_hal::WIFI_AC_VO].contention_time_max;
-    aidl_stats->iface.wmeVoContentionTimeStats.contentionTimeAvgInUsec =
+    linkStats.wmeVoContentionTimeStats.contentionTimeAvgInUsec =
             legacy_stats.iface.ac[legacy_hal::WIFI_AC_VO].contention_time_avg;
-    aidl_stats->iface.wmeVoContentionTimeStats.contentionNumSamples =
+    linkStats.wmeVoContentionTimeStats.contentionNumSamples =
             legacy_stats.iface.ac[legacy_hal::WIFI_AC_VO].contention_num_samples;
-    aidl_stats->iface.timeSliceDutyCycleInPercent =
-            legacy_stats.iface.info.time_slicing_duty_cycle_percent;
+    linkStats.timeSliceDutyCycleInPercent = legacy_stats.iface.info.time_slicing_duty_cycle_percent;
     // peer info legacy_stats conversion.
     std::vector<StaPeerInfo> aidl_peers_info_stats;
     for (const auto& legacy_peer_info_stats : legacy_stats.peers) {
@@ -1012,7 +1103,9 @@ bool convertLegacyLinkLayerStatsToAidl(const legacy_hal::LinkLayerStats& legacy_
         }
         aidl_peers_info_stats.push_back(aidl_peer_info_stats);
     }
-    aidl_stats->iface.peers = aidl_peers_info_stats;
+    linkStats.peers = aidl_peers_info_stats;
+    links.push_back(linkStats);
+    aidl_stats->iface.links = links;
     // radio legacy_stats conversion.
     std::vector<StaLinkLayerRadioStats> aidl_radios_stats;
     for (const auto& legacy_radio_stats : legacy_stats.radios) {
@@ -2270,6 +2363,8 @@ legacy_hal::wifi_rtt_bw convertAidlRttBwToLegacy(RttBw type) {
             return legacy_hal::WIFI_RTT_BW_160;
         case RttBw::BW_320MHZ:
             return legacy_hal::WIFI_RTT_BW_320;
+        case RttBw::BW_UNSPECIFIED:
+            return legacy_hal::WIFI_RTT_BW_UNSPECIFIED;
     };
     CHECK(false);
 }
@@ -2290,6 +2385,8 @@ RttBw convertLegacyRttBwToAidl(legacy_hal::wifi_rtt_bw type) {
             return RttBw::BW_160MHZ;
         case legacy_hal::WIFI_RTT_BW_320:
             return RttBw::BW_320MHZ;
+        case legacy_hal::WIFI_RTT_BW_UNSPECIFIED:
+            return RttBw::BW_UNSPECIFIED;
     };
     CHECK(false) << "Unknown legacy type: " << type;
 }
@@ -2619,6 +2716,28 @@ bool convertLegacyVectorOfRttResultToAidl(
         if (!convertLegacyRttResultToAidl(*legacy_result, &aidl_result)) {
             return false;
         }
+        aidl_result.channelFreqMHz = 0;
+        aidl_result.packetBw = RttBw::BW_UNSPECIFIED;
+        aidl_results->push_back(aidl_result);
+    }
+    return true;
+}
+
+bool convertLegacyVectorOfRttResultV2ToAidl(
+        const std::vector<const legacy_hal::wifi_rtt_result_v2*>& legacy_results,
+        std::vector<RttResult>* aidl_results) {
+    if (!aidl_results) {
+        return false;
+    }
+    *aidl_results = {};
+    for (const auto legacy_result : legacy_results) {
+        RttResult aidl_result;
+        if (!convertLegacyRttResultToAidl(legacy_result->rtt_result, &aidl_result)) {
+            return false;
+        }
+        aidl_result.channelFreqMHz =
+                legacy_result->frequency != UNSPECIFIED ? legacy_result->frequency : 0;
+        aidl_result.packetBw = convertLegacyRttBwToAidl(legacy_result->packet_bw);
         aidl_results->push_back(aidl_result);
     }
     return true;
@@ -2765,6 +2884,15 @@ bool convertLegacyRadioCombinationsMatrixToAidl(
                                           (sizeof(wifi_radio_configuration) * num_configurations));
     }
     aidl_matrix->radioCombinations = radio_combinations_vec;
+    return true;
+}
+
+bool convertLegacyWifiChipCapabilitiesToAidl(
+        const legacy_hal::wifi_chip_capabilities& legacy_chip_capabilities,
+        WifiChipCapabilities& aidl_chip_capabilities) {
+    aidl_chip_capabilities.maxMloLinkCount = legacy_chip_capabilities.max_mlo_link_count;
+    aidl_chip_capabilities.maxConcurrentTdlsSessionCount =
+            legacy_chip_capabilities.max_concurrent_tdls_session_count;
     return true;
 }
 

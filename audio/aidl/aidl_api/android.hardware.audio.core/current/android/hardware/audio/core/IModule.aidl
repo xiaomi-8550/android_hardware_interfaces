@@ -60,6 +60,10 @@ interface IModule {
   void updateAudioMode(android.hardware.audio.core.AudioMode mode);
   void updateScreenRotation(android.hardware.audio.core.IModule.ScreenRotation rotation);
   void updateScreenState(boolean isTurnedOn);
+  @nullable android.hardware.audio.core.ISoundDose getSoundDose();
+  int generateHwAvSyncId();
+  android.hardware.audio.core.VendorParameter[] getVendorParameters(in @utf8InCpp String[] ids);
+  void setVendorParameters(in android.hardware.audio.core.VendorParameter[] parameters, boolean async);
   @VintfStability
   parcelable OpenInputStreamArguments {
     int portConfigId;
