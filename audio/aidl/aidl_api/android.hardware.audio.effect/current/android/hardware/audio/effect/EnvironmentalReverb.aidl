@@ -52,6 +52,17 @@ union EnvironmentalReverb {
   @VintfStability
   parcelable Capability {
     android.hardware.audio.effect.VendorExtension extension;
+    int minRoomLevelMb;
+    int maxRoomLevelMb;
+    int minRoomHfLevelMb;
+    int maxRoomHfLevelMb;
     int maxDecayTimeMs;
+    int minDecayHfRatioPm;
+    int maxDecayHfRatioPm;
+    int minLevelMb;
+    int maxLevelMb;
+    int maxDelayMs;
+    int maxDiffusionPm;
+    int maxDensityPm;
   }
 }

@@ -356,7 +356,7 @@ TEST_P(RadioNetworkTest, setSignalStrengthReportingCriteria_Geran) {
 /*
  * Test IRadioNetwork.setSignalStrengthReportingCriteria() for UTRAN
  */
-TEST_P(RadioNetworkTest, setSignalStrengthReportingCriteria_Utran) {
+TEST_P(RadioNetworkTest, setSignalStrengthReportingCriteria_Utran_Rscp) {
     serial = GetRandomSerialNumber();
 
     SignalThresholdInfo signalThresholdInfo;
@@ -377,6 +377,33 @@ TEST_P(RadioNetworkTest, setSignalStrengthReportingCriteria_Utran) {
     ALOGI("setSignalStrengthReportingCriteria_Utran, rspInfo.error = %s\n",
           toString(radioRsp_network->rspInfo.error).c_str());
     ASSERT_TRUE(CheckAnyOfErrors(radioRsp_network->rspInfo.error, {RadioError::NONE}));
+}
+
+/*
+ * Test IRadioNetwork.setSignalStrengthReportingCriteria() for UTRAN
+ */
+TEST_P(RadioNetworkTest, setSignalStrengthReportingCriteria_Utran_Ecno) {
+    serial = GetRandomSerialNumber();
+
+    SignalThresholdInfo signalThresholdInfo;
+    signalThresholdInfo.signalMeasurement = SignalThresholdInfo::SIGNAL_MEASUREMENT_TYPE_ECNO;
+    signalThresholdInfo.hysteresisMs = 5000;
+    signalThresholdInfo.hysteresisDb = 2;
+    signalThresholdInfo.thresholds = {-22, -18, 0};
+    signalThresholdInfo.isEnabled = true;
+    signalThresholdInfo.ran = AccessNetwork::UTRAN;
+
+    ndk::ScopedAStatus res =
+            radio_network->setSignalStrengthReportingCriteria(serial, {signalThresholdInfo});
+    ASSERT_OK(res);
+    EXPECT_EQ(std::cv_status::no_timeout, wait());
+    EXPECT_EQ(RadioResponseType::SOLICITED, radioRsp_network->rspInfo.type);
+    EXPECT_EQ(serial, radioRsp_network->rspInfo.serial);
+
+    ALOGI("setSignalStrengthReportingCriteria_Utran, rspInfo.error = %s\n",
+          toString(radioRsp_network->rspInfo.error).c_str());
+    ASSERT_TRUE(CheckAnyOfErrors(radioRsp_network->rspInfo.error,
+                                 {RadioError::NONE, RadioError::REQUEST_NOT_SUPPORTED}));
 }
 
 /*
@@ -1974,9 +2001,9 @@ TEST_P(RadioNetworkTest, setNullCipherAndIntegrityEnabled) {
     EXPECT_EQ(RadioResponseType::SOLICITED, radioRsp_network->rspInfo.type);
     EXPECT_EQ(serial, radioRsp_network->rspInfo.serial);
 
-    ASSERT_TRUE(CheckAnyOfErrors(
-            radioRsp_network->rspInfo.error,
-            {RadioError::NONE, RadioError::RADIO_NOT_AVAILABLE, RadioError::MODEM_ERR}));
+    ASSERT_TRUE(CheckAnyOfErrors(radioRsp_network->rspInfo.error,
+                                 {RadioError::NONE, RadioError::REQUEST_NOT_SUPPORTED,
+                                  RadioError::RADIO_NOT_AVAILABLE, RadioError::MODEM_ERR}));
     LOG(DEBUG) << "setNullCipherAndIntegrityEnabled finished";
 }
 
@@ -1994,8 +2021,8 @@ TEST_P(RadioNetworkTest, isNullCipherAndIntegrityEnabled) {
     EXPECT_EQ(RadioResponseType::SOLICITED, radioRsp_network->rspInfo.type);
     EXPECT_EQ(serial, radioRsp_network->rspInfo.serial);
 
-    ASSERT_TRUE(CheckAnyOfErrors(
-            radioRsp_network->rspInfo.error,
-            {RadioError::NONE, RadioError::RADIO_NOT_AVAILABLE, RadioError::MODEM_ERR}));
+    ASSERT_TRUE(CheckAnyOfErrors(radioRsp_network->rspInfo.error,
+                                 {RadioError::NONE, RadioError::RADIO_NOT_AVAILABLE,
+                                  RadioError::MODEM_ERR, RadioError::REQUEST_NOT_SUPPORTED}));
     LOG(DEBUG) << "isNullCipherAndIntegrityEnabled finished";
 }

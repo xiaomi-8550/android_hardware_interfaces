@@ -261,6 +261,11 @@ ScopedAStatus RadioNetwork::setSignalStrengthReportingCriteria(
     if (infos.size() > 1) {
         LOG(WARNING) << "Multi-element reporting criteria are not supported with HIDL HAL";
     }
+    if (infos[0].signalMeasurement == aidl::SignalThresholdInfo::SIGNAL_MEASUREMENT_TYPE_ECNO) {
+        LOG(WARNING) << "SIGNAL_MEASUREMENT_TYPE_ECNO are not supported with HIDL HAL";
+        respond()->setSignalStrengthReportingCriteriaResponse(notSupported(serial));
+        return ok();
+    }
     mHal1_5->setSignalStrengthReportingCriteria_1_5(serial, toHidl(infos[0]),
                                                     V1_5::AccessNetwork(infos[0].ran));
     return ok();
@@ -365,20 +370,6 @@ ScopedAStatus RadioNetwork::setN1ModeEnabled(int32_t serial, bool /*enable*/) {
     LOG_CALL << serial;
     LOG(ERROR) << " setN1ModeEnabled is unsupported by HIDL HALs";
     respond()->setN1ModeEnabledResponse(notSupported(serial));
-    return ok();
-}
-
-ScopedAStatus RadioNetwork::setLocationPrivacySetting(int32_t serial, bool /*shareLocation*/) {
-    LOG_CALL << serial;
-    LOG(ERROR) << " setLocationPrivacySetting is unsupported by HIDL HALs";
-    respond()->setLocationPrivacySettingResponse(notSupported(serial));
-    return ok();
-}
-
-ScopedAStatus RadioNetwork::getLocationPrivacySetting(int32_t serial) {
-    LOG_CALL << serial;
-    LOG(ERROR) << " getLocationPrivacySetting is unsupported by HIDL HALs";
-    respond()->getLocationPrivacySettingResponse(notSupported(serial), false);
     return ok();
 }
 }  // namespace android::hardware::radio::compat

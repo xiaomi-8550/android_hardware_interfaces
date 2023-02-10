@@ -84,16 +84,71 @@ ndk::ScopedAStatus HapticGeneratorSw::getDescriptor(Descriptor* _aidl_return) {
 ndk::ScopedAStatus HapticGeneratorSw::setParameterSpecific(const Parameter::Specific& specific) {
     RETURN_IF(Parameter::Specific::hapticGenerator != specific.getTag(), EX_ILLEGAL_ARGUMENT,
               "EffectNotSupported");
-    mSpecificParam = specific.get<Parameter::Specific::hapticGenerator>();
-    LOG(DEBUG) << __func__ << " success with: " << specific.toString();
-    return ndk::ScopedAStatus::ok();
+    RETURN_IF(!mContext, EX_NULL_POINTER, "nullContext");
+
+    auto& hgParam = specific.get<Parameter::Specific::hapticGenerator>();
+    auto tag = hgParam.getTag();
+
+    switch (tag) {
+        case HapticGenerator::hapticScales: {
+            RETURN_IF(mContext->setHgHapticScales(hgParam.get<HapticGenerator::hapticScales>()) !=
+                              RetCode::SUCCESS,
+                      EX_ILLEGAL_ARGUMENT, "HapticScaleNotSupported");
+            return ndk::ScopedAStatus::ok();
+        }
+        case HapticGenerator::vibratorInfo: {
+            RETURN_IF(mContext->setHgVibratorInformation(
+                              hgParam.get<HapticGenerator::vibratorInfo>()) != RetCode::SUCCESS,
+                      EX_ILLEGAL_ARGUMENT, "VibratorInfoNotSupported");
+            return ndk::ScopedAStatus::ok();
+        }
+        default: {
+            LOG(ERROR) << __func__ << " unsupported tag: " << toString(tag);
+            return ndk::ScopedAStatus::fromExceptionCodeWithMessage(
+                    EX_ILLEGAL_ARGUMENT, "HapticGeneratorTagNotSupported");
+        }
+    }
 }
 
 ndk::ScopedAStatus HapticGeneratorSw::getParameterSpecific(const Parameter::Id& id,
                                                            Parameter::Specific* specific) {
     auto tag = id.getTag();
     RETURN_IF(Parameter::Id::hapticGeneratorTag != tag, EX_ILLEGAL_ARGUMENT, "wrongIdTag");
-    specific->set<Parameter::Specific::hapticGenerator>(mSpecificParam);
+    auto hgId = id.get<Parameter::Id::hapticGeneratorTag>();
+    auto hgIdTag = hgId.getTag();
+    switch (hgIdTag) {
+        case HapticGenerator::Id::commonTag:
+            return getParameterHapticGenerator(hgId.get<HapticGenerator::Id::commonTag>(),
+                                               specific);
+        default:
+            LOG(ERROR) << __func__ << " unsupported tag: " << toString(tag);
+            return ndk::ScopedAStatus::fromExceptionCodeWithMessage(
+                    EX_ILLEGAL_ARGUMENT, "HapticGeneratorTagNotSupported");
+    }
+}
+
+ndk::ScopedAStatus HapticGeneratorSw::getParameterHapticGenerator(const HapticGenerator::Tag& tag,
+                                                                  Parameter::Specific* specific) {
+    RETURN_IF(!mContext, EX_NULL_POINTER, "nullContext");
+
+    HapticGenerator hgParam;
+    switch (tag) {
+        case HapticGenerator::hapticScales: {
+            hgParam.set<HapticGenerator::hapticScales>(mContext->getHgHapticScales());
+            break;
+        }
+        case HapticGenerator::vibratorInfo: {
+            hgParam.set<HapticGenerator::vibratorInfo>(mContext->getHgVibratorInformation());
+            break;
+        }
+        default: {
+            LOG(ERROR) << __func__ << " unsupported tag: " << toString(tag);
+            return ndk::ScopedAStatus::fromExceptionCodeWithMessage(
+                    EX_ILLEGAL_ARGUMENT, "HapticGeneratorTagNotSupported");
+        }
+    }
+
+    specific->set<Parameter::Specific::hapticGenerator>(hgParam);
     return ndk::ScopedAStatus::ok();
 }
 
@@ -126,6 +181,22 @@ IEffect::Status HapticGeneratorSw::effectProcessImpl(float* in, float* out, int 
         *out++ = *in++;
     }
     return {STATUS_OK, samples, samples};
+}
+
+RetCode HapticGeneratorSwContext::setHgHapticScales(
+        const std::vector<HapticGenerator::HapticScale>& hapticScales) {
+    // Assume any audio track ID is valid
+    for (auto& it : hapticScales) {
+        mHapticScales[it.id] = it;
+    }
+    return RetCode::SUCCESS;
+}
+
+std::vector<HapticGenerator::HapticScale> HapticGeneratorSwContext::getHgHapticScales() const {
+    std::vector<HapticGenerator::HapticScale> result;
+    std::transform(mHapticScales.begin(), mHapticScales.end(), std::back_inserter(result),
+                   [](auto& scaleIt) { return scaleIt.second; });
+    return result;
 }
 
 }  // namespace aidl::android::hardware::audio::effect

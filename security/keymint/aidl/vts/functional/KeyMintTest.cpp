@@ -1136,8 +1136,8 @@ TEST_P(NewKeyGenerationTest, RsaWithAttestation) {
  * that has been generated using an associate IRemotelyProvisionedComponent.
  */
 TEST_P(NewKeyGenerationTest, RsaWithRkpAttestation) {
-    if (AidlVersion() < 2) {
-        GTEST_SKIP() << "Only required starting with KeyMint v2";
+    if (get_vsr_api_level() < 32 || AidlVersion() < 2) {
+        GTEST_SKIP() << "Only required for VSR 12+ and KeyMint 2+";
     }
 
     // There should be an IRemotelyProvisionedComponent instance associated with the KeyMint
@@ -1214,8 +1214,8 @@ TEST_P(NewKeyGenerationTest, RsaWithRkpAttestation) {
  * that has been generated using an associate IRemotelyProvisionedComponent.
  */
 TEST_P(NewKeyGenerationTest, EcdsaWithRkpAttestation) {
-    if (AidlVersion() < 2) {
-        GTEST_SKIP() << "Only required starting with KeyMint v2";
+    if (get_vsr_api_level() < 32 || AidlVersion() < 2) {
+        GTEST_SKIP() << "Only required for VSR 12+ and KeyMint 2+";
     }
 
     // There should be an IRemotelyProvisionedComponent instance associated with the KeyMint
@@ -8609,6 +8609,14 @@ TEST_P(VsrRequirementTest, Vsr13Test) {
     EXPECT_GE(AidlVersion(), 2) << "VSR 13+ requires KeyMint version 2";
 }
 
+TEST_P(VsrRequirementTest, Vsr14Test) {
+    int vsr_api_level = get_vsr_api_level();
+    if (vsr_api_level < 34) {
+        GTEST_SKIP() << "Applies only to VSR API level 34, this device is: " << vsr_api_level;
+    }
+    EXPECT_GE(AidlVersion(), 3) << "VSR 14+ requires KeyMint version 3";
+}
+
 INSTANTIATE_KEYMINT_AIDL_TEST(VsrRequirementTest);
 
 }  // namespace aidl::android::hardware::security::keymint::test
@@ -8640,6 +8648,15 @@ int main(int argc, char** argv) {
                 // be run in emulated environments that don't have the normal bootloader
                 // interactions.
                 aidl::android::hardware::security::keymint::test::check_boot_pl = false;
+            }
+            if (std::string(argv[i]) == "--keyblob_dir") {
+                if (i + 1 >= argc) {
+                    std::cerr << "Missing argument for --keyblob_dir\n";
+                    return 1;
+                }
+                aidl::android::hardware::security::keymint::test::KeyMintAidlTestBase::keyblob_dir =
+                        std::string(argv[i + 1]);
+                ++i;
             }
         }
     }

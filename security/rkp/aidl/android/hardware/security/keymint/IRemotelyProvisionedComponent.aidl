@@ -115,11 +115,9 @@ import android.hardware.security.keymint.RpcHardwareInfo;
 interface IRemotelyProvisionedComponent {
     const int STATUS_FAILED = 1;
     const int STATUS_INVALID_MAC = 2;
-    // --------- START: Versions 1 and 2 Only ----------
-    const int STATUS_PRODUCTION_KEY_IN_TEST_REQUEST = 3;
+    const int STATUS_PRODUCTION_KEY_IN_TEST_REQUEST = 3; // Versions 1 and 2 Only
     const int STATUS_TEST_KEY_IN_PRODUCTION_REQUEST = 4;
-    const int STATUS_INVALID_EEK = 5;
-    // --------- END: Versions 1 and 2 Only ------------
+    const int STATUS_INVALID_EEK = 5; // Versions 1 and 2 Only
     const int STATUS_REMOVED = 6;
 
     /**
@@ -224,7 +222,7 @@ interface IRemotelyProvisionedComponent {
      *                2 : bstr             ; KID : EEK ID
      *                3 : -25,             ; Algorithm : ECDH-ES + HKDF-256
      *                -1 : 4,              ; Curve : X25519
-     *                -2 : bstr            ; X25519 public key
+     *                -2 : bstr            ; X25519 public key, little-endian
      *            }
      *
      *            EekP256 = {              ; COSE_Key
@@ -347,8 +345,8 @@ interface IRemotelyProvisionedComponent {
      *     protected: bstr .cbor { 1 : AlgorithmEdDSA / AlgorithmES256 },
      *     unprotected: {},
      *     payload: bstr .cbor Data / nil,
-     *     signature: bstr      ; PureEd25519(CDI_Leaf_Priv, bstr .cbor SignedDataSigStruct<Data>) /
-     *                          ; ECDSA(CDI_Leaf_Priv, bstr .cbor SignedDataSigStruct<Data>)
+     *     signature: bstr      ; PureEd25519(CDI_Leaf_Priv, SignedDataSigStruct<Data>) /
+     *                          ; ECDSA(CDI_Leaf_Priv, SignedDataSigStruct<Data>)
      * ]
      *
      * ; Sig_structure for SignedData
@@ -427,8 +425,8 @@ interface IRemotelyProvisionedComponent {
      *     protected : bstr .cbor { 1 : AlgorithmEdDSA / AlgorithmES256 },
      *     unprotected: {},
      *     payload: bstr .cbor DiceChainEntryPayload,
-     *     signature: bstr ; PureEd25519(SigningKey, bstr .cbor DiceChainEntryInput) /
-     *                     ; ECDSA(SigningKey, bstr .cbor DiceChainEntryInput)
+     *     signature: bstr ; PureEd25519(SigningKey, DiceChainEntryInput) /
+     *                     ; ECDSA(SigningKey, DiceChainEntryInput)
      *                     ; See RFC 8032 for details of how to encode the signature value
      *                     ; for Ed25519.
      * ]
@@ -442,12 +440,9 @@ interface IRemotelyProvisionedComponent {
      *
      * ; The following section defines some types that are reused throughout the above
      * ; data structures.
-     * PubKeyX25519 = {                 ; COSE_Key
-     *      1 : 1,                      ; Key type : Octet Key Pair
-     *     -1 : 4,                      ; Curve : X25519
-     *     -2 : bstr                    ; Sender X25519 public key
-     * }
-     *
+     * ; NOTE: Integer encoding is different for Ed25519 and P256 keys:
+     * ;       - Ed25519 is LE: https://www.rfc-editor.org/rfc/rfc8032#section-3.1
+     * ;       - P256 is BE: https://www.secg.org/sec1-v2.pdf#page=19 (section 2.3.7)
      * PubKeyEd25519 = {                ; COSE_Key
      *     1 : 1,                       ; Key type : octet key pair
      *     3 : AlgorithmEdDSA,          ; Algorithm : EdDSA
@@ -455,19 +450,12 @@ interface IRemotelyProvisionedComponent {
      *     -2 : bstr                    ; X coordinate, little-endian
      * }
      *
-     * PubKeyEcdhP256 = {               ; COSE_Key
-     *      1 : 2,                      ; Key type : EC2
-     *      -1 : 1,                     ; Curve : P256
-     *      -2 : bstr                   ; Sender X coordinate
-     *      -3 : bstr                   ; Sender Y coordinate
-     * }
-     *
      * PubKeyECDSA256 = {               ; COSE_Key
      *     1 : 2,                       ; Key type : EC2
      *     3 : AlgorithmES256,          ; Algorithm : ECDSA w/ SHA-256
      *     -1 : 1,                      ; Curve: P256
-     *     -2 : bstr,                   ; X coordinate
-     *     -3 : bstr                    ; Y coordinate
+     *     -2 : bstr,                   ; X coordinate, big-endian
+     *     -3 : bstr                    ; Y coordinate, big-endian
      * }
      *
      * AlgorithmES256 = -7

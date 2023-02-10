@@ -32,7 +32,48 @@ class EnvReverbSwContext final : public EffectContext {
         : EffectContext(statusDepth, common) {
         LOG(DEBUG) << __func__;
     }
-    // TODO: add specific context here
+
+    RetCode setErRoomLevel(int roomLevel);
+    int getErRoomLevel() const { return mRoomLevel; }
+
+    RetCode setErRoomHfLevel(int roomHfLevel);
+    int getErRoomHfLevel() const { return mRoomHfLevel; }
+
+    RetCode setErDecayTime(int decayTime);
+    int getErDecayTime() const { return mDecayTime; }
+
+    RetCode setErDecayHfRatio(int decayHfRatio);
+    int getErDecayHfRatio() const { return mDecayHfRatio; }
+
+    RetCode setErLevel(int level);
+    int getErLevel() const { return mLevel; }
+
+    RetCode setErDelay(int delay);
+    int getErDelay() const { return mDelay; }
+
+    RetCode setErDiffusion(int diffusion);
+    int getErDiffusion() const { return mDiffusion; }
+
+    RetCode setErDensity(int density);
+    int getErDensity() const { return mDensity; }
+
+    RetCode setErBypass(bool bypass) {
+        // TODO : Add implementation to apply new bypass
+        mBypass = bypass;
+        return RetCode::SUCCESS;
+    }
+    bool getErBypass() const { return mBypass; }
+
+  private:
+    int mRoomLevel = -6000;                                        // Default room level
+    int mRoomHfLevel = 0;                                          // Default room hf level
+    int mDecayTime = 1000;                                         // Default decay time
+    int mDecayHfRatio = 500;                                       // Default decay hf ratio
+    int mLevel = -6000;                                            // Default level
+    int mDelay = 40;                                               // Default delay
+    int mDiffusion = 1000;                                         // Default diffusion
+    int mDensity = 1000;                                           // Default density
+    bool mBypass = false;                                          // Default bypass
 };
 
 class EnvReverbSw final : public EffectImpl {
@@ -60,7 +101,7 @@ class EnvReverbSw final : public EffectImpl {
 
   private:
     std::shared_ptr<EnvReverbSwContext> mContext;
-    /* parameters */
-    EnvironmentalReverb mSpecificParam;
+    ndk::ScopedAStatus getParameterEnvironmentalReverb(const EnvironmentalReverb::Tag& tag,
+                                                       Parameter::Specific* specific);
 };
 }  // namespace aidl::android::hardware::audio::effect

@@ -1,12 +1,4 @@
 <compatibility-matrix version="1.0" type="framework" level="8">
-    <hal format="hidl" optional="true">
-        <name>android.hardware.atrace</name>
-        <version>1.0</version>
-        <interface>
-            <name>IAtraceDevice</name>
-            <instance>default</instance>
-        </interface>
-    </hal>
     <hal format="hidl" optional="false">
         <name>android.hardware.audio</name>
         <version>6.0</version>
@@ -68,16 +60,9 @@
              <instance>default</instance>
          </interface>
     </hal>
-    <hal format="hidl" optional="true">
-        <name>android.hardware.authsecret</name>
-        <version>1.0</version>
-        <interface>
-            <name>IAuthSecret</name>
-            <instance>default</instance>
-        </interface>
-    </hal>
     <hal format="aidl" optional="true">
         <name>android.hardware.automotive.audiocontrol</name>
+        <version>2</version>
         <interface>
             <name>IAudioControl</name>
             <instance>default</instance>
@@ -250,14 +235,6 @@
             <instance>default</instance>
         </interface>
     </hal>
-    <hal format="hidl" optional="true">
-        <name>android.hardware.gatekeeper</name>
-        <version>1.0</version>
-        <interface>
-            <name>IGatekeeper</name>
-            <instance>default</instance>
-        </interface>
-    </hal>
     <hal format="aidl" optional="true">
         <name>android.hardware.gatekeeper</name>
         <version>1</version>
@@ -268,7 +245,7 @@
     </hal>
     <hal format="aidl" optional="true">
         <name>android.hardware.gnss</name>
-        <version>3</version>
+        <version>2-3</version>
         <interface>
             <name>IGnss</name>
             <instance>default</instance>
@@ -306,6 +283,7 @@
             <instance>default</instance>
         </interface>
     </hal>
+    <!-- Either the native or the HIDL mapper HAL must exist on the device -->
     <hal format="hidl" optional="true">
         <name>android.hardware.graphics.mapper</name>
         <!-- New, non-Go devices should use 4.0, tested in vts_treble_vintf_vendor_test -->
@@ -449,7 +427,7 @@
     </hal>
     <hal format="aidl" optional="false">
         <name>android.hardware.power</name>
-        <version>2-4</version>
+        <version>4</version>
         <interface>
             <name>IPower</name>
             <instance>default</instance>
@@ -550,14 +528,6 @@
             <instance>slot3</instance>
         </interface>
     </hal>
-    <hal format="hidl" optional="true">
-        <name>android.hardware.radio</name>
-        <version>1.2</version>
-        <interface>
-            <name>ISap</name>
-            <instance>slot1</instance>
-        </interface>
-    </hal>
     <hal format="aidl" optional="true">
         <name>android.hardware.radio.ims.media</name>
         <version>1</version>
@@ -616,6 +586,14 @@
             <instance>default</instance>
         </interface>
     </hal>
+    <hal format="hidl" optional="true">
+        <name>android.hardware.soundtrigger</name>
+        <version>2.3</version>
+        <interface>
+            <name>ISoundTriggerHw</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
     <hal format="aidl" optional="true">
          <name>android.hardware.soundtrigger3</name>
          <version>1</version>
@@ -649,16 +627,23 @@
         </interface>
     </hal>
     <hal format="aidl" optional="true">
-        <name>android.hardware.tv.cec</name>
+        <name>android.hardware.tv.hdmi.cec</name>
         <interface>
             <name>IHdmiCec</name>
             <instance>default</instance>
         </interface>
     </hal>
     <hal format="aidl" optional="true">
-        <name>android.hardware.tv.hdmi</name>
+        <name>android.hardware.tv.hdmi.earc</name>
         <interface>
-            <name>IHdmi</name>
+            <name>IEArc</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="aidl" optional="true">
+        <name>android.hardware.tv.hdmi.connection</name>
+        <interface>
+            <name>IHdmiConnection</name>
             <instance>default</instance>
         </interface>
     </hal>
@@ -717,14 +702,6 @@
             <instance>default</instance>
         </interface>
     </hal>
-    <hal format="hidl" optional="true">
-        <name>android.hardware.weaver</name>
-        <version>1.0</version>
-        <interface>
-            <name>IWeaver</name>
-            <instance>default</instance>
-        </interface>
-    </hal>
     <hal format="aidl" optional="true">
         <name>android.hardware.weaver</name>
         <version>2</version>
@@ -763,6 +740,15 @@
         <interface>
             <name>ISupplicant</name>
             <instance>default</instance>
+        </interface>
+    </hal>
+    <!-- Either the native or the HIDL mapper HAL must exist on the device -->
+    <hal format="native" optional="true">
+        <name>mapper</name>
+        <version>5.0</version>
+        <interface>
+            <name>I</name>
+            <regex-instance>.*</regex-instance>
         </interface>
     </hal>
 </compatibility-matrix>
