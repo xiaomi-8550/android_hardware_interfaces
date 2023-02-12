@@ -52,13 +52,18 @@ union Volume {
         VendorExtension extension;
 
         /**
-         * Volume strength supported in dB.
+         * Minimum Volume level supported in dB.
          */
-        int maxLevel;
+        int minLevelDb;
+
+        /**
+         * Maximum Volume level supported in dB.
+         */
+        int maxLevelDb;
     }
 
     /**
-     * Current level in dB.
+     * Current level in dB with supported minimum and maximum level specified in capability.
      */
     int levelDb;
     /**

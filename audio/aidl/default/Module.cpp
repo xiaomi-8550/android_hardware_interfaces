@@ -25,29 +25,35 @@
 #include <aidl/android/media/audio/common/AudioInputFlags.h>
 #include <aidl/android/media/audio/common/AudioOutputFlags.h>
 
+#include "core-impl/Bluetooth.h"
 #include "core-impl/Module.h"
 #include "core-impl/SoundDose.h"
+#include "core-impl/StreamStub.h"
 #include "core-impl/Telephony.h"
 #include "core-impl/utils.h"
 
 using aidl::android::hardware::audio::common::SinkMetadata;
 using aidl::android::hardware::audio::common::SourceMetadata;
+using aidl::android::hardware::audio::core::sounddose::ISoundDose;
 using aidl::android::media::audio::common::AudioChannelLayout;
 using aidl::android::media::audio::common::AudioDevice;
 using aidl::android::media::audio::common::AudioFormatDescription;
 using aidl::android::media::audio::common::AudioFormatType;
 using aidl::android::media::audio::common::AudioInputFlags;
 using aidl::android::media::audio::common::AudioIoFlags;
+using aidl::android::media::audio::common::AudioMode;
 using aidl::android::media::audio::common::AudioOffloadInfo;
 using aidl::android::media::audio::common::AudioOutputFlags;
 using aidl::android::media::audio::common::AudioPort;
 using aidl::android::media::audio::common::AudioPortConfig;
 using aidl::android::media::audio::common::AudioPortExt;
 using aidl::android::media::audio::common::AudioProfile;
+using aidl::android::media::audio::common::Boolean;
 using aidl::android::media::audio::common::Int;
 using aidl::android::media::audio::common::PcmType;
 using android::hardware::audio::common::getFrameSizeInBytes;
 using android::hardware::audio::common::isBitPositionFlagSet;
+using android::hardware::audio::common::isValidAudioMode;
 
 namespace aidl::android::hardware::audio::core {
 
@@ -99,9 +105,10 @@ void Module::cleanUpPatch(int32_t patchId) {
     erase_all_values(mPatches, std::set<int32_t>{patchId});
 }
 
-ndk::ScopedAStatus Module::createStreamContext(int32_t in_portConfigId, int64_t in_bufferSizeFrames,
-                                               std::shared_ptr<IStreamCallback> asyncCallback,
-                                               StreamContext* out_context) {
+ndk::ScopedAStatus Module::createStreamContext(
+        int32_t in_portConfigId, int64_t in_bufferSizeFrames,
+        std::shared_ptr<IStreamCallback> asyncCallback,
+        std::shared_ptr<IStreamOutEventCallback> outEventCallback, StreamContext* out_context) {
     if (in_bufferSizeFrames <= 0) {
         LOG(ERROR) << __func__ << ": non-positive buffer size " << in_bufferSizeFrames;
         return ndk::ScopedAStatus::fromExceptionCode(EX_ILLEGAL_ARGUMENT);
@@ -136,12 +143,15 @@ ndk::ScopedAStatus Module::createStreamContext(int32_t in_portConfigId, int64_t 
         (flags.getTag() == AudioIoFlags::Tag::output &&
          !isBitPositionFlagSet(flags.get<AudioIoFlags::Tag::output>(),
                                AudioOutputFlags::MMAP_NOIRQ))) {
+        StreamContext::DebugParameters params{mDebug.streamTransientStateDelayMs,
+                                              mVendorDebug.forceTransientBurst,
+                                              mVendorDebug.forceSynchronousDrain};
         StreamContext temp(
                 std::make_unique<StreamContext::CommandMQ>(1, true /*configureEventFlagWord*/),
                 std::make_unique<StreamContext::ReplyMQ>(1, true /*configureEventFlagWord*/),
                 portConfigIt->format.value(), portConfigIt->channelMask.value(),
                 std::make_unique<StreamContext::DataMQ>(frameSize * in_bufferSizeFrames),
-                asyncCallback, mDebug.streamTransientStateDelayMs);
+                asyncCallback, outEventCallback, params);
         if (temp.isValid()) {
             *out_context = std::move(temp);
         } else {
@@ -322,6 +332,18 @@ ndk::ScopedAStatus Module::getTelephony(std::shared_ptr<ITelephony>* _aidl_retur
     }
     *_aidl_return = mTelephony;
     LOG(DEBUG) << __func__ << ": returning instance of ITelephony: " << _aidl_return->get();
+    return ndk::ScopedAStatus::ok();
+}
+
+ndk::ScopedAStatus Module::getBluetooth(std::shared_ptr<IBluetooth>* _aidl_return) {
+    if (mBluetooth == nullptr) {
+        mBluetooth = ndk::SharedRefBase::make<Bluetooth>();
+        mBluetoothBinder = mBluetooth->asBinder();
+        AIBinder_setMinSchedulerPolicy(mBluetoothBinder.get(), SCHED_NORMAL,
+                                       ANDROID_PRIORITY_AUDIO);
+    }
+    *_aidl_return = mBluetooth;
+    LOG(DEBUG) << __func__ << ": returning instance of IBluetooth: " << _aidl_return->get();
     return ndk::ScopedAStatus::ok();
 }
 
@@ -527,14 +549,15 @@ ndk::ScopedAStatus Module::openInputStream(const OpenInputStreamArguments& in_ar
     }
     StreamContext context;
     if (auto status = createStreamContext(in_args.portConfigId, in_args.bufferSizeFrames, nullptr,
-                                          &context);
+                                          nullptr, &context);
         !status.isOk()) {
         return status;
     }
     context.fillDescriptor(&_aidl_return->desc);
     std::shared_ptr<StreamIn> stream;
-    if (auto status = StreamIn::createInstance(in_args.sinkMetadata, std::move(context),
-                                               mConfig->microphones, &stream);
+    // TODO: Add a mapping from module instance names to a corresponding 'createInstance'.
+    if (auto status = StreamInStub::createInstance(in_args.sinkMetadata, std::move(context),
+                                                   mConfig->microphones, &stream);
         !status.isOk()) {
         return status;
     }
@@ -580,14 +603,16 @@ ndk::ScopedAStatus Module::openOutputStream(const OpenOutputStreamArguments& in_
     }
     StreamContext context;
     if (auto status = createStreamContext(in_args.portConfigId, in_args.bufferSizeFrames,
-                                          isNonBlocking ? in_args.callback : nullptr, &context);
+                                          isNonBlocking ? in_args.callback : nullptr,
+                                          in_args.eventCallback, &context);
         !status.isOk()) {
         return status;
     }
     context.fillDescriptor(&_aidl_return->desc);
     std::shared_ptr<StreamOut> stream;
-    if (auto status = StreamOut::createInstance(in_args.sourceMetadata, std::move(context),
-                                                in_args.offloadInfo, &stream);
+    // TODO: Add a mapping from module instance names to a corresponding 'createInstance'.
+    if (auto status = StreamOutStub::createInstance(in_args.sourceMetadata, std::move(context),
+                                                    in_args.offloadInfo, &stream);
         !status.isOk()) {
         return status;
     }
@@ -601,6 +626,13 @@ ndk::ScopedAStatus Module::openOutputStream(const OpenOutputStreamArguments& in_
     mStreams.insert(port->id, in_args.portConfigId, std::move(streamWrapper));
     _aidl_return->stream = std::move(stream);
     return ndk::ScopedAStatus::ok();
+}
+
+ndk::ScopedAStatus Module::getSupportedPlaybackRateFactors(
+        SupportedPlaybackRateFactors* _aidl_return) {
+    LOG(DEBUG) << __func__;
+    (void)_aidl_return;
+    return ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);
 }
 
 ndk::ScopedAStatus Module::setAudioPatch(const AudioPatch& in_requested, AudioPatch* _aidl_return) {
@@ -922,6 +954,10 @@ ndk::ScopedAStatus Module::getMicrophones(std::vector<MicrophoneInfo>* _aidl_ret
 }
 
 ndk::ScopedAStatus Module::updateAudioMode(AudioMode in_mode) {
+    if (!isValidAudioMode(in_mode)) {
+        LOG(ERROR) << __func__ << ": invalid mode " << toString(in_mode);
+        return ndk::ScopedAStatus::fromExceptionCode(EX_ILLEGAL_ARGUMENT);
+    }
     // No checks for supported audio modes here, it's an informative notification.
     LOG(DEBUG) << __func__ << ": " << toString(in_mode);
     return ndk::ScopedAStatus::ok();
@@ -939,7 +975,7 @@ ndk::ScopedAStatus Module::updateScreenState(bool in_isTurnedOn) {
 
 ndk::ScopedAStatus Module::getSoundDose(std::shared_ptr<ISoundDose>* _aidl_return) {
     if (mSoundDose == nullptr) {
-        mSoundDose = ndk::SharedRefBase::make<SoundDose>();
+        mSoundDose = ndk::SharedRefBase::make<sounddose::SoundDose>();
         mSoundDoseBinder = mSoundDose->asBinder();
         AIBinder_setMinSchedulerPolicy(mSoundDoseBinder.get(), SCHED_NORMAL,
                                        ANDROID_PRIORITY_AUDIO);
@@ -955,17 +991,92 @@ ndk::ScopedAStatus Module::generateHwAvSyncId(int32_t* _aidl_return) {
     return ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);
 }
 
+const std::string Module::VendorDebug::kForceTransientBurstName = "aosp.forceTransientBurst";
+const std::string Module::VendorDebug::kForceSynchronousDrainName = "aosp.forceSynchronousDrain";
+
 ndk::ScopedAStatus Module::getVendorParameters(const std::vector<std::string>& in_ids,
                                                std::vector<VendorParameter>* _aidl_return) {
     LOG(DEBUG) << __func__ << ": id count: " << in_ids.size();
-    (void)_aidl_return;
-    return ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);
+    bool allParametersKnown = true;
+    for (const auto& id : in_ids) {
+        if (id == VendorDebug::kForceTransientBurstName) {
+            VendorParameter forceTransientBurst{.id = id};
+            forceTransientBurst.ext.setParcelable(Boolean{mVendorDebug.forceTransientBurst});
+            _aidl_return->push_back(std::move(forceTransientBurst));
+        } else if (id == VendorDebug::kForceSynchronousDrainName) {
+            VendorParameter forceSynchronousDrain{.id = id};
+            forceSynchronousDrain.ext.setParcelable(Boolean{mVendorDebug.forceSynchronousDrain});
+            _aidl_return->push_back(std::move(forceSynchronousDrain));
+        } else {
+            allParametersKnown = false;
+            LOG(ERROR) << __func__ << ": unrecognized parameter \"" << id << "\"";
+        }
+    }
+    if (allParametersKnown) return ndk::ScopedAStatus::ok();
+    return ndk::ScopedAStatus::fromExceptionCode(EX_ILLEGAL_ARGUMENT);
 }
+
+namespace {
+
+template <typename W>
+bool extractParameter(const VendorParameter& p, decltype(W::value)* v) {
+    std::optional<W> value;
+    binder_status_t result = p.ext.getParcelable(&value);
+    if (result == STATUS_OK && value.has_value()) {
+        *v = value.value().value;
+        return true;
+    }
+    LOG(ERROR) << __func__ << ": failed to read the value of the parameter \"" << p.id
+               << "\": " << result;
+    return false;
+}
+
+}  // namespace
 
 ndk::ScopedAStatus Module::setVendorParameters(const std::vector<VendorParameter>& in_parameters,
                                                bool in_async) {
     LOG(DEBUG) << __func__ << ": parameter count " << in_parameters.size()
                << ", async: " << in_async;
+    bool allParametersKnown = true;
+    for (const auto& p : in_parameters) {
+        if (p.id == VendorDebug::kForceTransientBurstName) {
+            if (!extractParameter<Boolean>(p, &mVendorDebug.forceTransientBurst)) {
+                return ndk::ScopedAStatus::fromExceptionCode(EX_ILLEGAL_ARGUMENT);
+            }
+        } else if (p.id == VendorDebug::kForceSynchronousDrainName) {
+            if (!extractParameter<Boolean>(p, &mVendorDebug.forceSynchronousDrain)) {
+                return ndk::ScopedAStatus::fromExceptionCode(EX_ILLEGAL_ARGUMENT);
+            }
+        } else {
+            allParametersKnown = false;
+            LOG(ERROR) << __func__ << ": unrecognized parameter \"" << p.id << "\"";
+        }
+    }
+    if (allParametersKnown) return ndk::ScopedAStatus::ok();
+    return ndk::ScopedAStatus::fromExceptionCode(EX_ILLEGAL_ARGUMENT);
+}
+
+ndk::ScopedAStatus Module::addDeviceEffect(
+        int32_t in_portConfigId,
+        const std::shared_ptr<::aidl::android::hardware::audio::effect::IEffect>& in_effect) {
+    if (in_effect == nullptr) {
+        LOG(DEBUG) << __func__ << ": port id " << in_portConfigId << ", null effect";
+    } else {
+        LOG(DEBUG) << __func__ << ": port id " << in_portConfigId << ", effect Binder "
+                   << in_effect->asBinder().get();
+    }
+    return ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);
+}
+
+ndk::ScopedAStatus Module::removeDeviceEffect(
+        int32_t in_portConfigId,
+        const std::shared_ptr<::aidl::android::hardware::audio::effect::IEffect>& in_effect) {
+    if (in_effect == nullptr) {
+        LOG(DEBUG) << __func__ << ": port id " << in_portConfigId << ", null effect";
+    } else {
+        LOG(DEBUG) << __func__ << ": port id " << in_portConfigId << ", effect Binder "
+                   << in_effect->asBinder().get();
+    }
     return ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);
 }
 

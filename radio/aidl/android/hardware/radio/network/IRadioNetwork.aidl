@@ -487,15 +487,21 @@ oneway interface IRadioNetwork {
 
     /**
      * Set if null encryption and integrity modes are enabled. If the value of enabled is false
-     * the modem must not allow any network communications with null ciphering or null integrity
-     * modes.
+     * the modem must not allow any network communications with null ciphering (for both signalling
+     * and user data) or null integrity (for signalling) modes for 3G and above, even if the
+     * network only uses null algorithms. This setting must be respected even if
+     * "cipheringDisabled" (as defined in TS 38.331) is in use by the network.
+     *
+     * For 2G, which does not use integrity protection, the modem must only disallow any network
+     * communications with null ciphering.
      *
      * In the case when enabled is false, integrity protection for user data is optional, but
-     * ciphering for user data is required. In case of an emergency call, the modem must bypass
-     * this setting.
+     * ciphering for user data is required.
+     *
+     * In case of an emergency call, the modem must bypass this setting.
      *
      * Null ciphering and integrity modes include (but are not limited to):
-     * 2G: A5/0
+     * 2G: A5/0 and GEA0
      * 3G: UEA0 and UIA0
      * 4G: EEA0 and EIA0
      * 5G: NEA0 and NIA0
@@ -549,30 +555,4 @@ oneway interface IRadioNetwork {
      * Response function is IRadioNetworkResponse.setN1ModeEnabledResponse()
      */
     void setN1ModeEnabled(in int serial, boolean enable);
-
-    /**
-     * This API updates the current user setting of sharing the location data. This value must be
-     * used by radio before honoring a network initiated location request for non emergency use
-     * cases. The radio shall ignore this setting during emergency call, emergency SMS or emergency
-     * call back modes and continue to provide the location information to the network initiated
-     * location requests.
-     *
-     * @param serial Serial number of request.
-     * @param shareLocation Whether to share location data to the network or not. true means the
-     *         radio is allowed to provide location data for any network initiated locations
-     *         request. false means the radio must not share location data for any network initiated
-     *         location requests for non-emergency use cases.
-     *
-     * Response function is IRadioNetworkResponse.setLocationPrivacySettingResponse()
-     */
-    void setLocationPrivacySetting(in int serial, in boolean shareLocation);
-
-    /**
-     * Request the current setting of sharing the location data.
-     *
-     * @param serial Serial number of request.
-     *
-     * Response function is IRadioNetworkResponse.getLocationPrivacySettingResponse()
-     */
-    void getLocationPrivacySetting(in int serial);
 }

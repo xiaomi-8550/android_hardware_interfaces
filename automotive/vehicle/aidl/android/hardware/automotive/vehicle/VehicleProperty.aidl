@@ -441,6 +441,17 @@ enum VehicleProperty {
     CRITICALLY_LOW_TIRE_PRESSURE = 0x030A + 0x10000000 + 0x07000000
             + 0x00600000, // VehiclePropertyGroup:SYSTEM,VehicleArea:WHEEL,VehiclePropertyType:FLOAT
     /**
+     * Represents feature for engine idle automatic stop.
+     *
+     * If true, the vehicle may automatically shut off the engine when it is not needed and then
+     * automatically restart it when needed.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ_WRITE
+     */
+    ENGINE_IDLE_AUTO_STOP_ENABLED =
+            0x0320 + VehiclePropertyGroup.SYSTEM + VehicleArea.GLOBAL + VehiclePropertyType.BOOLEAN,
+    /**
      * Currently selected gear
      *
      * This is the gear selected by the user.
@@ -591,6 +602,20 @@ enum VehicleProperty {
      */
     TRACTION_CONTROL_ACTIVE = 0x040B + 0x10000000 + 0x01000000
             + 0x00200000, // VehiclePropertyGroup:SYSTEM,VehicleArea:GLOBAL,VehiclePropertyType:BOOLEAN
+    /**
+     * Represents property for the current stopping mode of the vehicle.
+     *
+     * For the global area ID (0), the VehicleAreaConfig#supportedEnumValues must be defined unless
+     * all enum values of EvStoppingMode are supported.
+     *
+     * The EvStoppingMode enum may be extended to include more states in the future.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ_WRITE
+     * @data_enum EvStoppingMode
+     */
+    EV_STOPPING_MODE =
+            0x040D + VehiclePropertyGroup.SYSTEM + VehicleArea.GLOBAL + VehiclePropertyType.INT32,
     /**
      * HVAC Properties
      *
@@ -1749,7 +1774,11 @@ enum VehicleProperty {
     SEAT_LUMBAR_SIDE_SUPPORT_MOVE = 0x0B94 + 0x10000000 + 0x05000000
             + 0x00400000, // VehiclePropertyGroup:SYSTEM,VehicleArea:SEAT,VehiclePropertyType:INT32
     /**
-     * Headrest height position
+     * (Deprecated) Headrest height position
+     *
+     * This property is deprecated because it is defined as type VehicleArea:GLOBAL, which means all
+     * seats use the same value. Use SEAT_HEADREST_HEIGHT_POS_V2 instead which fixes this issue by
+     * being defined as type VehicleArea:SEAT.
      *
      * Sets the headrest height.
      * Max value indicates tallest setting.
@@ -1760,6 +1789,25 @@ enum VehicleProperty {
      */
     SEAT_HEADREST_HEIGHT_POS = 0x0B95 + 0x10000000 + 0x01000000
             + 0x00400000, // VehiclePropertyGroup:SYSTEM,VehicleArea:GLOBAL,VehiclePropertyType:INT32
+
+    /**
+     * Headrest height position
+     *
+     * Sets the headrest height for supported seats. VehiclePropConfig.areaConfigs specifies which
+     * seats are supported.
+     *
+     * The maxInt32Value and minInt32Value in VehicleAreaConfig must be defined. All values between
+     * minInt32Value and maxInt32Value must be supported. The maxInt32Value indicates the tallest
+     * setting and the minInt32Value indicates the shortest setting.
+     *
+     * This value is not in any particular unit but in a specified range of steps.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ_WRITE
+     */
+    SEAT_HEADREST_HEIGHT_POS_V2 =
+            0x0BA4 + VehiclePropertyGroup.SYSTEM + VehicleArea.SEAT + VehiclePropertyType.INT32,
+
     /**
      * Headrest height move
      *
@@ -1812,6 +1860,48 @@ enum VehicleProperty {
      */
     SEAT_HEADREST_FORE_AFT_MOVE = 0x0B9A + 0x10000000 + 0x05000000
             + 0x00400000, // VehiclePropertyGroup:SYSTEM,VehicleArea:SEAT,VehiclePropertyType:INT32
+    /**
+     * Represents property for the seat footwell lights state.
+     *
+     * SEAT_FOOTWELL_LIGHTS_STATE reflects the current state of the lights at any point in time.
+     * This is different from the function of SEAT_FOOTWELL_LIGHTS_SWITCH which represents the
+     * position of the switch controlling the lights. Therefore, SEAT_FOOTWELL_LIGHTS_STATE may not
+     * match the value of SEAT_FOOTWELL_LIGHTS_SWITCH (e.g. SEAT_FOOTWELL_LIGHTS_SWITCH=AUTOMATIC
+     * and SEAT_FOOTWELL_LIGHTS_STATE=ON).
+     *
+     * This property should only be implemented if SEAT_FOOTWELL_LIGHTS_STATE's value may be
+     * different from that of CABIN_LIGHTS_STATE.
+     *
+     * For each supported area ID, the VehicleAreaConfig#supportedEnumValues must be defined unless
+     * all enum values of VehicleLightState are supported.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ
+     * @data_enum VehicleLightState
+     */
+    SEAT_FOOTWELL_LIGHTS_STATE =
+            0x0B9B + VehiclePropertyGroup.SYSTEM + VehicleArea.SEAT + VehiclePropertyType.INT32,
+    /**
+     * Represents property for the seat footwell lights switch.
+     *
+     * SEAT_FOOTWELL_LIGHTS_SWITCH represents the position of the switch controlling the lights.
+     * This is different from the function of SEAT_FOOTWELL_LIGHTS_STATE which reflects the current
+     * state of the lights at any point in time. Therefore, SEAT_FOOTWELL_LIGHTS_SWITCH may not
+     * match the value of SEAT_FOOTWELL_LIGHTS_STATE (e.g. SEAT_FOOTWELL_LIGHTS_SWITCH=AUTOMATIC and
+     * SEAT_FOOTWELL_LIGHTS_STATE=ON).
+     *
+     * This property should only be implemented if SEAT_FOOTWELL_LIGHTS_SWITCH's value may be
+     * different from that of CABIN_LIGHTS_SWITCH.
+     *
+     * For each supported area ID, the VehicleAreaConfig#supportedEnumValues must be defined unless
+     * all enum values of VehicleLightSwitch are supported.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ_WRITE
+     * @data_enum VehicleLightSwitch
+     */
+    SEAT_FOOTWELL_LIGHTS_SWITCH =
+            0x0B9C + VehiclePropertyGroup.SYSTEM + VehicleArea.SEAT + VehiclePropertyType.INT32,
     /**
      * Represents property for Seat easy access feature.
      *
@@ -1911,6 +2001,27 @@ enum VehicleProperty {
      */
     SEAT_LUMBAR_VERTICAL_MOVE =
             0x0BA2 + VehiclePropertyGroup.SYSTEM + VehicleArea.SEAT + VehiclePropertyType.INT32,
+    /**
+     * Represents property that indicates the current walk-in position of the seat.
+     *
+     * The maxInt32Value and minInt32Value in VehicleAreaConfig must be defined.
+     * The minInt32Value must be 0.
+     * All integers between minInt32Value and maxInt32Value must be supported.
+     *
+     * minInt32Value indicates the normal seat position.
+     * maxInt32Value indicates the seat is in the full walk-in position.
+     *
+     * Values in between minInt32Value and maxInt32Value indicate a transition state between the
+     * normal and walk-in positions.
+     *
+     * The area ID must match the seat that actually moves when the walk-in feature activates, not
+     * the intended seat the passengers will sit in.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ_WRITE
+     */
+    SEAT_WALK_IN_POS =
+            0x0BA3 + VehiclePropertyGroup.SYSTEM + VehicleArea.SEAT + VehiclePropertyType.INT32,
     /**
      * Seat Occupancy
      *
@@ -2381,6 +2492,48 @@ enum VehicleProperty {
      */
     READING_LIGHTS_SWITCH = 0x0F04 + 0x10000000 + 0x05000000
             + 0x00400000, // VehiclePropertyGroup:SYSTEM,VehicleArea:SEAT,VehiclePropertyType:INT32
+    /**
+     * Steering wheel lights state
+     *
+     * Represents the current state of the steering wheel lights. This is different from
+     * STEERING_WHEEL_LIGHTS_SWITCH which represents the position of the switch controlling
+     * the lights. Therefore, STEERING_WHEEL_LIGHTS_STATE may not match the value of
+     * STEERING_WHEEL_LIGHTS_SWITCH (e.g. STEERING_WHEEL_LIGHTS_SWITCH=AUTOMATIC and
+     * STEERING_WHEEL_LIGHTS_STATE=ON).
+     *
+     * This property should only be implemented if STEERING_WHEEL_LIGHTS_STATE's value may be
+     * different from that of CABIN_LIGHTS_STATE.
+     *
+     * For the global area ID (0), the VehicleAreaConfig#supportedEnumValues must be defined unless
+     * all enum values of VehicleLightState are supported.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ
+     * @data_enum VehicleLightState
+     */
+    STEERING_WHEEL_LIGHTS_STATE =
+            0x0F0C + VehiclePropertyGroup.SYSTEM + VehicleArea.GLOBAL + VehiclePropertyType.INT32,
+    /**
+     * Steering wheel lights switch
+     *
+     * Represents the position of the switch controlling the steering wheel lights. This is
+     * different from STEERING_WHEEL_LIGHTS_STATE which represents the current state of the steering
+     * wheel lights. Therefore, STEERING_WHEEL_LIGHTS_SWITCH may not match the value of
+     * STEERING_WHEEL_LIGHTS_STATE (e.g. STEERING_WHEEL_LIGHTS_SWITCH=AUTOMATIC and
+     * STEERING_WHEEL_LIGHTS_STATE=ON).
+     *
+     * This property should only be implemented if STEERING_WHEEL_LIGHTS_SWITCH's value may be
+     * different from that of CABIN_LIGHTS_SWITCH.
+     *
+     * For the global area ID (0), the VehicleAreaConfig#supportedEnumValues must be defined unless
+     * all enum values of VehicleLightSwitch are supported.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ_WRITE
+     * @data_enum VehicleLightSwitch
+     */
+    STEERING_WHEEL_LIGHTS_SWITCH =
+            0x0F0D + VehiclePropertyGroup.SYSTEM + VehicleArea.GLOBAL + VehiclePropertyType.INT32,
     /**
      * Support customize permissions for vendor properties
      *
@@ -3264,4 +3417,183 @@ enum VehicleProperty {
      */
     SHUTDOWN_REQUEST =
             0x0F49 + VehiclePropertyGroup.SYSTEM + VehicleArea.GLOBAL + VehiclePropertyType.INT32,
+
+    /***************************************************************************
+     * Start of ADAS Properties
+     * Allocate IDs in range of 0x1000 (inclusive) to 0x1100 (exclusive) for ADAS properties
+     **************************************************************************/
+
+    /**
+     * Enable or disable automatic emergency braking (AEB).
+     *
+     * Set true to enable AEB and false to disable AEB. When AEB is enabled, the ADAS system in the
+     * vehicle should be turned on and monitoring to avoid potential collisions.
+     *
+     * This property is defined as read_write, but OEMs have the option to implement it as read
+     * only.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ_WRITE
+     */
+    AUTOMATIC_EMERGENCY_BRAKING_ENABLED =
+            0x1000 + VehiclePropertyGroup.SYSTEM + VehicleArea.GLOBAL + VehiclePropertyType.BOOLEAN,
+
+    /**
+     * Enable or disable forward collision warning (FCW).
+     *
+     * Set true to enable FCW and false to disable FCW. When FCW is enabled, the ADAS system in the
+     * vehicle should be turned on and monitoring for potential collisions.
+     *
+     * This property is defined as read_write, but OEMs have the option to implement it as read
+     * only.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ_WRITE
+     */
+    FORWARD_COLLISION_WARNING_ENABLED =
+            0x1002 + VehiclePropertyGroup.SYSTEM + VehicleArea.GLOBAL + VehiclePropertyType.BOOLEAN,
+
+    /**
+     * Enable and disable blind spot warning (BSW).
+     *
+     * Set true to enable BSW and false to disable BSW. When BSW is enabled, the ADAS system in the
+     * vehicle should be turned on and monitoring for objects in the vehicle’s blind spots.
+     *
+     * This property is defined as read_write, but OEMs have the option to implement it as read
+     * only.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ_WRITE
+     */
+    BLIND_SPOT_WARNING_ENABLED =
+            0x1004 + VehiclePropertyGroup.SYSTEM + VehicleArea.GLOBAL + VehiclePropertyType.BOOLEAN,
+
+    /**
+     * Enable or disable lane departure warning (LDW).
+     *
+     * Set true to enable LDW and false to disable LDW. When LDW is enabled, the ADAS system in the
+     * vehicle should be turned on and monitoring if the vehicle is approaching or crossing lane
+     * lines, in which case a warning will be given.
+     *
+     * This property is defined as read_write, but OEMs have the option to implement it as read
+     * only.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ_WRITE
+     */
+    LANE_DEPARTURE_WARNING_ENABLED =
+            0x1006 + VehiclePropertyGroup.SYSTEM + VehicleArea.GLOBAL + VehiclePropertyType.BOOLEAN,
+
+    /**
+     * Enable or disable Lane Keep Assist (LKA).
+     *
+     * Set true to enable LKA and false to disable LKA. When LKA is enabled, the ADAS system in the
+     * vehicle should be turned on and monitoring if the driver unintentionally drifts toward or
+     * over the lane marking. If an unintentional lane departure is detected, the system applies
+     * steering control to return the vehicle into the current lane.
+     *
+     * This is different from Lane Centering Assist (LCA) which, when activated, applies continuous
+     * steering control to keep the vehicle centered in the current lane.
+     *
+     * This property is defined as read_write, but OEMs have the option to implement it as read
+     * only.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ_WRITE
+     */
+    LANE_KEEP_ASSIST_ENABLED =
+            0x1008 + VehiclePropertyGroup.SYSTEM + VehicleArea.GLOBAL + VehiclePropertyType.BOOLEAN,
+
+    /**
+     * Enable or disable lane centering assist (LCA).
+     *
+     * Set true to enable LCA and false to disable LCA. When LCA is enabled, the ADAS system in the
+     * vehicle should be turned on and waiting for an activation signal from the driver. Once the
+     * feature is activated, the ADAS system should be steering the vehicle to keep it centered in
+     * its current lane.
+     *
+     * This is different from Lane Keep Assist (LKA) which monitors if the driver unintentionally
+     * drifts toward or over the lane marking. If an unintentional lane departure is detected, the
+     * system applies steering control to return the vehicle into the current lane.
+     *
+     * This property is defined as read_write, but OEMs have the option to implement it as read
+     * only.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ_WRITE
+     */
+    LANE_CENTERING_ASSIST_ENABLED =
+            0x100A + VehiclePropertyGroup.SYSTEM + VehicleArea.GLOBAL + VehiclePropertyType.BOOLEAN,
+
+    /*
+     * Enable or disable emergency lane keep assist (ELKA).
+     *
+     * Set true to enable ELKA and false to disable ELKA. When ELKA is enabled, the ADAS system in
+     * the vehicle should be on and monitoring for unsafe lane changes by the driver. When an unsafe
+     * maneuver is detected, ELKA alerts the driver and applies steering corrections to keep the
+     * vehicle in its original lane.
+     *
+     * This property is defined as read_write, but OEMs have the option to implement it as read
+     * only.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ_WRITE
+     */
+    EMERGENCY_LANE_KEEP_ASSIST_ENABLED =
+            0x100D + VehiclePropertyGroup.SYSTEM + VehicleArea.GLOBAL + VehiclePropertyType.BOOLEAN,
+
+    /**
+     * Enable or disable adaptive cruise control (ACC).
+     *
+     * Set true to enable ACC and false to disable ACC. When ACC is enabled, the ADAS system in the
+     * vehicle should be turned on and waiting for an activation signal from the driver. Once the
+     * feature is activated, the ADAS system in the car should be accelerating and braking in a way
+     * that allows the vehicle to maintain a set speed and to maintain a set distance gap from a
+     * leading vehicle.
+     *
+     * This property is defined as read_write, but OEMs have the option to implement it as read
+     * only.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ_WRITE
+     */
+    ADAPTIVE_CRUISE_CONTROL_ENABLED =
+            0x100F + VehiclePropertyGroup.SYSTEM + VehicleArea.GLOBAL + VehiclePropertyType.BOOLEAN,
+
+    /**
+     * Enable or disable hands on detection (HOD).
+     *
+     * Set true to enable HOD and false to disable HOD. When HOD is enabled, a system inside the
+     * vehicle should be monitoring the presence of the driver's hands on the steering wheel and
+     * send a warning if it detects that the driver's hands are no longer on the steering wheel.
+     *
+     * This property is defined as read_write, but OEMs have the option to implement it as read
+     * only.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ_WRITE
+     */
+    HANDS_ON_DETECTION_ENABLED =
+            0x1015 + VehiclePropertyGroup.SYSTEM + VehicleArea.GLOBAL + VehiclePropertyType.BOOLEAN,
+
+    /**
+     * Enable or disable driver attention monitoring.
+     *
+     * Set true to enable driver attention monitoring and false to disable driver attention
+     * monitoring. When driver attention monitoring is enabled, a system inside the vehicle should
+     * be monitoring the attention level of the driver and should send a warning if it detects that
+     * the driver is distracted.
+     *
+     * This property is defined as read_write, but OEMs have the option to implement it as read
+     * only.
+     *
+     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
+     * @access VehiclePropertyAccess.READ_WRITE
+     */
+    DRIVER_ATTENTION_MONITORING_ENABLED =
+            0x1018 + VehiclePropertyGroup.SYSTEM + VehicleArea.GLOBAL + VehiclePropertyType.BOOLEAN,
+
+    /***************************************************************************
+     * End of ADAS Properties
+     **************************************************************************/
 }
