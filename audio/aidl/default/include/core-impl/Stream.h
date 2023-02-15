@@ -17,6 +17,7 @@
 #pragma once
 
 #include <atomic>
+#include <chrono>
 #include <cstdlib>
 #include <map>
 #include <memory>
@@ -28,7 +29,10 @@
 #include <aidl/android/hardware/audio/common/SourceMetadata.h>
 #include <aidl/android/hardware/audio/core/BnStreamIn.h>
 #include <aidl/android/hardware/audio/core/BnStreamOut.h>
+#include <aidl/android/hardware/audio/core/IStreamCallback.h>
+#include <aidl/android/hardware/audio/core/MicrophoneInfo.h>
 #include <aidl/android/hardware/audio/core/StreamDescriptor.h>
+#include <aidl/android/media/audio/common/AudioDevice.h>
 #include <aidl/android/media/audio/common/AudioOffloadInfo.h>
 #include <fmq/AidlMessageQueue.h>
 #include <system/thread_defs.h>
@@ -59,33 +63,53 @@ class StreamContext {
 
     StreamContext() = default;
     StreamContext(std::unique_ptr<CommandMQ> commandMQ, std::unique_ptr<ReplyMQ> replyMQ,
-                  size_t frameSize, std::unique_ptr<DataMQ> dataMQ)
+                  const ::aidl::android::media::audio::common::AudioFormatDescription& format,
+                  const ::aidl::android::media::audio::common::AudioChannelLayout& channelLayout,
+                  std::unique_ptr<DataMQ> dataMQ, std::shared_ptr<IStreamCallback> asyncCallback,
+                  int transientStateDelayMs)
         : mCommandMQ(std::move(commandMQ)),
           mInternalCommandCookie(std::rand()),
           mReplyMQ(std::move(replyMQ)),
-          mFrameSize(frameSize),
-          mDataMQ(std::move(dataMQ)) {}
+          mFormat(format),
+          mChannelLayout(channelLayout),
+          mDataMQ(std::move(dataMQ)),
+          mAsyncCallback(asyncCallback),
+          mTransientStateDelayMs(transientStateDelayMs) {}
     StreamContext(StreamContext&& other)
         : mCommandMQ(std::move(other.mCommandMQ)),
           mInternalCommandCookie(other.mInternalCommandCookie),
           mReplyMQ(std::move(other.mReplyMQ)),
-          mFrameSize(other.mFrameSize),
-          mDataMQ(std::move(other.mDataMQ)) {}
+          mFormat(other.mFormat),
+          mChannelLayout(other.mChannelLayout),
+          mDataMQ(std::move(other.mDataMQ)),
+          mAsyncCallback(other.mAsyncCallback),
+          mTransientStateDelayMs(other.mTransientStateDelayMs) {}
     StreamContext& operator=(StreamContext&& other) {
         mCommandMQ = std::move(other.mCommandMQ);
         mInternalCommandCookie = other.mInternalCommandCookie;
         mReplyMQ = std::move(other.mReplyMQ);
-        mFrameSize = other.mFrameSize;
+        mFormat = std::move(other.mFormat);
+        mChannelLayout = std::move(other.mChannelLayout);
         mDataMQ = std::move(other.mDataMQ);
+        mAsyncCallback = other.mAsyncCallback;
+        mTransientStateDelayMs = other.mTransientStateDelayMs;
         return *this;
     }
 
     void fillDescriptor(StreamDescriptor* desc);
+    std::shared_ptr<IStreamCallback> getAsyncCallback() const { return mAsyncCallback; }
+    ::aidl::android::media::audio::common::AudioChannelLayout getChannelLayout() const {
+        return mChannelLayout;
+    }
     CommandMQ* getCommandMQ() const { return mCommandMQ.get(); }
     DataMQ* getDataMQ() const { return mDataMQ.get(); }
-    size_t getFrameSize() const { return mFrameSize; }
+    ::aidl::android::media::audio::common::AudioFormatDescription getFormat() const {
+        return mFormat;
+    }
+    size_t getFrameSize() const;
     int getInternalCommandCookie() const { return mInternalCommandCookie; }
     ReplyMQ* getReplyMQ() const { return mReplyMQ.get(); }
+    int getTransientStateDelayMs() const { return mTransientStateDelayMs; }
     bool isValid() const;
     void reset();
 
@@ -93,8 +117,11 @@ class StreamContext {
     std::unique_ptr<CommandMQ> mCommandMQ;
     int mInternalCommandCookie;  // The value used to confirm that the command was posted internally
     std::unique_ptr<ReplyMQ> mReplyMQ;
-    size_t mFrameSize;
+    ::aidl::android::media::audio::common::AudioFormatDescription mFormat;
+    ::aidl::android::media::audio::common::AudioChannelLayout mChannelLayout;
     std::unique_ptr<DataMQ> mDataMQ;
+    std::shared_ptr<IStreamCallback> mAsyncCallback;
+    int mTransientStateDelayMs;
 };
 
 class StreamWorkerCommonLogic : public ::android::hardware::audio::common::StreamLogic {
@@ -111,9 +138,17 @@ class StreamWorkerCommonLogic : public ::android::hardware::audio::common::Strea
           mFrameSize(context.getFrameSize()),
           mCommandMQ(context.getCommandMQ()),
           mReplyMQ(context.getReplyMQ()),
-          mDataMQ(context.getDataMQ()) {}
+          mDataMQ(context.getDataMQ()),
+          mAsyncCallback(context.getAsyncCallback()),
+          mTransientStateDelayMs(context.getTransientStateDelayMs()) {}
     std::string init() override;
     void populateReply(StreamDescriptor::Reply* reply, bool isConnected) const;
+    void populateReplyWrongState(StreamDescriptor::Reply* reply,
+                                 const StreamDescriptor::Command& command) const;
+    void switchToTransientState(StreamDescriptor::State state) {
+        mState = state;
+        mTransientStateStart = std::chrono::steady_clock::now();
+    }
 
     // Atomic fields are used both by the main and worker threads.
     std::atomic<bool> mIsConnected = false;
@@ -125,6 +160,9 @@ class StreamWorkerCommonLogic : public ::android::hardware::audio::common::Strea
     StreamContext::CommandMQ* mCommandMQ;
     StreamContext::ReplyMQ* mReplyMQ;
     StreamContext::DataMQ* mDataMQ;
+    std::shared_ptr<IStreamCallback> mAsyncCallback;
+    const std::chrono::duration<int, std::milli> mTransientStateDelayMs;
+    std::chrono::time_point<std::chrono::steady_clock> mTransientStateStart;
     // We use an array and the "size" field instead of a vector to be able to detect
     // memory allocation issues.
     std::unique_ptr<int8_t[]> mDataBuffer;
@@ -169,7 +207,11 @@ class StreamCommon {
                        : ndk::ScopedAStatus::fromExceptionCode(EX_ILLEGAL_STATE);
     }
     bool isClosed() const { return mWorker.isClosed(); }
-    void setIsConnected(bool connected) { mWorker.setIsConnected(connected); }
+    void setIsConnected(
+            const std::vector<::aidl::android::media::audio::common::AudioDevice>& devices) {
+        mWorker.setIsConnected(!devices.empty());
+        mConnectedDevices = devices;
+    }
     ndk::ScopedAStatus updateMetadata(const Metadata& metadata);
 
   protected:
@@ -181,6 +223,7 @@ class StreamCommon {
     Metadata mMetadata;
     StreamContext mContext;
     StreamWorker mWorker;
+    std::vector<::aidl::android::media::audio::common::AudioDevice> mConnectedDevices;
 };
 
 class StreamIn
@@ -190,6 +233,12 @@ class StreamIn
         return StreamCommon<::aidl::android::hardware::audio::common::SinkMetadata,
                             StreamInWorker>::close();
     }
+    ndk::ScopedAStatus getActiveMicrophones(
+            std::vector<MicrophoneDynamicInfo>* _aidl_return) override;
+    ndk::ScopedAStatus getMicrophoneDirection(MicrophoneDirection* _aidl_return) override;
+    ndk::ScopedAStatus setMicrophoneDirection(MicrophoneDirection in_direction) override;
+    ndk::ScopedAStatus getMicrophoneFieldDimension(float* _aidl_return) override;
+    ndk::ScopedAStatus setMicrophoneFieldDimension(float in_zoom) override;
     ndk::ScopedAStatus updateMetadata(const ::aidl::android::hardware::audio::common::SinkMetadata&
                                               in_sinkMetadata) override {
         return StreamCommon<::aidl::android::hardware::audio::common::SinkMetadata,
@@ -198,7 +247,10 @@ class StreamIn
 
   public:
     StreamIn(const ::aidl::android::hardware::audio::common::SinkMetadata& sinkMetadata,
-             StreamContext context);
+             StreamContext context, const std::vector<MicrophoneInfo>& microphones);
+
+  private:
+    const std::map<::aidl::android::media::audio::common::AudioDevice, std::string> mMicrophones;
 };
 
 class StreamOut : public StreamCommon<::aidl::android::hardware::audio::common::SourceMetadata,
@@ -237,11 +289,12 @@ class StreamWrapper {
                 },
                 mStream);
     }
-    void setStreamIsConnected(bool connected) {
+    void setStreamIsConnected(
+            const std::vector<::aidl::android::media::audio::common::AudioDevice>& devices) {
         std::visit(
                 [&](auto&& ws) {
                     auto s = ws.lock();
-                    if (s) s->setIsConnected(connected);
+                    if (s) s->setIsConnected(devices);
                 },
                 mStream);
     }
@@ -264,9 +317,11 @@ class Streams {
         mStreams.insert(std::pair{portConfigId, sw});
         mStreams.insert(std::pair{portId, std::move(sw)});
     }
-    void setStreamIsConnected(int32_t portConfigId, bool connected) {
+    void setStreamIsConnected(
+            int32_t portConfigId,
+            const std::vector<::aidl::android::media::audio::common::AudioDevice>& devices) {
         if (auto it = mStreams.find(portConfigId); it != mStreams.end()) {
-            it->second.setStreamIsConnected(connected);
+            it->second.setStreamIsConnected(devices);
         }
     }
 

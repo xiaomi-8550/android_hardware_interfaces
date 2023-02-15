@@ -23,5 +23,21 @@ enum VehicleDisplay {
      * The primary Android display (for example, center console)
      */
     MAIN = 0,
+    /**
+     * Instrument cluster display. This may exist only for driver
+     */
     INSTRUMENT_CLUSTER = 1,
+
+    /**
+     * Head Up Display. This may exist only for driver
+     */
+    HUD = 2,
+    /**
+     * Dedicated display for showing IME for {@code MAIN}
+     */
+    INPUT = 3,
+    /**
+     * Auxiliary display which can provide additional screen for {@code MAIN} display
+     */
+    AUXILIARY = 4,
 }

@@ -1223,6 +1223,8 @@ TEST_F(FakeVehicleHardwareTest, testSwitchUser) {
     ASSERT_EQ(events.size(), static_cast<size_t>(1));
 
     events[0].timestamp = 0;
+    // The returned event will have area ID 0.
+    valueToSet.areaId = 0;
     ASSERT_EQ(events[0], valueToSet);
 
     // Try to get switch_user again, should return default value.
@@ -1277,6 +1279,8 @@ TEST_F(FakeVehicleHardwareTest, testCreateUser) {
     auto events = getChangedProperties();
     ASSERT_EQ(events.size(), static_cast<size_t>(1));
     events[0].timestamp = 0;
+    // The returned event will have area ID 0.
+    valueToSet.areaId = 0;
     EXPECT_EQ(events[0], valueToSet);
 
     // Try to get create_user again, should return default value.
@@ -1330,7 +1334,7 @@ TEST_F(FakeVehicleHardwareTest, testInitialUserInfo) {
     ASSERT_EQ(events.size(), static_cast<size_t>(1));
     events[0].timestamp = 0;
     EXPECT_EQ(events[0], (VehiclePropValue{
-                                 .areaId = 1,
+                                 .areaId = 0,
                                  .prop = toInt(VehicleProperty::INITIAL_USER_INFO),
                                  .value.int32Values = {3, 1, 11},
                          }));
@@ -1516,26 +1520,16 @@ TEST_F(FakeVehicleHardwareTest, testDumpInvalidOptions) {
     ASSERT_THAT(result.buffer, ContainsRegex("Invalid option: --invalid"));
 }
 
-TEST_F(FakeVehicleHardwareTest, testDumpFakeUserHalHelp) {
-    std::vector<std::string> options;
-    options.push_back("--user-hal");
-
-    DumpResult result = getHardware()->dump(options);
-    ASSERT_FALSE(result.callerShouldDumpState);
-    ASSERT_NE(result.buffer, "");
-    ASSERT_THAT(result.buffer, ContainsRegex("dumps state used for user management"));
-}
-
 TEST_F(FakeVehicleHardwareTest, testDumpFakeUserHal) {
     std::vector<std::string> options;
     options.push_back("--user-hal");
-    // Indent: " ".
-    options.push_back(" ");
 
     DumpResult result = getHardware()->dump(options);
     ASSERT_FALSE(result.callerShouldDumpState);
     ASSERT_NE(result.buffer, "");
-    ASSERT_THAT(result.buffer, ContainsRegex(" No InitialUserInfo response\n"));
+    ASSERT_THAT(result.buffer,
+                ContainsRegex("No InitialUserInfo response\nNo SwitchUser response\nNo CreateUser "
+                              "response\nNo SetUserIdentificationAssociation response\n"));
 }
 
 struct SetPropTestCase {

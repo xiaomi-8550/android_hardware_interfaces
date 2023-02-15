@@ -61,6 +61,7 @@ std::unordered_map<VehicleProperty, VehiclePropertyAccess> AccessForVehiclePrope
         {VehicleProperty::FUEL_LEVEL, VehiclePropertyAccess::READ},
         {VehicleProperty::FUEL_DOOR_OPEN, VehiclePropertyAccess::READ_WRITE},
         {VehicleProperty::EV_BATTERY_LEVEL, VehiclePropertyAccess::READ},
+        {VehicleProperty::EV_CURRENT_BATTERY_CAPACITY, VehiclePropertyAccess::READ},
         {VehicleProperty::EV_CHARGE_PORT_OPEN, VehiclePropertyAccess::READ_WRITE},
         {VehicleProperty::EV_CHARGE_PORT_CONNECTED, VehiclePropertyAccess::READ},
         {VehicleProperty::EV_BATTERY_INSTANTANEOUS_CHARGE_RATE, VehiclePropertyAccess::READ},
@@ -71,6 +72,7 @@ std::unordered_map<VehicleProperty, VehiclePropertyAccess> AccessForVehiclePrope
         {VehicleProperty::CURRENT_GEAR, VehiclePropertyAccess::READ},
         {VehicleProperty::PARKING_BRAKE_ON, VehiclePropertyAccess::READ},
         {VehicleProperty::PARKING_BRAKE_AUTO_APPLY, VehiclePropertyAccess::READ},
+        {VehicleProperty::EV_BRAKE_REGENERATION_LEVEL, VehiclePropertyAccess::READ_WRITE},
         {VehicleProperty::FUEL_LEVEL_LOW, VehiclePropertyAccess::READ},
         {VehicleProperty::NIGHT_MODE, VehiclePropertyAccess::READ},
         {VehicleProperty::TURN_SIGNAL_STATE, VehiclePropertyAccess::READ},
@@ -114,6 +116,8 @@ std::unordered_map<VehicleProperty, VehiclePropertyAccess> AccessForVehiclePrope
         {VehicleProperty::AP_POWER_BOOTUP_REASON, VehiclePropertyAccess::READ},
         {VehicleProperty::DISPLAY_BRIGHTNESS, VehiclePropertyAccess::READ_WRITE},
         {VehicleProperty::HW_KEY_INPUT, VehiclePropertyAccess::READ},
+        {VehicleProperty::HW_KEY_INPUT_V2, VehiclePropertyAccess::READ},
+        {VehicleProperty::HW_MOTION_INPUT, VehiclePropertyAccess::READ},
         {VehicleProperty::HW_ROTARY_INPUT, VehiclePropertyAccess::READ},
         {VehicleProperty::HW_CUSTOM_INPUT, VehiclePropertyAccess::READ},
         {VehicleProperty::DOOR_POS, VehiclePropertyAccess::READ_WRITE},
@@ -156,6 +160,7 @@ std::unordered_map<VehicleProperty, VehiclePropertyAccess> AccessForVehiclePrope
         {VehicleProperty::SEAT_HEADREST_FORE_AFT_POS, VehiclePropertyAccess::READ_WRITE},
         {VehicleProperty::SEAT_HEADREST_FORE_AFT_MOVE, VehiclePropertyAccess::READ_WRITE},
         {VehicleProperty::SEAT_EASY_ACCESS_ENABLED, VehiclePropertyAccess::READ_WRITE},
+        {VehicleProperty::SEAT_AIRBAG_ENABLED, VehiclePropertyAccess::READ_WRITE},
         {VehicleProperty::SEAT_CUSHION_SIDE_SUPPORT_POS, VehiclePropertyAccess::READ_WRITE},
         {VehicleProperty::SEAT_CUSHION_SIDE_SUPPORT_MOVE, VehiclePropertyAccess::READ_WRITE},
         {VehicleProperty::SEAT_LUMBAR_VERTICAL_POS, VehiclePropertyAccess::READ_WRITE},
@@ -223,6 +228,7 @@ std::unordered_map<VehicleProperty, VehiclePropertyAccess> AccessForVehiclePrope
         {VehicleProperty::VEHICLE_CURB_WEIGHT, VehiclePropertyAccess::READ},
         {VehicleProperty::GENERAL_SAFETY_REGULATION_COMPLIANCE_REQUIREMENT, VehiclePropertyAccess::READ},
         {VehicleProperty::SUPPORTED_PROPERTY_IDS, VehiclePropertyAccess::READ},
+        {VehicleProperty::SHUTDOWN_REQUEST, VehiclePropertyAccess::WRITE},
 };
 
 }  // namespace vehicle

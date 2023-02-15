@@ -1597,17 +1597,6 @@ wifi_error WifiLegacyHal::enableWifiTxPowerLimits(const std::string& iface_name,
     return global_func_table_.wifi_enable_tx_power_limits(getIfaceHandle(iface_name), enable);
 }
 
-wifi_error WifiLegacyHal::getWifiCachedScanResults(
-        const std::string& iface_name, const CachedScanResultsCallbackHandlers& handler) {
-    on_cached_scan_results_internal_callback = handler.on_cached_scan_results;
-
-    wifi_error status = global_func_table_.wifi_get_cached_scan_results(getIfaceHandle(iface_name),
-                                                                        {onSyncCachedScanResults});
-
-    on_cached_scan_results_internal_callback = nullptr;
-    return status;
-}
-
 std::pair<wifi_error, wifi_iface_concurrency_matrix*>
 WifiLegacyHal::getSupportedIfaceConcurrencyMatrix() {
     wifi_iface_concurrency_matrix *iface_concurrency_matrix_ptr =
@@ -1618,6 +1607,17 @@ WifiLegacyHal::getSupportedIfaceConcurrencyMatrix() {
         return {status, nullptr};
 
     return {status, iface_concurrency_matrix_ptr};
+}
+
+wifi_error WifiLegacyHal::getWifiCachedScanResults(
+        const std::string& iface_name, const CachedScanResultsCallbackHandlers& handler) {
+    on_cached_scan_results_internal_callback = handler.on_cached_scan_results;
+
+    wifi_error status = global_func_table_.wifi_get_cached_scan_results(getIfaceHandle(iface_name),
+                                                                        {onSyncCachedScanResults});
+
+    on_cached_scan_results_internal_callback = nullptr;
+    return status;
 }
 
 void WifiLegacyHal::invalidate() {

@@ -61,6 +61,7 @@ std::unordered_map<VehicleProperty, VehiclePropertyChangeMode> ChangeModeForVehi
         {VehicleProperty::FUEL_LEVEL, VehiclePropertyChangeMode::CONTINUOUS},
         {VehicleProperty::FUEL_DOOR_OPEN, VehiclePropertyChangeMode::ON_CHANGE},
         {VehicleProperty::EV_BATTERY_LEVEL, VehiclePropertyChangeMode::CONTINUOUS},
+        {VehicleProperty::EV_CURRENT_BATTERY_CAPACITY, VehiclePropertyChangeMode::ON_CHANGE},
         {VehicleProperty::EV_CHARGE_PORT_OPEN, VehiclePropertyChangeMode::ON_CHANGE},
         {VehicleProperty::EV_CHARGE_PORT_CONNECTED, VehiclePropertyChangeMode::ON_CHANGE},
         {VehicleProperty::EV_BATTERY_INSTANTANEOUS_CHARGE_RATE, VehiclePropertyChangeMode::CONTINUOUS},
@@ -71,6 +72,7 @@ std::unordered_map<VehicleProperty, VehiclePropertyChangeMode> ChangeModeForVehi
         {VehicleProperty::CURRENT_GEAR, VehiclePropertyChangeMode::ON_CHANGE},
         {VehicleProperty::PARKING_BRAKE_ON, VehiclePropertyChangeMode::ON_CHANGE},
         {VehicleProperty::PARKING_BRAKE_AUTO_APPLY, VehiclePropertyChangeMode::ON_CHANGE},
+        {VehicleProperty::EV_BRAKE_REGENERATION_LEVEL, VehiclePropertyChangeMode::ON_CHANGE},
         {VehicleProperty::FUEL_LEVEL_LOW, VehiclePropertyChangeMode::ON_CHANGE},
         {VehicleProperty::NIGHT_MODE, VehiclePropertyChangeMode::ON_CHANGE},
         {VehicleProperty::TURN_SIGNAL_STATE, VehiclePropertyChangeMode::ON_CHANGE},
@@ -114,6 +116,8 @@ std::unordered_map<VehicleProperty, VehiclePropertyChangeMode> ChangeModeForVehi
         {VehicleProperty::AP_POWER_BOOTUP_REASON, VehiclePropertyChangeMode::STATIC},
         {VehicleProperty::DISPLAY_BRIGHTNESS, VehiclePropertyChangeMode::ON_CHANGE},
         {VehicleProperty::HW_KEY_INPUT, VehiclePropertyChangeMode::ON_CHANGE},
+        {VehicleProperty::HW_KEY_INPUT_V2, VehiclePropertyChangeMode::ON_CHANGE},
+        {VehicleProperty::HW_MOTION_INPUT, VehiclePropertyChangeMode::ON_CHANGE},
         {VehicleProperty::HW_ROTARY_INPUT, VehiclePropertyChangeMode::ON_CHANGE},
         {VehicleProperty::HW_CUSTOM_INPUT, VehiclePropertyChangeMode::ON_CHANGE},
         {VehicleProperty::DOOR_POS, VehiclePropertyChangeMode::ON_CHANGE},
@@ -156,6 +160,7 @@ std::unordered_map<VehicleProperty, VehiclePropertyChangeMode> ChangeModeForVehi
         {VehicleProperty::SEAT_HEADREST_FORE_AFT_POS, VehiclePropertyChangeMode::ON_CHANGE},
         {VehicleProperty::SEAT_HEADREST_FORE_AFT_MOVE, VehiclePropertyChangeMode::ON_CHANGE},
         {VehicleProperty::SEAT_EASY_ACCESS_ENABLED, VehiclePropertyChangeMode::ON_CHANGE},
+        {VehicleProperty::SEAT_AIRBAG_ENABLED, VehiclePropertyChangeMode::ON_CHANGE},
         {VehicleProperty::SEAT_CUSHION_SIDE_SUPPORT_POS, VehiclePropertyChangeMode::ON_CHANGE},
         {VehicleProperty::SEAT_CUSHION_SIDE_SUPPORT_MOVE, VehiclePropertyChangeMode::ON_CHANGE},
         {VehicleProperty::SEAT_LUMBAR_VERTICAL_POS, VehiclePropertyChangeMode::ON_CHANGE},
@@ -223,6 +228,7 @@ std::unordered_map<VehicleProperty, VehiclePropertyChangeMode> ChangeModeForVehi
         {VehicleProperty::VEHICLE_CURB_WEIGHT, VehiclePropertyChangeMode::STATIC},
         {VehicleProperty::GENERAL_SAFETY_REGULATION_COMPLIANCE_REQUIREMENT, VehiclePropertyChangeMode::STATIC},
         {VehicleProperty::SUPPORTED_PROPERTY_IDS, VehiclePropertyChangeMode::STATIC},
+        {VehicleProperty::SHUTDOWN_REQUEST, VehiclePropertyChangeMode::ON_CHANGE},
 };
 
 }  // namespace vehicle
