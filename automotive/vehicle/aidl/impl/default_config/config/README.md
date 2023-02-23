@@ -143,6 +143,10 @@ We support the following constant types:
 
 * AutomaticEmergencyBrakingState
 
+* ForwardCollisionWarningState
+
+* BlindSpotWarningState
+
 * ErrorState
 
 * Constants
