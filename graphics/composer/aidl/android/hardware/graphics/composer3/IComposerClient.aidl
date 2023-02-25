@@ -824,6 +824,8 @@ interface IComposerClient {
      *
      * This function returns what the device's overlays support.
      *
+     * @exception EX_UNSUPPORTED when not supported by the underlying HAL
+     *
      * @return the overlay properties of the device.
      */
     OverlayProperties getOverlaySupport();
@@ -848,4 +850,16 @@ interface IComposerClient {
      * @see getHdrConversionCapabilities
      */
     void setHdrConversionStrategy(in HdrConversionStrategy conversionStrategy);
+
+    /*
+     * Sets either the callback for the refresh rate change is enabled or disabled
+     * for the provided display.
+     *
+     * @see IComposerCallback.onRefreshRateChangedDebug
+     *
+     * @param display is the display on which the callback is enabled on.
+     * @param enabled true when refresh rate callback is enabled,
+     *        false when refresh rate callback is disabled.
+     */
+    void setRefreshRateChangedCallbackDebugEnabled(long display, boolean enabled);
 }

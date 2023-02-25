@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 The Android Open Source Project
+ * Copyright (C) 2023 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,9 +31,9 @@
 // with such a backward incompatible change, it has a high risk of breaking
 // later when a module using the interface is updated, e.g., Mainline modules.
 
-package android.hardware.radio.ims.media;
-@Backing(type="int") @VintfStability
-enum MediaProtocolType {
-  RTP = 0,
-  RTCP = 1,
+package android.hardware.radio.sim;
+@JavaDerive(toString=true) @VintfStability
+parcelable SessionInfo {
+  int sessionId;
+  boolean isEs10 = false;
 }
