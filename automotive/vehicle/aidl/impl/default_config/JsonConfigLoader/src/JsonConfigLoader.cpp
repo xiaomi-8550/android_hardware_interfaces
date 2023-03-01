@@ -35,7 +35,9 @@ namespace vehicle {
 namespace jsonconfigloader_impl {
 
 using ::aidl::android::hardware::automotive::vehicle::AccessForVehicleProperty;
+using ::aidl::android::hardware::automotive::vehicle::AutomaticEmergencyBrakingState;
 using ::aidl::android::hardware::automotive::vehicle::ChangeModeForVehicleProperty;
+using ::aidl::android::hardware::automotive::vehicle::ErrorState;
 using ::aidl::android::hardware::automotive::vehicle::EvConnectorType;
 using ::aidl::android::hardware::automotive::vehicle::EvsServiceState;
 using ::aidl::android::hardware::automotive::vehicle::EvsServiceType;
@@ -89,6 +91,7 @@ const std::unordered_map<std::string, int> CONSTANTS_BY_NAME = {
         {"SEAT_2_LEFT", SEAT_2_LEFT},
         {"SEAT_2_RIGHT", SEAT_2_RIGHT},
         {"SEAT_2_CENTER", SEAT_2_CENTER},
+        {"SEAT_2_LEFT_2_RIGHT_2_CENTER", SEAT_2_LEFT | SEAT_2_RIGHT | SEAT_2_CENTER},
         {"WHEEL_REAR_RIGHT", WHEEL_REAR_RIGHT},
         {"WHEEL_REAR_LEFT", WHEEL_REAR_LEFT},
         {"WHEEL_FRONT_RIGHT", WHEEL_FRONT_RIGHT},
@@ -105,8 +108,13 @@ const std::unordered_map<std::string, int> CONSTANTS_BY_NAME = {
          FAN_DIRECTION_FLOOR | FAN_DIRECTION_DEFROST | FAN_DIRECTION_FACE},
         {"FUEL_DOOR_REAR_LEFT", FUEL_DOOR_REAR_LEFT},
         {"LIGHT_STATE_ON", LIGHT_STATE_ON},
+        {"LIGHT_STATE_OFF", LIGHT_STATE_OFF},
         {"LIGHT_SWITCH_OFF", LIGHT_SWITCH_OFF},
+        {"LIGHT_SWITCH_ON", LIGHT_SWITCH_ON},
         {"LIGHT_SWITCH_AUTO", LIGHT_SWITCH_AUTO},
+        {"EV_STOPPING_MODE_CREEP", EV_STOPPING_MODE_CREEP},
+        {"EV_STOPPING_MODE_ROLL", EV_STOPPING_MODE_ROLL},
+        {"EV_STOPPING_MODE_HOLD", EV_STOPPING_MODE_HOLD},
         {"MIRROR_DRIVER_LEFT_RIGHT",
          toInt(VehicleAreaMirror::DRIVER_LEFT) | toInt(VehicleAreaMirror::DRIVER_RIGHT)},
 #ifdef ENABLE_VEHICLE_HAL_TEST_PROPERTIES
@@ -201,6 +209,9 @@ JsonValueParser::JsonValueParser() {
     mConstantParsersByType["VehicleIgnitionState"] =
             std::make_unique<ConstantParser<VehicleIgnitionState>>();
     mConstantParsersByType["FuelType"] = std::make_unique<ConstantParser<FuelType>>();
+    mConstantParsersByType["ErrorState"] = std::make_unique<ConstantParser<ErrorState>>();
+    mConstantParsersByType["AutomaticEmergencyBrakingState"] =
+            std::make_unique<ConstantParser<AutomaticEmergencyBrakingState>>();
     mConstantParsersByType["Constants"] = std::make_unique<LocalVariableParser>();
 }
 
@@ -460,6 +471,13 @@ void JsonConfigParser::parseAreas(const Json::Value& parentJsonNode, const std::
                                     &areaConfig.minFloatValue, errors);
         tryParseJsonValueToVariable(jsonAreaConfig, "maxFloatValue", /*optional=*/true,
                                     &areaConfig.maxFloatValue, errors);
+
+        std::vector<int64_t> supportedEnumValues;
+        tryParseJsonArrayToVariable(jsonAreaConfig, "supportedEnumValues", /*optional=*/true,
+                                    &supportedEnumValues, errors);
+        if (!supportedEnumValues.empty()) {
+            areaConfig.supportedEnumValues = std::move(supportedEnumValues);
+        }
         config->config.areaConfigs.push_back(std::move(areaConfig));
 
         RawPropValues areaValue = {};

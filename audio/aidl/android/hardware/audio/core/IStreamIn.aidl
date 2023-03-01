@@ -17,6 +17,7 @@
 package android.hardware.audio.core;
 
 import android.hardware.audio.common.SinkMetadata;
+import android.hardware.audio.core.IStreamCommon;
 import android.hardware.audio.core.MicrophoneDynamicInfo;
 
 /**
@@ -25,19 +26,15 @@ import android.hardware.audio.core.MicrophoneDynamicInfo;
 @VintfStability
 interface IStreamIn {
     /**
-     * Close the stream.
+     * Return the interface for common stream operations.
      *
-     * Releases any resources allocated for this stream on the HAL module side.
-     * This includes the fast message queues and shared memories returned via
-     * the StreamDescriptor. Thus, the stream can not be operated anymore after
-     * it has been closed. The client needs to release the audio data I/O
-     * objects after the call to this method returns.
+     * This method must always succeed. The implementation must
+     * return the same instance object for all subsequent calls to
+     * this method.
      *
-     * Methods of this interface throw EX_ILLEGAL_STATE for a closed stream.
-     *
-     * @throws EX_ILLEGAL_STATE If the stream has already been closed.
+     * @return The interface for common operations.
      */
-    void close();
+    IStreamCommon getStreamCommon();
 
     /**
      * Provides information on the microphones that are active for this stream.
@@ -134,4 +131,38 @@ interface IStreamIn {
      * @throws EX_ILLEGAL_STATE If the stream is closed.
      */
     void updateMetadata(in SinkMetadata sinkMetadata);
+
+    const int HW_GAIN_MIN = 0;
+    const int HW_GAIN_MAX = 1;
+    /**
+     * Retrieve current gain applied in hardware.
+     *
+     * In case when the HAL module has a gain controller, this method returns
+     * the current value of its gain for each input channel.
+     *
+     * The valid range for gain is [0.0f, 1.0f], where 1.0f corresponds to unity
+     * gain, 0.0f corresponds to full mute (see HW_GAIN_* constants).
+     *
+     * @return Current gain values for each input channel.
+     * @throws EX_ILLEGAL_STATE If the stream is closed.
+     * @throws EX_UNSUPPORTED_OPERATION If hardware gain control is not supported.
+     */
+    float[] getHwGain();
+    /**
+     * Set gain applied in hardware.
+     *
+     * In case when the HAL module has a gain controller, this method sets the
+     * current value of its gain for each input channel.
+     *
+     * The valid range for gain is [0.0f, 1.0f], where 1.0f corresponds to unity
+     * gain, 0.0f corresponds to full mute (see HW_GAIN_* constants).
+     *
+     * @param gain Gain values for each input channel.
+     * @throws EX_ILLEGAL_ARGUMENT If the number of elements in the provided
+     *                             array does not match the channel count, or
+     *                             gain values are out of range.
+     * @throws EX_ILLEGAL_STATE If the stream is closed.
+     * @throws EX_UNSUPPORTED_OPERATION If hardware gain control is not supported.
+     */
+    void setHwGain(in float[] channelGains);
 }

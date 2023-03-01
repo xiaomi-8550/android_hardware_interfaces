@@ -45,6 +45,7 @@ union Volume {
   @VintfStability
   parcelable Capability {
     android.hardware.audio.effect.VendorExtension extension;
-    int maxLevel;
+    int minLevelDb;
+    int maxLevelDb;
   }
 }

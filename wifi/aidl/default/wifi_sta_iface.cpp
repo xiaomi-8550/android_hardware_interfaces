@@ -222,6 +222,11 @@ ndk::ScopedAStatus WifiStaIface::setScanMode(bool in_enable) {
                            &WifiStaIface::setScanModeInternal, in_enable);
 }
 
+ndk::ScopedAStatus WifiStaIface::setDtimMultiplier(int32_t in_multiplier) {
+    return validateAndCall(this, WifiStatusCode::ERROR_WIFI_IFACE_INVALID,
+                           &WifiStaIface::setDtimMultiplierInternal, in_multiplier);
+}
+
 std::pair<std::string, ndk::ScopedAStatus> WifiStaIface::getNameInternal() {
     return {ifname_, ndk::ScopedAStatus::ok()};
 }
@@ -399,13 +404,22 @@ ndk::ScopedAStatus WifiStaIface::disableLinkLayerStatsCollectionInternal() {
 
 std::pair<StaLinkLayerStats, ndk::ScopedAStatus> WifiStaIface::getLinkLayerStatsInternal() {
     legacy_hal::wifi_error legacy_status;
-    legacy_hal::LinkLayerStats legacy_stats;
-    std::tie(legacy_status, legacy_stats) = legacy_hal_.lock()->getLinkLayerStats(ifname_);
+    legacy_hal::LinkLayerStats legacy_stats{};
+    legacy_hal::LinkLayerMlStats legacy_ml_stats{};
+    legacy_status = legacy_hal_.lock()->getLinkLayerStats(ifname_, legacy_stats, legacy_ml_stats);
     if (legacy_status != legacy_hal::WIFI_SUCCESS) {
         return {StaLinkLayerStats{}, createWifiStatusFromLegacyError(legacy_status)};
     }
     StaLinkLayerStats aidl_stats;
-    if (!aidl_struct_util::convertLegacyLinkLayerStatsToAidl(legacy_stats, &aidl_stats)) {
+    if (legacy_stats.valid) {
+        if (!aidl_struct_util::convertLegacyLinkLayerStatsToAidl(legacy_stats, &aidl_stats)) {
+            return {StaLinkLayerStats{}, createWifiStatus(WifiStatusCode::ERROR_UNKNOWN)};
+        }
+    } else if (legacy_ml_stats.valid) {
+        if (!aidl_struct_util::convertLegacyLinkLayerMlStatsToAidl(legacy_ml_stats, &aidl_stats)) {
+            return {StaLinkLayerStats{}, createWifiStatus(WifiStatusCode::ERROR_UNKNOWN)};
+        }
+    } else {
         return {StaLinkLayerStats{}, createWifiStatus(WifiStatusCode::ERROR_UNKNOWN)};
     }
     return {aidl_stats, ndk::ScopedAStatus::ok()};
@@ -550,6 +564,11 @@ ndk::ScopedAStatus WifiStaIface::setScanModeInternal(bool enable) {
     // OEM's need to implement this on their devices if needed.
     LOG(WARNING) << "setScanModeInternal(" << enable << ") not supported";
     return createWifiStatus(WifiStatusCode::ERROR_NOT_SUPPORTED);
+}
+
+ndk::ScopedAStatus WifiStaIface::setDtimMultiplierInternal(const int multiplier) {
+    legacy_hal::wifi_error legacy_status = legacy_hal_.lock()->setDtimConfig(ifname_, multiplier);
+    return createWifiStatusFromLegacyError(legacy_status);
 }
 
 }  // namespace wifi

@@ -16,6 +16,7 @@
 
 package android.hardware.wifi;
 
+import android.hardware.wifi.AvailableAfcFrequencyInfo;
 import android.hardware.wifi.IWifiApIface;
 import android.hardware.wifi.IWifiChipEventCallback;
 import android.hardware.wifi.IWifiNanIface;
@@ -25,6 +26,7 @@ import android.hardware.wifi.IWifiStaIface;
 import android.hardware.wifi.IfaceConcurrencyType;
 import android.hardware.wifi.IfaceType;
 import android.hardware.wifi.WifiBand;
+import android.hardware.wifi.WifiChipCapabilities;
 import android.hardware.wifi.WifiDebugHostWakeReasonStats;
 import android.hardware.wifi.WifiDebugRingBufferStatus;
 import android.hardware.wifi.WifiDebugRingBufferVerboseLevel;
@@ -104,6 +106,11 @@ interface IWifiChip {
          * Chip can operate in the 60GHz band (WiGig chip).
          */
         WIGIG = 1 << 14,
+        /**
+         * Chip supports setting allowed channels along with PSD in 6GHz band
+         * for AFC purposes.
+         */
+        SET_AFC_CHANNEL_ALLOWANCE = 1 << 15,
     }
 
     /**
@@ -785,6 +792,18 @@ interface IWifiChip {
     WifiRadioCombinationMatrix getSupportedRadioCombinationsMatrix();
 
     /**
+     * Get capabilities supported by this chip.
+     *
+     * @return Chip capabilities represented by |WifiChipCapabilities|.
+     * @throws ServiceSpecificException with one of the following values:
+     *         |WifiStatusCode.ERROR_WIFI_CHIP_INVALID|,
+     *         |WifiStatusCode.ERROR_NOT_SUPPORTED|,
+     *         |WifiStatusCode.FAILURE_UNKNOWN|
+     *
+     */
+    WifiChipCapabilities getWifiChipCapabilities();
+
+    /**
      * Retrieve a list of usable Wifi channels for the specified band &
      * operational modes.
      *
@@ -821,6 +840,18 @@ interface IWifiChip {
      */
     WifiUsableChannel[] getUsableChannels(
             in WifiBand band, in WifiIfaceMode ifaceModeMask, in UsableChannelFilter filterMask);
+
+    /*
+     * Set the max power level the chip is allowed to transmit on for 6Ghz AFC
+     * using an array of AvailableAfcFrequencyInfo. The max power for
+     * frequencies not included in the input frequency ranges will be reset to
+     * their respective default values.
+     * @param availableAfcFrequencyInfo The list of frequency ranges and
+     * corresponding max allowed power.
+     * @throws ServiceSpecificException with one of the following values:
+     *         |WifiStatusCode.ERROR_NOT_SUPPORTED|
+     */
+    void setAfcChannelAllowance(in AvailableAfcFrequencyInfo[] availableAfcFrequencyInfo);
 
     /**
      * Requests notifications of significant events on this chip. Multiple calls
@@ -1093,4 +1124,29 @@ interface IWifiChip {
      *         |WifiStatusCode.ERROR_UNKNOWN|
      */
     void triggerSubsystemRestart();
+
+    /**
+     * Channel category mask.
+     */
+    @VintfStability
+    @Backing(type="int")
+    enum ChannelCategoryMask {
+        INDOOR_CHANNEL = 1 << 0,
+        DFS_CHANNEL = 1 << 1,
+    }
+
+    /**
+     * API to enable or disable the feature of allowing current STA-connected channel for WFA GO,
+     * SAP and Aware when the regulatory allows.
+     * If the channel category is enabled and allowed by the regulatory, the HAL method
+     * getUsableChannels() will contain the current STA-connected channel if that channel belongs
+     * to that category.
+     * @param channelCategoryEnableFlag bitmask of |ChannelCategoryMask|.
+     *        For each bit, 1 enables the channel category and 0 disables that channel category.
+     * @throws ServiceSpecificException with one of the following values:
+     *         |WifiStatusCode.ERROR_WIFI_CHIP_INVALID|,
+     *         |WifiStatusCode.ERROR_NOT_SUPPORTED|,
+     *         |WifiStatusCode.FAILURE_UNKNOWN|
+     */
+    void enableStaChannelForPeerNetwork(in ChannelCategoryMask channelCategoryEnableFlag);
 }

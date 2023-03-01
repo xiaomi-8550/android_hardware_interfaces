@@ -44,6 +44,7 @@ union BassBoost {
   @VintfStability
   parcelable Capability {
     ParcelableHolder extension;
+    int maxStrengthPm;
     boolean strengthSupported;
   }
 }

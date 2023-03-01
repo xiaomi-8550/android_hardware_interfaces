@@ -16,13 +16,17 @@
 
 package android.hardware.audio.effect;
 
+import android.hardware.audio.effect.AcousticEchoCanceler;
+import android.hardware.audio.effect.AutomaticGainControl;
 import android.hardware.audio.effect.BassBoost;
 import android.hardware.audio.effect.Downmix;
 import android.hardware.audio.effect.DynamicsProcessing;
+import android.hardware.audio.effect.EnvironmentalReverb;
 import android.hardware.audio.effect.Equalizer;
 import android.hardware.audio.effect.HapticGenerator;
 import android.hardware.audio.effect.LoudnessEnhancer;
-import android.hardware.audio.effect.Reverb;
+import android.hardware.audio.effect.NoiseSuppression;
+import android.hardware.audio.effect.PresetReverb;
 import android.hardware.audio.effect.VendorExtension;
 import android.hardware.audio.effect.Virtualizer;
 import android.hardware.audio.effect.Visualizer;
@@ -70,13 +74,17 @@ union Parameter {
          *  effectInstance.getParameter(id, &param);
          *
          */
+        AcousticEchoCanceler.Id acousticEchoCancelerTag;
+        AutomaticGainControl.Id automaticGainControlTag;
         BassBoost.Id bassBoostTag;
         Downmix.Id downmixTag;
         DynamicsProcessing.Id dynamicsProcessingTag;
+        EnvironmentalReverb.Id environmentalReverbTag;
         Equalizer.Id equalizerTag;
         HapticGenerator.Id hapticGeneratorTag;
         LoudnessEnhancer.Id loudnessEnhancerTag;
-        Reverb.Id reverbTag;
+        NoiseSuppression.Id noiseSuppressionTag;
+        PresetReverb.Id presetReverbTag;
         Virtualizer.Id virtualizerTag;
         Visualizer.Id visualizerTag;
         Volume.Id volumeTag;
@@ -112,10 +120,11 @@ union Parameter {
     Common common;
 
     /**
-     * Used by audio framework to set the device type to effect engine.
-     * Effect must implement setParameter(device) if Flags.deviceIndication set to true.
+     * Used by audio framework to set the device type(s) to effect engine.
+     * Effect engine must apply all AudioDeviceDescription in the list.
+     * Effect must implement setParameter(deviceDescription) if Flags.deviceIndication set to true.
      */
-    AudioDeviceDescription deviceDescription;
+    AudioDeviceDescription[] deviceDescription;
     /**
      * Used by audio framework to set the audio mode to effect engine.
      * Effect must implement setParameter(mode) if Flags.audioModeIndication set to true.
@@ -147,13 +156,17 @@ union Parameter {
     @VintfStability
     union Specific {
         VendorExtension vendorEffect;
+        AcousticEchoCanceler acousticEchoCanceler;
+        AutomaticGainControl automaticGainControl;
         BassBoost bassBoost;
         Downmix downmix;
         DynamicsProcessing dynamicsProcessing;
+        EnvironmentalReverb environmentalReverb;
         Equalizer equalizer;
-        LoudnessEnhancer loudnessEnhancer;
         HapticGenerator hapticGenerator;
-        Reverb reverb;
+        LoudnessEnhancer loudnessEnhancer;
+        NoiseSuppression noiseSuppression;
+        PresetReverb presetReverb;
         Virtualizer virtualizer;
         Visualizer visualizer;
         Volume volume;

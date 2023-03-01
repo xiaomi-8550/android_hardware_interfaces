@@ -61,6 +61,8 @@ class VtsComposerClient {
 
     bool tearDown();
 
+    std::pair<ScopedAStatus, int32_t> getInterfaceVersion();
+
     std::pair<ScopedAStatus, VirtualDisplay> createVirtualDisplay(int32_t width, int32_t height,
                                                                   PixelFormat pixelFormat,
                                                                   int32_t bufferSlotCount);
@@ -161,6 +163,11 @@ class VtsComposerClient {
 
     std::pair<ScopedAStatus, int32_t> getPreferredBootDisplayConfig(int64_t display);
 
+    std::pair<ScopedAStatus, std::vector<common::HdrConversionCapability>>
+    getHdrConversionCapabilities();
+
+    ScopedAStatus setHdrConversionStrategy(const common::HdrConversionStrategy& conversionStrategy);
+
     std::pair<ScopedAStatus, common::Transform> getDisplayPhysicalOrientation(int64_t display);
 
     ScopedAStatus setIdleTimerEnabled(int64_t display, int32_t timeoutMs);
@@ -176,6 +183,7 @@ class VtsComposerClient {
     std::pair<ScopedAStatus, OverlayProperties> getOverlaySupport();
 
   private:
+    ScopedAStatus addDisplayConfig(VtsDisplay* vtsDisplay, int32_t config);
     ScopedAStatus updateDisplayProperties(VtsDisplay* vtsDisplay, int32_t config);
 
     ScopedAStatus addDisplayToDisplayResources(int64_t display, bool isVirtual);

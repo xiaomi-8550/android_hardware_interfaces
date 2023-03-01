@@ -301,6 +301,13 @@ ndk::ScopedAStatus RadioNetworkResponse::setNullCipherAndIntegrityEnabledRespons
     return ndk::ScopedAStatus::ok();
 }
 
+ndk::ScopedAStatus RadioNetworkResponse::isNullCipherAndIntegrityEnabledResponse(
+        const RadioResponseInfo& info, bool /*isEnabled*/) {
+    rspInfo = info;
+    parent_network.notify(info.serial);
+    return ndk::ScopedAStatus::ok();
+}
+
 ndk::ScopedAStatus RadioNetworkResponse::isN1ModeEnabledResponse(
         const RadioResponseInfo& info, bool /*isEnabled*/) {
     rspInfo = info;
@@ -309,20 +316,6 @@ ndk::ScopedAStatus RadioNetworkResponse::isN1ModeEnabledResponse(
 }
 
 ndk::ScopedAStatus RadioNetworkResponse::setN1ModeEnabledResponse(const RadioResponseInfo& info) {
-    rspInfo = info;
-    parent_network.notify(info.serial);
-    return ndk::ScopedAStatus::ok();
-}
-
-ndk::ScopedAStatus RadioNetworkResponse::setLocationPrivacySettingResponse(
-        const RadioResponseInfo& info) {
-    rspInfo = info;
-    parent_network.notify(info.serial);
-    return ndk::ScopedAStatus::ok();
-}
-
-ndk::ScopedAStatus RadioNetworkResponse::getLocationPrivacySettingResponse(
-        const RadioResponseInfo& info, bool /*shareLocation*/) {
     rspInfo = info;
     parent_network.notify(info.serial);
     return ndk::ScopedAStatus::ok();

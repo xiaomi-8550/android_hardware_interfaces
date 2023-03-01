@@ -71,4 +71,16 @@ enum NanStatusCode {
      * Unsupported concurrency of NAN and another feature - NAN disabled.
      */
     UNSUPPORTED_CONCURRENCY_NAN_DISABLED = 12,
+    /**
+     * If the pairing id is invalid
+     */
+    INVALID_PAIRING_ID = 13,
+    /**
+     * If the bootstrapping id is invalid
+     */
+    INVALID_BOOTSTRAPPING_ID = 14,
+    /**
+     * If the system is not in a valid state for the given request.
+     */
+    INVALID_STATE = 15
 }

@@ -18,6 +18,9 @@
 #include "RadioCompatBase.h"
 
 #include <aidl/android/hardware/radio/network/BnRadioNetwork.h>
+#include <aidl/android/hardware/radio/network/IRadioNetwork.h>
+
+// using namespace aidl::android::hardware::radio::network;
 
 namespace android::hardware::radio::compat {
 
@@ -103,9 +106,7 @@ class RadioNetwork : public RadioCompatBase,
     ::ndk::ScopedAStatus setN1ModeEnabled(int32_t serial, bool enable) override;
 
     ::ndk::ScopedAStatus setNullCipherAndIntegrityEnabled(int32_t serial, bool enabled) override;
-
-    ::ndk::ScopedAStatus setLocationPrivacySetting(int32_t serial, bool shareLocation) override;
-    ::ndk::ScopedAStatus getLocationPrivacySetting(int32_t serial) override;
+    ::ndk::ScopedAStatus isNullCipherAndIntegrityEnabled(int32_t serial) override;
 
   protected:
     std::shared_ptr<::aidl::android::hardware::radio::network::IRadioNetworkResponse> respond();

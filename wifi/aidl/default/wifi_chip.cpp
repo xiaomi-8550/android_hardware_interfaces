@@ -34,6 +34,7 @@ namespace {
 using aidl::android::hardware::wifi::IfaceType;
 using aidl::android::hardware::wifi::IWifiChip;
 using CoexRestriction = aidl::android::hardware::wifi::IWifiChip::CoexRestriction;
+using ChannelCategoryMask = aidl::android::hardware::wifi::IWifiChip::ChannelCategoryMask;
 using android::base::unique_fd;
 
 constexpr char kCpioMagic[] = "070701";
@@ -669,6 +670,12 @@ ndk::ScopedAStatus WifiChip::getUsableChannels(WifiBand in_band, WifiIfaceMode i
                            in_ifaceModeMask, in_filterMask);
 }
 
+ndk::ScopedAStatus WifiChip::setAfcChannelAllowance(
+        const std::vector<AvailableAfcFrequencyInfo>& availableAfcFrequencyInfo) {
+    return validateAndCall(this, WifiStatusCode::ERROR_WIFI_CHIP_INVALID,
+                           &WifiChip::setAfcChannelAllowanceInternal, availableAfcFrequencyInfo);
+}
+
 ndk::ScopedAStatus WifiChip::triggerSubsystemRestart() {
     return validateAndCall(this, WifiStatusCode::ERROR_WIFI_CHIP_INVALID,
                            &WifiChip::triggerSubsystemRestartInternal);
@@ -678,6 +685,18 @@ ndk::ScopedAStatus WifiChip::getSupportedRadioCombinationsMatrix(
         WifiRadioCombinationMatrix* _aidl_return) {
     return validateAndCall(this, WifiStatusCode::ERROR_WIFI_CHIP_INVALID,
                            &WifiChip::getSupportedRadioCombinationsMatrixInternal, _aidl_return);
+}
+
+ndk::ScopedAStatus WifiChip::getWifiChipCapabilities(WifiChipCapabilities* _aidl_return) {
+    return validateAndCall(this, WifiStatusCode::ERROR_WIFI_CHIP_INVALID,
+                           &WifiChip::getWifiChipCapabilitiesInternal, _aidl_return);
+}
+
+ndk::ScopedAStatus WifiChip::enableStaChannelForPeerNetwork(
+        ChannelCategoryMask in_channelCategoryEnableFlag) {
+    return validateAndCall(this, WifiStatusCode::ERROR_WIFI_CHIP_INVALID,
+                           &WifiChip::enableStaChannelForPeerNetworkInternal,
+                           in_channelCategoryEnableFlag);
 }
 
 void WifiChip::invalidateAndRemoveAllIfaces() {
@@ -1381,6 +1400,12 @@ std::pair<std::vector<WifiUsableChannel>, ndk::ScopedAStatus> WifiChip::getUsabl
     return {aidl_usable_channels, ndk::ScopedAStatus::ok()};
 }
 
+ndk::ScopedAStatus WifiChip::setAfcChannelAllowanceInternal(
+        const std::vector<AvailableAfcFrequencyInfo>& availableAfcFrequencyInfo) {
+    LOG(INFO) << "setAfcChannelAllowance is not yet supported " << availableAfcFrequencyInfo.size();
+    return createWifiStatus(WifiStatusCode::ERROR_NOT_SUPPORTED);
+}
+
 std::pair<WifiRadioCombinationMatrix, ndk::ScopedAStatus>
 WifiChip::getSupportedRadioCombinationsMatrixInternal() {
     legacy_hal::wifi_error legacy_status;
@@ -1401,6 +1426,34 @@ WifiChip::getSupportedRadioCombinationsMatrixInternal() {
         return {WifiRadioCombinationMatrix(), createWifiStatus(WifiStatusCode::ERROR_INVALID_ARGS)};
     }
     return {aidl_matrix, ndk::ScopedAStatus::ok()};
+}
+
+std::pair<WifiChipCapabilities, ndk::ScopedAStatus> WifiChip::getWifiChipCapabilitiesInternal() {
+    legacy_hal::wifi_error legacy_status;
+    legacy_hal::wifi_chip_capabilities legacy_chip_capabilities;
+    std::tie(legacy_status, legacy_chip_capabilities) =
+            legacy_hal_.lock()->getWifiChipCapabilities();
+    if (legacy_status != legacy_hal::WIFI_SUCCESS) {
+        LOG(ERROR) << "Failed to get chip capabilities from legacy HAL: "
+                   << legacyErrorToString(legacy_status);
+        return {WifiChipCapabilities(), createWifiStatusFromLegacyError(legacy_status)};
+    }
+    WifiChipCapabilities aidl_chip_capabilities;
+    if (!aidl_struct_util::convertLegacyWifiChipCapabilitiesToAidl(legacy_chip_capabilities,
+                                                                   aidl_chip_capabilities)) {
+        LOG(ERROR) << "Failed convertLegacyWifiChipCapabilitiesToAidl() ";
+        return {WifiChipCapabilities(), createWifiStatus(WifiStatusCode::ERROR_INVALID_ARGS)};
+    }
+
+    return {aidl_chip_capabilities, ndk::ScopedAStatus::ok()};
+}
+
+ndk::ScopedAStatus WifiChip::enableStaChannelForPeerNetworkInternal(
+        ChannelCategoryMask channelCategoryEnableFlag) {
+    auto legacy_status = legacy_hal_.lock()->enableStaChannelForPeerNetwork(
+            aidl_struct_util::convertAidlChannelCategoryToLegacy(
+                    static_cast<uint32_t>(channelCategoryEnableFlag)));
+    return createWifiStatusFromLegacyError(legacy_status);
 }
 
 ndk::ScopedAStatus WifiChip::triggerSubsystemRestartInternal() {

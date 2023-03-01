@@ -21,11 +21,12 @@ package android.hardware.broadcastradio;
  */
 @VintfStability
 @Backing(type="int")
+@JavaDerive(equals=true, toString=true)
 enum Result {
     /**
      * Methods run without error.
      */
-    OK,
+    OK = 0,
 
     /**
      * Internal error in HAL.
@@ -53,6 +54,12 @@ enum Result {
      * within {@link IBroadcastRadio#LIST_COMPLETE_TIMEOUT_MS}.
      */
     TIMEOUT,
+
+    /**
+     * Error used when a tune, seek, step or operation is canceled before
+     * being processed.
+     */
+    CANCELED,
 
     /**
      * Error that does not follow into the error categories above.

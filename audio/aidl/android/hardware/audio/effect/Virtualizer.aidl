@@ -53,6 +53,10 @@ union Virtualizer {
          */
         VendorExtension extension;
         /**
+         * Maximum possible per mille strength.
+         */
+        int maxStrengthPm;
+        /**
          * Indicates whether setting strength is supported. False value indicates only one strength
          * is supported and setParameter() method will always return EX_ILLEGAL_ARGUMENT.
          */
@@ -66,7 +70,8 @@ union Virtualizer {
      * allowed to round the given strength to the nearest supported value. In this case {@link
      * #IEffect.getParameter()} method should return the rounded value that was actually set.
      *
-     * The valid range for strength is [0, 1000].
+     * The value of the strength must be non-negative and not exceed the value specified by
+     * the 'maxStrengthPm' capability.
      */
     int strengthPm;
 }
