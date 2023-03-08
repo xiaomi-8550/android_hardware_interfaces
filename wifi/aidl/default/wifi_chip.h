@@ -144,12 +144,13 @@ class WifiChip : public BnWifiChip {
     ndk::ScopedAStatus setAfcChannelAllowance(
             const std::vector<AvailableAfcFrequencyInfo>& availableAfcFrequencyInfo) override;
     ndk::ScopedAStatus triggerSubsystemRestart() override;
-    ndk::ScopedAStatus getSupportedRadioCombinationsMatrix(
-            WifiRadioCombinationMatrix* _aidl_return) override;
+    ndk::ScopedAStatus getSupportedRadioCombinations(
+            std::vector<WifiRadioCombination>* _aidl_return) override;
     ndk::ScopedAStatus getWifiChipCapabilities(WifiChipCapabilities* _aidl_return) override;
     ndk::ScopedAStatus enableStaChannelForPeerNetwork(
             ChannelCategoryMask in_channelCategoryEnableFlag) override;
     binder_status_t dump(int fd, const char** args, uint32_t numArgs) override;
+    ndk::ScopedAStatus setMloMode(const ChipMloMode in_mode) override;
 
   private:
     void invalidateAndRemoveAllIfaces();
@@ -257,9 +258,11 @@ class WifiChip : public BnWifiChip {
     void invalidateAndClearBridgedAp(const std::string& br_name);
     bool findUsingNameFromBridgedApInstances(const std::string& name);
     ndk::ScopedAStatus triggerSubsystemRestartInternal();
-    std::pair<WifiRadioCombinationMatrix, ndk::ScopedAStatus>
-    getSupportedRadioCombinationsMatrixInternal();
+    std::pair<std::vector<WifiRadioCombination>, ndk::ScopedAStatus>
+    getSupportedRadioCombinationsInternal();
     std::pair<WifiChipCapabilities, ndk::ScopedAStatus> getWifiChipCapabilitiesInternal();
+    ndk::ScopedAStatus setMloModeInternal(const ChipMloMode in_mode);
+    void retrieveDynamicIfaceCombination();
     void setWeakPtr(std::weak_ptr<WifiChip> ptr);
 
     int32_t chip_id_;
@@ -281,6 +284,7 @@ class WifiChip : public BnWifiChip {
     // registration mechanism. Use this to check if we have already
     // registered a callback.
     bool debug_ring_buffer_cb_registered_;
+    bool using_dynamic_iface_combination_;
     aidl_callback_util::AidlCallbackHandler<IWifiChipEventCallback> event_cb_handler_;
     std::weak_ptr<WifiChip> weak_ptr_this_;
 

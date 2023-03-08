@@ -637,8 +637,10 @@ TEST_P(GraphicsComposerAidlTest, SetHdrConversionStrategy_Passthrough) {
     }
     common::HdrConversionStrategy hdrConversionStrategy;
     hdrConversionStrategy.set<common::HdrConversionStrategy::Tag::passthrough>(true);
-    const auto& status = mComposerClient->setHdrConversionStrategy(hdrConversionStrategy);
+    const auto& [status, preferredHdrOutputType] =
+            mComposerClient->setHdrConversionStrategy(hdrConversionStrategy);
     EXPECT_TRUE(status.isOk());
+    EXPECT_EQ(common::Hdr::INVALID, preferredHdrOutputType);
 }
 
 TEST_P(GraphicsComposerAidlTest, SetHdrConversionStrategy_Force) {
@@ -652,9 +654,10 @@ TEST_P(GraphicsComposerAidlTest, SetHdrConversionStrategy_Force) {
             common::HdrConversionStrategy hdrConversionStrategy;
             hdrConversionStrategy.set<common::HdrConversionStrategy::Tag::forceHdrConversion>(
                     conversionCapability.outputType->hdr);
-            const auto& statusSet =
+            const auto& [statusSet, preferredHdrOutputType] =
                     mComposerClient->setHdrConversionStrategy(hdrConversionStrategy);
-            EXPECT_TRUE(status.isOk());
+            EXPECT_TRUE(statusSet.isOk());
+            EXPECT_EQ(common::Hdr::INVALID, preferredHdrOutputType);
         }
     }
 }
@@ -674,8 +677,10 @@ TEST_P(GraphicsComposerAidlTest, SetHdrConversionStrategy_Auto) {
     common::HdrConversionStrategy hdrConversionStrategy;
     hdrConversionStrategy.set<common::HdrConversionStrategy::Tag::autoAllowedHdrTypes>(
             autoHdrTypes);
-    const auto& statusSet = mComposerClient->setHdrConversionStrategy(hdrConversionStrategy);
-    EXPECT_TRUE(status.isOk());
+    const auto& [statusSet, preferredHdrOutputType] =
+            mComposerClient->setHdrConversionStrategy(hdrConversionStrategy);
+    EXPECT_TRUE(statusSet.isOk());
+    EXPECT_NE(common::Hdr::INVALID, preferredHdrOutputType);
 }
 
 TEST_P(GraphicsComposerAidlTest, SetAutoLowLatencyMode_BadDisplay) {
@@ -869,6 +874,13 @@ TEST_P(GraphicsComposerAidlTest, GetDisplayName) {
 }
 
 TEST_P(GraphicsComposerAidlTest, GetOverlaySupport) {
+    const auto& [versionStatus, version] = mComposerClient->getInterfaceVersion();
+    ASSERT_TRUE(versionStatus.isOk());
+    if (version == 1) {
+        GTEST_SUCCEED() << "Device does not support the new API for overlay support";
+        return;
+    }
+
     const auto& [status, properties] = mComposerClient->getOverlaySupport();
     if (!status.isOk() && status.getExceptionCode() == EX_SERVICE_SPECIFIC &&
         status.getServiceSpecificError() == IComposerClient::EX_UNSUPPORTED) {
