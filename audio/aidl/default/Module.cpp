@@ -370,26 +370,29 @@ ndk::ScopedAStatus Module::setModuleDebug(
 }
 
 ndk::ScopedAStatus Module::getTelephony(std::shared_ptr<ITelephony>* _aidl_return) {
-    if (mTelephony == nullptr) {
+    if (!mTelephony) {
         mTelephony = ndk::SharedRefBase::make<Telephony>();
-        mTelephonyBinder = mTelephony->asBinder();
-        AIBinder_setMinSchedulerPolicy(mTelephonyBinder.get(), SCHED_NORMAL,
-                                       ANDROID_PRIORITY_AUDIO);
     }
-    *_aidl_return = mTelephony;
+    *_aidl_return = mTelephony.getPtr();
     LOG(DEBUG) << __func__ << ": returning instance of ITelephony: " << _aidl_return->get();
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus Module::getBluetooth(std::shared_ptr<IBluetooth>* _aidl_return) {
-    if (mBluetooth == nullptr) {
+    if (!mBluetooth) {
         mBluetooth = ndk::SharedRefBase::make<Bluetooth>();
-        mBluetoothBinder = mBluetooth->asBinder();
-        AIBinder_setMinSchedulerPolicy(mBluetoothBinder.get(), SCHED_NORMAL,
-                                       ANDROID_PRIORITY_AUDIO);
     }
-    *_aidl_return = mBluetooth;
+    *_aidl_return = mBluetooth.getPtr();
     LOG(DEBUG) << __func__ << ": returning instance of IBluetooth: " << _aidl_return->get();
+    return ndk::ScopedAStatus::ok();
+}
+
+ndk::ScopedAStatus Module::getBluetoothA2dp(std::shared_ptr<IBluetoothA2dp>* _aidl_return) {
+    if (!mBluetoothA2dp) {
+        mBluetoothA2dp = ndk::SharedRefBase::make<BluetoothA2dp>();
+    }
+    *_aidl_return = mBluetoothA2dp.getPtr();
+    LOG(DEBUG) << __func__ << ": returning instance of IBluetoothA2dp: " << _aidl_return->get();
     return ndk::ScopedAStatus::ok();
 }
 
@@ -457,6 +460,7 @@ ndk::ScopedAStatus Module::connectExternalDevice(const AudioPort& in_templateIdA
         connectedPort.profiles = connectedProfilesIt->second;
     }
     ports.push_back(connectedPort);
+    onExternalDeviceConnectionChanged(connectedPort, true /*connected*/);
     *_aidl_return = std::move(connectedPort);
 
     std::vector<AudioRoute> newRoutes;
@@ -510,6 +514,7 @@ ndk::ScopedAStatus Module::disconnectExternalDevice(int32_t in_portId) {
                    << configIt->id;
         return ndk::ScopedAStatus::fromExceptionCode(EX_ILLEGAL_STATE);
     }
+    onExternalDeviceConnectionChanged(*portIt, false /*connected*/);
     ports.erase(portIt);
     mConnectedDevicePorts.erase(in_portId);
     LOG(DEBUG) << __func__ << ": connected device port " << in_portId << " released";
@@ -895,6 +900,21 @@ ndk::ScopedAStatus Module::setAudioPortConfig(const AudioPortConfig& in_requeste
         out_suggested->gain = in_requested.gain.value();
     }
 
+    if (in_requested.ext.getTag() != AudioPortExt::Tag::unspecified) {
+        if (in_requested.ext.getTag() == out_suggested->ext.getTag()) {
+            if (out_suggested->ext.getTag() == AudioPortExt::Tag::mix) {
+                // 'AudioMixPortExt.handle' is set by the client, copy from in_requested
+                out_suggested->ext.get<AudioPortExt::Tag::mix>().handle =
+                        in_requested.ext.get<AudioPortExt::Tag::mix>().handle;
+            }
+        } else {
+            LOG(WARNING) << __func__ << ": requested ext tag "
+                         << toString(in_requested.ext.getTag()) << " do not match port's tag "
+                         << toString(out_suggested->ext.getTag());
+            requestedIsValid = false;
+        }
+    }
+
     if (existing == configs.end() && requestedIsValid && requestedIsFullySpecified) {
         out_suggested->id = getConfig().nextPortId++;
         configs.push_back(*out_suggested);
@@ -965,8 +985,17 @@ ndk::ScopedAStatus Module::getMasterMute(bool* _aidl_return) {
 
 ndk::ScopedAStatus Module::setMasterMute(bool in_mute) {
     LOG(DEBUG) << __func__ << ": " << in_mute;
-    mMasterMute = in_mute;
-    return ndk::ScopedAStatus::ok();
+    auto result = mDebug.simulateDeviceConnections ? ndk::ScopedAStatus::ok()
+                                                   : onMasterMuteChanged(in_mute);
+    if (result.isOk()) {
+        mMasterMute = in_mute;
+    } else {
+        LOG(ERROR) << __func__ << ": failed calling onMasterMuteChanged(" << in_mute
+                   << "), error=" << result;
+        // Reset master mute if it failed.
+        onMasterMuteChanged(mMasterMute);
+    }
+    return std::move(result);
 }
 
 ndk::ScopedAStatus Module::getMasterVolume(float* _aidl_return) {
@@ -978,8 +1007,17 @@ ndk::ScopedAStatus Module::getMasterVolume(float* _aidl_return) {
 ndk::ScopedAStatus Module::setMasterVolume(float in_volume) {
     LOG(DEBUG) << __func__ << ": " << in_volume;
     if (in_volume >= 0.0f && in_volume <= 1.0f) {
-        mMasterVolume = in_volume;
-        return ndk::ScopedAStatus::ok();
+        auto result = mDebug.simulateDeviceConnections ? ndk::ScopedAStatus::ok()
+                                                       : onMasterVolumeChanged(in_volume);
+        if (result.isOk()) {
+            mMasterVolume = in_volume;
+        } else {
+            // Reset master volume if it failed.
+            LOG(ERROR) << __func__ << ": failed calling onMasterVolumeChanged(" << in_volume
+                       << "), error=" << result;
+            onMasterVolumeChanged(mMasterVolume);
+        }
+        return std::move(result);
     }
     LOG(ERROR) << __func__ << ": invalid master volume value: " << in_volume;
     return ndk::ScopedAStatus::fromExceptionCode(EX_ILLEGAL_ARGUMENT);
@@ -1024,13 +1062,10 @@ ndk::ScopedAStatus Module::updateScreenState(bool in_isTurnedOn) {
 }
 
 ndk::ScopedAStatus Module::getSoundDose(std::shared_ptr<ISoundDose>* _aidl_return) {
-    if (mSoundDose == nullptr) {
+    if (!mSoundDose) {
         mSoundDose = ndk::SharedRefBase::make<sounddose::SoundDose>();
-        mSoundDoseBinder = mSoundDose->asBinder();
-        AIBinder_setMinSchedulerPolicy(mSoundDoseBinder.get(), SCHED_NORMAL,
-                                       ANDROID_PRIORITY_AUDIO);
     }
-    *_aidl_return = mSoundDose;
+    *_aidl_return = mSoundDose.getPtr();
     LOG(DEBUG) << __func__ << ": returning instance of ISoundDose: " << _aidl_return->get();
     return ndk::ScopedAStatus::ok();
 }
@@ -1236,14 +1271,30 @@ bool Module::isMmapSupported() {
 }
 
 ndk::ScopedAStatus Module::populateConnectedDevicePort(AudioPort* audioPort __unused) {
-    LOG(DEBUG) << __func__ << ": do nothing and return ok";
+    LOG(VERBOSE) << __func__ << ": do nothing and return ok";
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus Module::checkAudioPatchEndpointsMatch(
         const std::vector<AudioPortConfig*>& sources __unused,
         const std::vector<AudioPortConfig*>& sinks __unused) {
-    LOG(DEBUG) << __func__ << ": do nothing and return ok";
+    LOG(VERBOSE) << __func__ << ": do nothing and return ok";
+    return ndk::ScopedAStatus::ok();
+}
+
+void Module::onExternalDeviceConnectionChanged(
+        const ::aidl::android::media::audio::common::AudioPort& audioPort __unused,
+        bool connected __unused) {
+    LOG(DEBUG) << __func__ << ": do nothing and return";
+}
+
+ndk::ScopedAStatus Module::onMasterMuteChanged(bool mute __unused) {
+    LOG(VERBOSE) << __func__ << ": do nothing and return ok";
+    return ndk::ScopedAStatus::ok();
+}
+
+ndk::ScopedAStatus Module::onMasterVolumeChanged(float volume __unused) {
+    LOG(VERBOSE) << __func__ << ": do nothing and return ok";
     return ndk::ScopedAStatus::ok();
 }
 

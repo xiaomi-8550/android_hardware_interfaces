@@ -21,6 +21,7 @@ import android.hardware.audio.common.SourceMetadata;
 import android.hardware.audio.core.AudioPatch;
 import android.hardware.audio.core.AudioRoute;
 import android.hardware.audio.core.IBluetooth;
+import android.hardware.audio.core.IBluetoothA2dp;
 import android.hardware.audio.core.IStreamCallback;
 import android.hardware.audio.core.IStreamIn;
 import android.hardware.audio.core.IStreamOut;
@@ -101,6 +102,20 @@ interface IModule {
      * @throws EX_ILLEGAL_STATE If there was an error creating an instance.
      */
     @nullable IBluetooth getBluetooth();
+
+    /**
+     * Retrieve the interface to control Bluetooth A2DP.
+     *
+     * If the HAL module supports A2DP Profile functionality for Bluetooth, it
+     * must return an instance of the IBluetoothA2dp interface. The same
+     * instance must be returned during the lifetime of the HAL module. If the
+     * HAL module does not support BT A2DP, a null must be returned, without
+     * throwing any errors.
+     *
+     * @return An instance of the IBluetoothA2dp interface implementation.
+     * @throws EX_ILLEGAL_STATE If there was an error creating an instance.
+     */
+    @nullable IBluetoothA2dp getBluetoothA2dp();
 
     /**
      * Set a device port of an external device into connected state.
@@ -596,6 +611,7 @@ interface IModule {
      * @param mute Whether the output from the module is muted.
      * @throws EX_UNSUPPORTED_OPERATION If muting of combined output
      *                                  is not supported by the module.
+     * @throws EX_ILLEGAL_STATE If any error happens while muting of combined output.
      */
     void setMasterMute(boolean mute);
 
@@ -627,6 +643,8 @@ interface IModule {
      *                             accepted range.
      * @throws EX_UNSUPPORTED_OPERATION If attenuation of combined output
      *                                  is not supported by the module.
+     * @throws EX_ILLEGAL_STATE If any error happens while updating attenuation of
+                                combined output.
      */
     void setMasterVolume(float volume);
 
