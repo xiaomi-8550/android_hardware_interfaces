@@ -76,18 +76,6 @@
             <instance>default</instance>
         </interface>
     </hal>
-    <hal format="hidl" optional="true">
-        <name>android.hardware.automotive.can</name>
-        <version>1.0</version>
-        <interface>
-            <name>ICanBus</name>
-            <regex-instance>.*</regex-instance>
-        </interface>
-        <interface>
-            <name>ICanController</name>
-            <regex-instance>.*</regex-instance>
-        </interface>
-    </hal>
     <hal format="aidl" optional="true">
         <name>android.hardware.automotive.evs</name>
         <interface>
@@ -161,7 +149,7 @@
     </hal>
     <hal format="aidl" optional="true">
         <name>android.hardware.bluetooth.audio</name>
-        <version>2</version>
+        <version>3</version>
         <interface>
             <name>IBluetoothAudioProviderFactory</name>
             <instance>default</instance>
@@ -289,7 +277,7 @@
     </hal>
     <hal format="aidl" optional="false">
         <name>android.hardware.health</name>
-        <version>1</version>
+        <version>1-2</version>
         <interface>
             <name>IHealth</name>
             <instance>default</instance>
@@ -427,6 +415,7 @@
     </hal>
     <hal format="aidl" optional="true">
         <name>android.hardware.power.stats</name>
+        <version>2</version>
         <interface>
             <name>IPowerStats</name>
             <instance>default</instance>
@@ -515,6 +504,16 @@
         <version>1</version>
         <interface>
             <name>IRadioIms</name>
+            <instance>slot1</instance>
+            <instance>slot2</instance>
+            <instance>slot3</instance>
+        </interface>
+    </hal>
+    <hal format="aidl" optional="true">
+        <name>android.hardware.radio.satellite</name>
+        <version>1</version>
+        <interface>
+            <name>IRadioSatellite</name>
             <instance>slot1</instance>
             <instance>slot2</instance>
             <instance>slot3</instance>
@@ -618,7 +617,7 @@
             <instance>default</instance>
         </interface>
     </hal>
-    <hal format="aidl" optional="false">
+    <hal format="aidl" optional="true">
         <name>android.hardware.thermal</name>
         <version>1</version>
         <interface>
@@ -674,14 +673,6 @@
             <instance>default</instance>
         </interface>
     </hal>
-    <hal format="hidl" optional="true">
-        <name>android.hardware.usb.gadget</name>
-        <version>1.0-2</version>
-        <interface>
-            <name>IUsbGadget</name>
-            <instance>default</instance>
-        </interface>
-    </hal>
     <hal format="aidl" optional="true">
         <name>android.hardware.usb.gadget</name>
         <interface>
@@ -713,7 +704,7 @@
             <instance>default</instance>
         </interface>
     </hal>
-    <hal format="aidl" optional="true">
+    <hal format="aidl" optional="true" updatable-via-apex="true">
         <name>android.hardware.wifi</name>
         <version>1</version>
         <interface>
@@ -750,7 +741,6 @@
         <name>mapper</name>
         <version>5.0</version>
         <interface>
-            <name>I</name>
             <regex-instance>.*</regex-instance>
         </interface>
     </hal>

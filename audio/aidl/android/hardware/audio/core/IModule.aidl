@@ -26,7 +26,6 @@ import android.hardware.audio.core.IStreamIn;
 import android.hardware.audio.core.IStreamOut;
 import android.hardware.audio.core.IStreamOutEventCallback;
 import android.hardware.audio.core.ITelephony;
-import android.hardware.audio.core.MicrophoneInfo;
 import android.hardware.audio.core.ModuleDebug;
 import android.hardware.audio.core.StreamDescriptor;
 import android.hardware.audio.core.VendorParameter;
@@ -39,6 +38,7 @@ import android.media.audio.common.AudioOffloadInfo;
 import android.media.audio.common.AudioPort;
 import android.media.audio.common.AudioPortConfig;
 import android.media.audio.common.Float;
+import android.media.audio.common.MicrophoneInfo;
 
 /**
  * Each instance of IModule corresponds to a separate audio module. The system
@@ -822,4 +822,42 @@ interface IModule {
      * @return The vector with mmap policy information.
      */
     AudioMMapPolicyInfo[] getMmapPolicyInfos(AudioMMapPolicyType mmapPolicyType);
+
+    /**
+     * Indicates if this module supports variable latency control for instance
+     * over Bluetooth A2DP or LE Audio links.
+     *
+     * If supported, all instances of IStreamOut interface returned by this module must
+     * implement getRecommendedLatencyModes() and setLatencyMode() APIs.
+     *
+     * @return Whether the module supports variable latency control.
+     */
+    boolean supportsVariableLatency();
+
+    /**
+     * Default value for number of bursts per aaudio mixer cycle. This is a suggested value
+     * to return for the HAL module, unless it is known that a better option exists.
+     */
+    const int DEFAULT_AAUDIO_MIXER_BURST_COUNT = 2;
+    /**
+     * Get the number of bursts per aaudio mixer cycle.
+     *
+     * @return The number of burst per aaudio mixer cycle.
+     * @throw EX_UNSUPPORTED_OPERATION If the module does not support aaudio MMAP.
+     */
+    int getAAudioMixerBurstCount();
+
+    /**
+     * Default value for minimum duration in microseconds for a MMAP hardware burst. This
+     * is a suggested value to return for the HAL module, unless it is known that a better
+     * option exists.
+     */
+    const int DEFAULT_AAUDIO_HARDWARE_BURST_MIN_DURATION_US = 1000;
+    /**
+     * Get the minimum duration in microseconds for a MMAP hardware burst.
+     *
+     * @return The minimum number of microseconds for a MMAP hardware burst.
+     * @throw EX_UNSUPPORTED_OPERATION If the module does not support aaudio MMAP.
+     */
+    int getAAudioHardwareBurstMinUsec();
 }
