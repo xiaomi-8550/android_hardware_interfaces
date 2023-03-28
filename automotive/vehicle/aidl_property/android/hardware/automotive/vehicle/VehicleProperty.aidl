@@ -43,6 +43,8 @@ import android.hardware.automotive.vehicle.VehiclePropertyType;
 enum VehicleProperty {
     /**
      * Undefined property.
+     *
+     * This property must never be used/supported.
      */
     INVALID = 0x00000000,
     /**
@@ -88,7 +90,17 @@ enum VehicleProperty {
     INFO_FUEL_CAPACITY = 0x0104 + 0x10000000 + 0x01000000
             + 0x00600000, // VehiclePropertyGroup:SYSTEM,VehicleArea:GLOBAL,VehiclePropertyType:FLOAT
     /**
-     * List of fuels the vehicle may use
+     * List of fuels the vehicle may use.
+     *
+     * FuelType::FUEL_TYPE_ELECTRIC must only be included if the vehicle is plug in rechargeable.
+     * For example:
+     *   An FHEV (Fully Hybrid Electric Vehicle) must not include FuelType::FUEL_TYPE_ELECTRIC in
+     *   INFO_FUEL_TYPE's INT32_VEC value. So INFO_FUEL_TYPE can be populated as such:
+     *     int32Values = { FuelType::FUEL_TYPE_UNLEADED }
+     *   On the other hand, a PHEV (Partially Hybrid Electric Vehicle) is plug in rechargeable, and
+     *   hence should include FuelType::FUEL_TYPE_ELECTRIC in INFO_FUEL_TYPE's INT32_VEC value. So
+     *   INFO_FUEL_TYPE can be populated as such:
+     *     int32Values = { FuelType::FUEL_TYPE_UNLEADED, FuelType::FUEL_TYPE_ELECTRIC }
      *
      * @change_mode VehiclePropertyChangeMode.STATIC
      * @access VehiclePropertyAccess.READ
@@ -296,7 +308,10 @@ enum VehicleProperty {
      * configArray is used to indicate the micrometers-per-wheel-tick value and
      * which wheels are supported.  configArray is set as follows:
      *
-     *  configArray[0], bits [0:3] = supported wheels.  Uses enum Wheel.
+     *  configArray[0], bits [0:3] = supported wheels. Uses enum Wheel. For example, if all wheels
+     *    are supported, then configArray[0] = VehicleAreaWheel::LEFT_FRONT
+     *    | VehicleAreaWheel::RIGHT_FRONT | VehicleAreaWheel::LEFT_REAR
+     *    | VehicleAreaWheel::RIGHT_REAR
      *  configArray[1] = micrometers per front left wheel tick
      *  configArray[2] = micrometers per front right wheel tick
      *  configArray[3] = micrometers per rear right wheel tick
@@ -1946,7 +1961,8 @@ enum VehicleProperty {
      * Represents property for Seat easy access feature.
      *
      * If true, the seat will automatically adjust to make it easier for the occupant to enter and
-     * exit the vehicle.
+     * exit the vehicle. Each area ID must map to the seat that the user is trying to enter/exit
+     * with the help of the easy access feature.
      *
      * @change_mode VehiclePropertyChangeMode.ON_CHANGE
      * @access VehiclePropertyAccess.READ_WRITE
@@ -3617,7 +3633,7 @@ enum VehicleProperty {
      **********************************************************************************************/
 
     /**
-     * Enable or disable automatic emergency braking (AEB).
+     * Enable or disable Automatic Emergency Braking (AEB).
      *
      * Set true to enable AEB and false to disable AEB. When AEB is enabled, the ADAS system in the
      * vehicle should be turned on and monitoring to avoid potential collisions.
@@ -3659,7 +3675,7 @@ enum VehicleProperty {
             0x1001 + VehiclePropertyGroup.SYSTEM + VehicleArea.GLOBAL + VehiclePropertyType.INT32,
 
     /**
-     * Enable or disable forward collision warning (FCW).
+     * Enable or disable Forward Collision Warning (FCW).
      *
      * Set true to enable FCW and false to disable FCW. When FCW is enabled, the ADAS system in the
      * vehicle should be turned on and monitoring for potential collisions.
@@ -3698,7 +3714,7 @@ enum VehicleProperty {
             0x1003 + VehiclePropertyGroup.SYSTEM + VehicleArea.GLOBAL + VehiclePropertyType.INT32,
 
     /**
-     * Enable and disable blind spot warning (BSW).
+     * Enable and disable Blind Spot Warning (BSW).
      *
      * Set true to enable BSW and false to disable BSW. When BSW is enabled, the ADAS system in the
      * vehicle should be turned on and monitoring for objects in the vehicle’s blind spots.
@@ -3737,7 +3753,7 @@ enum VehicleProperty {
             0x1005 + VehiclePropertyGroup.SYSTEM + VehicleArea.MIRROR + VehiclePropertyType.INT32,
 
     /**
-     * Enable or disable lane departure warning (LDW).
+     * Enable or disable Lane Departure Warning (LDW).
      *
      * Set true to enable LDW and false to disable LDW. When LDW is enabled, the ADAS system in the
      * vehicle should be turned on and monitoring if the vehicle is approaching or crossing lane
@@ -3824,7 +3840,7 @@ enum VehicleProperty {
             0x1009 + VehiclePropertyGroup.SYSTEM + VehicleArea.GLOBAL + VehiclePropertyType.INT32,
 
     /**
-     * Enable or disable lane centering assist (LCA).
+     * Enable or disable Lane Centering Assist (LCA).
      *
      * Set true to enable LCA and false to disable LCA. When LCA is enabled, the ADAS system in the
      * vehicle should be turned on and waiting for an activation signal from the driver. Once the
@@ -3896,7 +3912,7 @@ enum VehicleProperty {
             0x100C + VehiclePropertyGroup.SYSTEM + VehicleArea.GLOBAL + VehiclePropertyType.INT32,
 
     /*
-     * Enable or disable emergency lane keep assist (ELKA).
+     * Enable or disable Emergency Lane Keep Assist (ELKA).
      *
      * Set true to enable ELKA and false to disable ELKA. When ELKA is enabled, the ADAS system in
      * the vehicle should be on and monitoring for unsafe lane changes by the driver. When an unsafe
@@ -4084,7 +4100,7 @@ enum VehicleProperty {
             0x1015 + VehiclePropertyGroup.SYSTEM + VehicleArea.GLOBAL + VehiclePropertyType.INT32,
 
     /**
-     * Enable or disable hands on detection (HOD).
+     * Enable or disable Hands On Detection (HOD).
      *
      * Set true to enable HOD and false to disable HOD. When HOD is enabled, a system inside the
      * vehicle should be monitoring the presence of the driver's hands on the steering wheel and
@@ -4104,7 +4120,7 @@ enum VehicleProperty {
             0x1016 + VehiclePropertyGroup.SYSTEM + VehicleArea.GLOBAL + VehiclePropertyType.BOOLEAN,
 
     /**
-     * Hands on detection (HOD) driver state.
+     * Hands On Detection (HOD) driver state.
      *
      * Returns whether the driver's hands are on the steering wheel. Generally, this property should
      * return a valid state defined in the HandsOnDetectionDriverState or ErrorState. For example,
@@ -4128,7 +4144,7 @@ enum VehicleProperty {
             0x1017 + VehiclePropertyGroup.SYSTEM + VehicleArea.GLOBAL + VehiclePropertyType.INT32,
 
     /**
-     * Hands on detection (HOD) warning.
+     * Hands On Detection (HOD) warning.
      *
      * Returns whether a warning is being sent to the driver for having their hands off the wheel
      * for too long a duration.
