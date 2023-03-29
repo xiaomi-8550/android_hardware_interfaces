@@ -277,6 +277,22 @@ typedef struct {
     wifi_radio_combination radio_combinations[];
 } wifi_radio_combination_matrix;
 
+typedef struct {
+    /**
+     * Maximum number of links used in Multi-Link Operation. The maximum
+     * number of links used for MLO can be different from the number of
+     * radios supported by the chip.
+     *
+     * This is a static configuration of the chip.
+     */
+    u32 max_mlo_link_count;
+    /**
+     * Maximum number of concurrent TDLS sessions supported by the chip.
+     *
+     */
+    u32 max_concurrent_tdls_session_count;
+} wifi_chip_capabilities;
+
 #define MAX_IFACE_COMBINATIONS 16
 #define MAX_IFACE_LIMITS 8
 
@@ -1105,6 +1121,14 @@ typedef struct {
     wifi_error (*wifi_get_cached_scan_results)(wifi_interface_handle iface,
                                                wifi_cached_scan_result_handler handler);
 
+
+    /**@brief wifi_get_chip_capabilities
+     *        Retrieve capabilities supported by this chip
+     * @param wifi_handle
+     * @return Synchronous wifi_error and chip capabilites
+     */
+    wifi_error (*wifi_get_chip_capabilities)(wifi_handle handle,
+                                             wifi_chip_capabilities *chip_capabilities);
 
     /**@brief wifi_get_supported_iface_concurrency_matrix
      *        Request all the possible interface concurrency combinations this
