@@ -96,9 +96,10 @@ int main(int /* argc */, char* /* argv */ []) {
     android::hardware::ProcessState::initWithMmapSize(getHWBinderMmapSize());
 #endif
 
-    ::android::ProcessState::initWithDriver("/dev/vndbinder");
-    // start a threadpool for vndbinder interactions
-    ::android::ProcessState::self()->startThreadPool();
+    if (::android::ProcessState::isVndservicemanagerEnabled()) {
+        ::android::ProcessState::initWithDriver("/dev/vndbinder");
+        ::android::ProcessState::self()->startThreadPool();
+    }
 
     ABinderProcess_setThreadPoolMaxThreadCount(1);
     ABinderProcess_startThreadPool();

@@ -34,17 +34,13 @@
 package android.hardware.audio.effect;
 @VintfStability
 union HapticGenerator {
-  android.hardware.audio.effect.VendorExtension vendorExtension;
+  android.hardware.audio.effect.VendorExtension vendor;
   android.hardware.audio.effect.HapticGenerator.HapticScale[] hapticScales;
   android.hardware.audio.effect.HapticGenerator.VibratorInformation vibratorInfo;
   @VintfStability
   union Id {
-    int vendorExtensionTag;
+    android.hardware.audio.effect.VendorExtension vendorExtensionTag;
     android.hardware.audio.effect.HapticGenerator.Tag commonTag;
-  }
-  @VintfStability
-  parcelable Capability {
-    android.hardware.audio.effect.VendorExtension extension;
   }
   @Backing(type="int") @VintfStability
   enum VibratorScale {
