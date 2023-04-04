@@ -1222,6 +1222,8 @@ NanStatusType convertLegacyNanStatusTypeToHidl(legacy_hal::NanStatusType type) {
             return NanStatusType::FOLLOWUP_TX_QUEUE_FULL;
         case legacy_hal::NAN_STATUS_UNSUPPORTED_CONCURRENCY_NAN_DISABLED:
             return NanStatusType::UNSUPPORTED_CONCURRENCY_NAN_DISABLED;
+        default:
+            return NanStatusType::INVALID_ARGS;
     }
     CHECK(false);
 }
