@@ -407,6 +407,10 @@ enum VehicleProperty {
      * all energy sources in a vehicle.  For example, a hybrid car's range will
      * be the sum of the ranges based on fuel and battery.
      *
+     * This property may be writable because a navigation app could update the range if it has a
+     * more accurate estimate based on the upcoming route. However, this property can be set to
+     * VehiclePropertyAccess.READ only at the OEM's discretion.
+     *
      * @change_mode VehiclePropertyChangeMode.CONTINUOUS
      * @access VehiclePropertyAccess.READ_WRITE
      * @unit VehicleUnit:METER
@@ -889,6 +893,9 @@ enum VehicleProperty {
      * Values must be one of VehicleUnit::CELSIUS or VehicleUnit::FAHRENHEIT
      * Note that internally, all temperatures are represented in floating point Celsius.
      *
+     * If updating HVAC_TEMPERATURE_DISPLAY_UNITS affects the values of other *_DISPLAY_UNITS
+     * properties, then their values must be updated and communicated to the AAOS framework as well.
+     *
      * @change_mode VehiclePropertyChangeMode.ON_CHANGE
      * @access VehiclePropertyAccess.READ_WRITE
      * @data_enum VehicleUnit
@@ -1050,6 +1057,10 @@ enum VehicleProperty {
      * For example: configArray[0] = METER
      *              configArray[1] = KILOMETER
      *              configArray[2] = MILE
+     *
+     * If updating DISTANCE_DISPLAY_UNITS affects the values of other *_DISPLAY_UNITS properties,
+     * then their values must be updated and communicated to the AAOS framework as well.
+     *
      * @change_mode VehiclePropertyChangeMode.ON_CHANGE
      * @access VehiclePropertyAccess.READ_WRITE
      * @data_enum VehicleUnit
@@ -1066,6 +1077,10 @@ enum VehicleProperty {
      * Volume units are defined in VehicleUnit.
      * For example: configArray[0] = LITER
      *              configArray[1] = GALLON
+     *
+     * If updating FUEL_VOLUME_DISPLAY_UNITS affects the values of other *_DISPLAY_UNITS properties,
+     * then their values must be updated and communicated to the AAOS framework as well.
+     *
      * @change_mode VehiclePropertyChangeMode.ON_CHANGE
      * @access VehiclePropertyAccess.READ_WRITE
      * @data_enum VehicleUnit
@@ -1083,6 +1098,10 @@ enum VehicleProperty {
      * For example: configArray[0] = KILOPASCAL
      *              configArray[1] = PSI
      *              configArray[2] = BAR
+     *
+     * If updating TIRE_PRESSURE_DISPLAY_UNITS affects the values of other *_DISPLAY_UNITS
+     * properties, then their values must be updated and communicated to the AAOS framework as well.
+     *
      * @change_mode VehiclePropertyChangeMode.ON_CHANGE
      * @access VehiclePropertyAccess.READ_WRITE
      * @data_enum VehicleUnit
@@ -1100,6 +1119,10 @@ enum VehicleProperty {
      * For example: configArray[0] = WATT_HOUR
      *              configArray[1] = AMPERE_HOURS
      *              configArray[2] = KILOWATT_HOUR
+     *
+     * If updating EV_BATTERY_DISPLAY_UNITS affects the values of other *_DISPLAY_UNITS properties,
+     * then their values must be updated and communicated to the AAOS framework as well.
+     *
      * @change_mode VehiclePropertyChangeMode.ON_CHANGE
      * @access VehiclePropertyAccess.READ_WRITE
      * @data_enum VehicleUnit
@@ -1128,6 +1151,10 @@ enum VehicleProperty {
      * For example: configArray[0] = METER_PER_SEC
      *              configArray[1] = MILES_PER_HOUR
      *              configArray[2] = KILOMETERS_PER_HOUR
+     *
+     * If updating VEHICLE_SPEED_DISPLAY_UNITS affects the values of other *_DISPLAY_UNITS
+     * properties, then their values must be updated and communicated to the AAOS framework as well.
+     *
      * @change_mode VehiclePropertyChangeMode.ON_CHANGE
      * @access VehiclePropertyAccess.READ_WRITE
      */
@@ -1596,11 +1623,11 @@ enum VehicleProperty {
      *
      * This parameter selects the memory preset to use to select the seat
      * position. The minValue is always 0, and the maxValue determines the
-     * number of seat positions available.
+     * number of seat preset memory slots available (i.e. numSeatPresets - 1).
      *
      * For instance, if the driver's seat has 3 memory presets, the maxValue
-     * will be 3. When the user wants to select a preset, the desired preset
-     * number (1, 2, or 3) is set.
+     * will be 2. When the user wants to select a preset, the desired preset
+     * number (0, 1, or 2) is set.
      *
      * @change_mode VehiclePropertyChangeMode.ON_CHANGE
      * @access VehiclePropertyAccess.WRITE
@@ -4027,7 +4054,10 @@ enum VehicleProperty {
      *
      * For the global area ID (0), the VehicleAreaConfig#supportedEnumValues array must be defined
      * unless all states of CruiseControlState are supported. Any unsupported commands sent through
-     * this property should return StatusCode.INVALID_ARG.
+     * this property must return StatusCode#INVALID_ARG.
+     *
+     * When this property is not available because CC is disabled (i.e. CRUISE_CONTROL_ENABLED is
+     * false), this property must return StatusCode#NOT_AVAILABLE_DISABLED.
      *
      * @change_mode VehiclePropertyChangeMode.ON_CHANGE
      * @access VehiclePropertyAccess.WRITE
@@ -4045,8 +4075,8 @@ enum VehicleProperty {
      * The maxFloatValue represents the upper bound of the target speed.
      * The minFloatValue represents the lower bound of the target speed.
      *
-     * When this property is not available (for example when CRUISE_CONTROL_ENABLED is false), it
-     * should return StatusCode.NOT_AVAILABLE_DISABLED.
+     * When this property is not available because CC is disabled (i.e. CRUISE_CONTROL_ENABLED is
+     * false), this property must return StatusCode#NOT_AVAILABLE_DISABLED.
      *
      * @change_mode VehiclePropertyChangeMode.ON_CHANGE
      * @access VehiclePropertyAccess.READ
@@ -4068,7 +4098,8 @@ enum VehicleProperty {
      * ascending order. All values must be positive. If the property is writable, all values must be
      * writable.
      *
-     * Writing to this property when it is not available should return StatusCode.NOT_AVAILABLE.
+     * When this property is not available because CC is disabled (i.e. CRUISE_CONTROL_ENABLED is
+     * false), this property must return StatusCode#NOT_AVAILABLE_DISABLED.
      *
      * @change_mode VehiclePropertyChangeMode.ON_CHANGE
      * @access VehiclePropertyAccess.READ_WRITE
@@ -4091,6 +4122,9 @@ enum VehicleProperty {
      * When no lead vehicle is detected (that is, when there is no leading vehicle or the leading
      * vehicle is too far away for the sensor to detect), this property should return
      * StatusCode.NOT_AVAILABLE.
+     *
+     * When this property is not available because CC is disabled (i.e. CRUISE_CONTROL_ENABLED is
+     * false), this property must return StatusCode#NOT_AVAILABLE_DISABLED.
      *
      * @change_mode VehiclePropertyChangeMode.CONTINUOUS
      * @access VehiclePropertyAccess.READ
@@ -4164,72 +4198,6 @@ enum VehicleProperty {
      */
     HANDS_ON_DETECTION_WARNING =
             0x1018 + VehiclePropertyGroup.SYSTEM + VehicleArea.GLOBAL + VehiclePropertyType.INT32,
-
-    /**
-     * Enable or disable driver attention monitoring.
-     *
-     * Set true to enable driver attention monitoring and false to disable driver attention
-     * monitoring. When driver attention monitoring is enabled, a system inside the vehicle should
-     * be monitoring the attention level of the driver and should send a warning if it detects that
-     * the driver is distracted.
-     *
-     * In general, DRIVER_ATTENTION_MONITORING_ENABLED should always return true or false. If the
-     * feature is not available due to some temporary state, that information must be conveyed
-     * through the ErrorState values in the DRIVER_ATTENTION_MONITORING_STATE property.
-     *
-     * This property is defined as read_write, but OEMs have the option to implement it as read
-     * only.
-     *
-     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
-     * @access VehiclePropertyAccess.READ_WRITE
-     */
-    DRIVER_ATTENTION_MONITORING_ENABLED =
-            0x1019 + VehiclePropertyGroup.SYSTEM + VehicleArea.GLOBAL + VehiclePropertyType.BOOLEAN,
-
-    /**
-     * Driver attention monitoring state.
-     *
-     * Returns whether the driver is currently attentive or distracted. Generally, this property
-     * should return a valid state defined in the DriverAttentionMonitoringState or ErrorState. For
-     * example, if the feature is not available due to some temporary state, that information should
-     * be conveyed through an ErrorState.
-     *
-     * If the vehicle wants to send a warning to the user because the driver has been distracted for
-     * too long, the warning should be surfaced through DRIVER_ATTENTION_MONITORING_WARNING.
-     *
-     * The VehicleAreaConfig#configArray array must define all states from
-     * DriverAttentionMonitoringState (including OTHER, which is not recommended) and ErrorState
-     * that are supported.
-     *
-     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
-     * @access VehiclePropertyAccess.READ
-     * @data_enum DriverAttentionMonitoringState
-     * @data_enum ErrorState
-     */
-    DRIVER_ATTENTION_MONITORING_STATE =
-            0x101A + VehiclePropertyGroup.SYSTEM + VehicleArea.GLOBAL + VehiclePropertyType.INT32,
-
-    /**
-     * Driver attention monitoring warning.
-     *
-     * Returns whether a warning is being sent to the driver for being distracted for too long a
-     * duration.
-     *
-     * Generally, this property should return a valid state defined in the
-     * DriverAttentionMonitoringWarning or ErrorState. For example, if the feature is not available
-     * due to some temporary state, that information should be conveyed through an ErrorState.
-     *
-     * For the global area ID (0), the VehicleAreaConfig#supportedEnumValues array must be defined
-     * unless all states of both DriverAttentionMonitoringWarning (including OTHER, which is not
-     * recommended) and ErrorState are supported.
-     *
-     * @change_mode VehiclePropertyChangeMode.ON_CHANGE
-     * @access VehiclePropertyAccess.READ
-     * @data_enum DriverAttentionMonitoringWarning
-     * @data_enum ErrorState
-     */
-    DRIVER_ATTENTION_MONITORING_WARNING =
-            0x101B + VehiclePropertyGroup.SYSTEM + VehicleArea.GLOBAL + VehiclePropertyType.INT32,
 
     /***************************************************************************
      * End of ADAS Properties
