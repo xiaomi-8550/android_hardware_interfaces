@@ -752,7 +752,7 @@ std::pair<wifi_error, LinkLayerStats> WifiLegacyHal::getLinkLayerStats(
     };
 
     wifi_error status = global_func_table_.wifi_get_link_stats(0, getIfaceHandle(iface_name),
-                                                               {onSyncLinkLayerStatsResult});
+                                                               {onSyncLinkLayerStatsResult, NULL});
     on_link_layer_stats_result_internal_callback = nullptr;
     return {status, link_stats};
 }
@@ -1111,7 +1111,7 @@ wifi_error WifiLegacyHal::startRttRangeRequest(
     std::vector<wifi_rtt_config> rtt_configs_internal(rtt_configs);
     wifi_error status = global_func_table_.wifi_rtt_range_request(
             id, getIfaceHandle(iface_name), rtt_configs.size(), rtt_configs_internal.data(),
-            {onAsyncRttResults});
+            {onAsyncRttResults, NULL});
     if (status != WIFI_SUCCESS) {
         on_rtt_results_internal_callback = nullptr;
     }
@@ -1209,7 +1209,8 @@ wifi_error WifiLegacyHal::nanRegisterCallbackHandlers(const std::string& iface_n
              onAysncNanEventBeaconSdfPayload, onAysncNanEventDataPathRequest,
              onAysncNanEventDataPathConfirm, onAysncNanEventDataPathEnd,
              onAysncNanEventTransmitFollowUp, onAysncNanEventRangeRequest,
-             onAysncNanEventRangeReport, onAsyncNanEventScheduleUpdate});
+             onAysncNanEventRangeReport, onAsyncNanEventScheduleUpdate,
+             NULL, NULL, NULL, NULL, NULL});
 }
 
 wifi_error WifiLegacyHal::nanEnableRequest(const std::string& iface_name, transaction_id id,
