@@ -315,7 +315,7 @@ interface IRemotelyProvisionedComponent {
      *
      * @param in challenge contains a byte string from the provisioning server which will be
      *        included in the signed data of the CSR structure. Different provisioned backends may
-     *        use different semantic data for this field, but the supported sizes must be between 16
+     *        use different semantic data for this field, but the supported sizes must be between 0
      *        and 64 bytes, inclusive.
      *
      * @return the following CBOR Certificate Signing Request (Csr) serialized into a byte array:
@@ -344,7 +344,7 @@ interface IRemotelyProvisionedComponent {
      *     UdsCerts,
      *     DiceCertChain,
      *     SignedData<[
-     *         challenge: bstr .size (16..64), ; Provided by the method parameters
+     *         challenge: bstr .size (0..64), ; Provided by the method parameters
      *         bstr .cbor T,
      *     ]>,
      * ]
@@ -421,7 +421,7 @@ interface IRemotelyProvisionedComponent {
      *     ? -4670547 : bstr,                       ; Configuration Hash
      *     -4670548 : bstr .cbor {                  ; Configuration Descriptor
      *         ? -70002 : tstr,                         ; Component name
-     *         ? -70003 : int,                          ; Firmware version
+     *         ? -70003 : int / tstr,                   ; Component version
      *         ? -70004 : null,                         ; Resettable
      *     },
      *     -4670549 : bstr,                         ; Authority Hash
