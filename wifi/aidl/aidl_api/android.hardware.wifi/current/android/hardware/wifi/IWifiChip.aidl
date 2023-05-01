@@ -47,7 +47,7 @@ interface IWifiChip {
   @PropagateAllowBlocking android.hardware.wifi.IWifiApIface getApIface(in String ifname);
   String[] getApIfaceNames();
   android.hardware.wifi.IWifiChip.ChipMode[] getAvailableModes();
-  int getCapabilities();
+  int getFeatureSet();
   android.hardware.wifi.WifiDebugHostWakeReasonStats getDebugHostWakeReasonStats();
   android.hardware.wifi.WifiDebugRingBufferStatus[] getDebugRingBuffersStatus();
   int getId();
@@ -61,7 +61,7 @@ interface IWifiChip {
   android.hardware.wifi.WifiRadioCombination[] getSupportedRadioCombinations();
   android.hardware.wifi.WifiChipCapabilities getWifiChipCapabilities();
   android.hardware.wifi.WifiUsableChannel[] getUsableChannels(in android.hardware.wifi.WifiBand band, in int ifaceModeMask, in int filterMask);
-  void setAfcChannelAllowance(in android.hardware.wifi.AvailableAfcFrequencyInfo[] availableAfcFrequencyInfo);
+  void setAfcChannelAllowance(in android.hardware.wifi.AfcChannelAllowance afcChannelAllowance);
   void registerEventCallback(in android.hardware.wifi.IWifiChipEventCallback callback);
   void removeApIface(in String ifname);
   void removeIfaceInstanceFromBridgedApIface(in String brIfaceName, in String ifaceInstanceName);
@@ -85,7 +85,7 @@ interface IWifiChip {
   void setMloMode(in android.hardware.wifi.IWifiChip.ChipMloMode mode);
   const int NO_POWER_CAP_CONSTANT = 0x7FFFFFFF;
   @Backing(type="int") @VintfStability
-  enum ChipCapabilityMask {
+  enum FeatureSetMask {
     SET_TX_POWER_LIMIT = (1 << 0) /* 1 */,
     D2D_RTT = (1 << 1) /* 2 */,
     D2AP_RTT = (1 << 2) /* 4 */,

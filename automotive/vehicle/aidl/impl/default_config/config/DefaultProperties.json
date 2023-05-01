@@ -2371,7 +2371,7 @@
                     66.19999694824219,
                     "VehicleUnit::FAHRENHEIT",
                     19.0,
-                    66.5
+                    66.0
                 ]
             }
         },
@@ -3532,50 +3532,6 @@
                         "ErrorState::NOT_AVAILABLE_DISABLED",
                         "HandsOnDetectionWarning::NO_WARNING",
                         "HandsOnDetectionWarning::WARNING"
-                    ]
-                }
-            ]
-        },
-        {
-            "property": "VehicleProperty::DRIVER_ATTENTION_MONITORING_ENABLED",
-            "defaultValue": {
-                "int32Values": [
-                    1
-                ]
-            }
-        },
-        {
-            "property": "VehicleProperty::DRIVER_ATTENTION_MONITORING_STATE",
-            "defaultValue": {
-                "int32Values": [
-                    "DriverAttentionMonitoringState::NOT_DISTRACTED"
-                ]
-            },
-            "areas": [
-                {
-                    "areaId": 0,
-                    "supportedEnumValues": [
-                        "ErrorState::NOT_AVAILABLE_DISABLED",
-                        "DriverAttentionMonitoringState::DISTRACTED",
-                        "DriverAttentionMonitoringState::NOT_DISTRACTED"
-                    ]
-                }
-            ]
-        },
-        {
-            "property": "VehicleProperty::DRIVER_ATTENTION_MONITORING_WARNING",
-            "defaultValue": {
-                "int32Values": [
-                    "DriverAttentionMonitoringWarning::NO_WARNING"
-                ]
-            },
-            "areas": [
-                {
-                    "areaId": 0,
-                    "supportedEnumValues": [
-                        "ErrorState::NOT_AVAILABLE_DISABLED",
-                        "DriverAttentionMonitoringWarning::NO_WARNING",
-                        "DriverAttentionMonitoringWarning::WARNING"
                     ]
                 }
             ]

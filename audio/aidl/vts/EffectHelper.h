@@ -31,6 +31,7 @@
 #include <fmq/AidlMessageQueue.h>
 #include <gtest/gtest.h>
 #include <system/audio_effects/aidl_effects_utils.h>
+#include <system/audio_effects/effect_uuid.h>
 
 #include "AudioHalBinderServiceUtil.h"
 #include "EffectFactoryHelper.h"
@@ -227,10 +228,10 @@ class EffectHelper {
      */
     template <typename S, typename = std::enable_if_t<std::is_arithmetic_v<S>>>
     static std::set<S> expandTestValueBasic(std::set<S>& s) {
-        const auto min = *s.begin(), max = *s.rbegin();
         const auto minLimit = std::numeric_limits<S>::min(),
                    maxLimit = std::numeric_limits<S>::max();
         if (s.size()) {
+            const auto min = *s.begin(), max = *s.rbegin();
             s.insert(min + (max - min) / 2);
             if (min != minLimit) {
                 s.insert(min - 1);
